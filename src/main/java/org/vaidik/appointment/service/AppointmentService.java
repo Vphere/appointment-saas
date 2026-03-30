@@ -25,8 +25,8 @@ public class AppointmentService {
     public AppointmentResponse bookAppointment(CreateAppointmentRequest request, String userEmail){
 
         boolean exists = appointmentRepository
-                .existsByBusinessIdAndAppointmentDateAndAppointmentTime(
-                        request.getBusinessId(),
+                .existsByServiceIdAndAppointmentDateAndAppointmentTime(
+                        request.getServiceId(),
                         request.getAppointmentDate(),
                         request.getAppointmentTime()
                 );
@@ -51,7 +51,7 @@ public class AppointmentService {
                 .appointmentDate(request.getAppointmentDate())
                 .appointmentTime(request.getAppointmentTime())
                 .status(AppointmentStatus.PENDING)
-                .createdAt(LocalDateTime.now())
+                .reviewed(false) // ✅ IMPORTANT FIX
                 .build();
 
         Appointment saved = appointmentRepository.save(appointment);
@@ -89,12 +89,23 @@ public class AppointmentService {
             String ownerEmail
     ) {
 
+        // First, let's find the requesting user and check their role
+        User requestingUser = userRepository.findByEmail(ownerEmail)
+                .orElseThrow(() -> new RuntimeException("User not found: " + ownerEmail));
+
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Appointment not found"));
 
-        // 🔥 Check ownership
-        if (!appointment.getBusiness().getOwner().getEmail().equals(ownerEmail)) {
-            throw new RuntimeException("Not authorized for this business");
+        // Check ownership - business owner should match
+        String businessOwnerEmail = appointment.getBusiness().getOwner().getEmail();
+        
+        if (!businessOwnerEmail.equals(ownerEmail)) {
+            throw new RuntimeException("Not authorized for this business. You must be the business owner to update appointments.");
+        }
+
+        // Check if user has BUSINESS_OWNER role
+        if (requestingUser.getRole() != Role.BUSINESS_OWNER) {
+            throw new RuntimeException("Only business owners can update appointment status.");
         }
 
         AppointmentStatus currentStatus = appointment.getStatus();
@@ -116,8 +127,62 @@ public class AppointmentService {
             appointment.setStatus(newStatus);
 
         } else {
-            throw new RuntimeException("Invalid transition");
+            throw new RuntimeException("Invalid transition from " + currentStatus + " to " + newStatus);
         }
+
+        Appointment saved = appointmentRepository.save(appointment);
+        
+        return mapper.toResponse(saved);
+    }
+
+    public AppointmentResponse cancelByUser(Long id, String email) {
+
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+
+        if (!appointment.getUser().getEmail().equals(email)) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
+            throw new RuntimeException("Cannot cancel completed appointment");
+        }
+
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+
+        return mapper.toResponse(appointmentRepository.save(appointment));
+    }
+
+    public AppointmentResponse rescheduleAppointment(Long id, CreateAppointmentRequest request, String email) {
+
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+
+        // ✅ USER check
+        if (!appointment.getUser().getEmail().equals(email)) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        if (appointment.getStatus() != AppointmentStatus.PENDING &&
+                appointment.getStatus() != AppointmentStatus.CONFIRMED) {
+            throw new RuntimeException("Only pending or confirmed appointments can be edited");
+        }
+
+        // ❗ CHECK SLOT CONFLICT (VERY IMPORTANT)
+        boolean exists = appointmentRepository
+                .existsByServiceIdAndAppointmentDateAndAppointmentTime(
+                        request.getServiceId(),
+                        request.getAppointmentDate(),
+                        request.getAppointmentTime()
+                );
+
+        if (exists) {
+            throw new RuntimeException("Slot already booked");
+        }
+
+        appointment.setAppointmentDate(request.getAppointmentDate());
+        appointment.setAppointmentTime(request.getAppointmentTime());
+        appointment.setStatus(AppointmentStatus.PENDING);
 
         return mapper.toResponse(appointmentRepository.save(appointment));
     }

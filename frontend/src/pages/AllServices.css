@@ -1,0 +1,56 @@
+/* AllServices.css */
+
+.all-services-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .all-services-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .all-services-grid { grid-template-columns: 1fr; }
+}
+
+.service-card-strip {
+  height: 80px;
+  background: linear-gradient(135deg, rgba(108,99,255,0.2), rgba(67,233,123,0.1));
+  border-radius: 10px 10px 0 0;
+  margin: -24px -24px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.service-card-biz-link {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.service-card-biz-link:hover {
+  color: var(--primary-light);
+}
+
+.service-card-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.service-card-price {
+  color: var(--primary-light);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.service-card-duration {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}

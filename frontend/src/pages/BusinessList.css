@@ -1,0 +1,30 @@
+/* BusinessList.css */
+
+.business-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.business-search {
+  max-width: 280px;
+  width: 100%;
+}
+
+.business-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .business-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .business-grid { grid-template-columns: 1fr; }
+  .business-search { max-width: 100%; }
+}

@@ -93,4 +93,11 @@ public class ServiceOfferingService {
 
         serviceRepository.delete(service);
     }
+
+    public List<ServiceResponse> getAllServices() {
+        return serviceRepository.findAll()
+                .stream()
+                .map(mapper::toResponse)
+                .toList();
+    }
 }

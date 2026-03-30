@@ -54,4 +54,9 @@ public class ServiceOfferingController {
 
         serviceOfferingService.deleteService(id, authentication.getName());
     }
+
+    @GetMapping
+    public List<ServiceResponse> getAllServices() {
+        return serviceOfferingService.getAllServices();
+    }
 }

@@ -8,11 +8,10 @@ import java.time.LocalTime;
 @Data
 public class WorkingHoursRequest {
 
-    private Long businessId;
-
+    private Long serviceId;
     private DayOfWeek dayOfWeek;
-
     private LocalTime startTime;
-
     private LocalTime endTime;
+    private boolean open = true;
+
 }

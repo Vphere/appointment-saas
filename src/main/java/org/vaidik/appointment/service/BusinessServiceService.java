@@ -1,6 +1,7 @@
 package org.vaidik.appointment.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.vaidik.appointment.dto.*;
 import org.vaidik.appointment.entity.*;
@@ -26,13 +27,14 @@ public class BusinessServiceService {
                 .address(request.getAddress())
                 .city(request.getCity())
                 .phone(request.getPhone())
+                .category(request.getCategory())
                 .status(BusinessStatus.PENDING)
                 .owner(owner)
                 .build();
 
-        businessRepository.save(business);
+        Business saved = businessRepository.save(business);
 
-        return mapToResponse(business);
+        return mapToResponse(saved);
     }
 
     // GET ALL APPROVED (for customers)
@@ -56,34 +58,54 @@ public class BusinessServiceService {
     // GET ALL (admin)
     public List<BusinessResponse> getAllBusinesses() {
 
-        return businessRepository.findAll()
+        return businessRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
     }
 
-    // APPROVE BUSINESS
-    public void updateBusinessStatus(Long id, BusinessStatus status) {
+    // GET PENDING (admin)
+    public List<BusinessResponse> getPendingBusinesses() {
+
+        return businessRepository.findByStatus(BusinessStatus.PENDING)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    // APPROVE / REJECT BUSINESS
+    public BusinessResponse updateBusinessStatus(Long id, BusinessStatus status) {
 
         Business business = businessRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Business not found"));
 
         business.setStatus(status);
+        Business saved = businessRepository.save(business);
+        
+        return mapToResponse(saved);
+    }
 
-        businessRepository.save(business);
+    public BusinessResponse getBusinessById(Long id) {
+        Business b = businessRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Business not found"));
+
+        return mapToResponse(b);
     }
 
     // COMMON MAPPER
     private BusinessResponse mapToResponse(Business b) {
-
         return BusinessResponse.builder()
                 .id(b.getId())
                 .name(b.getName())
                 .description(b.getDescription())
-                .status(b.getStatus().name())
+                .status(b.getStatus() != null ? b.getStatus().name() : "PENDING")
                 .address(b.getAddress())
                 .city(b.getCity())
                 .phone(b.getPhone())
+                .category(b.getCategory())
+                .ownerName(b.getOwner() != null ? b.getOwner().getName() : null)
+                .ownerEmail(b.getOwner() != null ? b.getOwner().getEmail() : null)
+                .createdAt(b.getCreatedAt())
                 .build();
     }
 }

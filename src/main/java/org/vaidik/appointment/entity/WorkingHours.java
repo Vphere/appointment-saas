@@ -20,13 +20,17 @@ public class WorkingHours {
     private Long id;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private DayOfWeek dayOfWeek;
 
     private LocalTime startTime;
 
     private LocalTime endTime;
 
-    @ManyToOne
-    @JoinColumn(name = "business_id", nullable = false)
-    private Business business;
+    @Builder.Default
+    private boolean open = true;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_id", nullable = false)
+    private ServiceOffering service;
 }

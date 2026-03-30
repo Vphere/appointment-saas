@@ -1,61 +1,109 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import Navbar from './components/Navbar';
+import ProtectedRoute from './components/ProtectedRoute';
 
-import Login from "./pages/Login.jsx";
-import Register from "./pages/Register.jsx";
-import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import Dashboard from "./pages/Dashboard.jsx";
-import BusinessList from "./pages/BusinessList.jsx";
-import CreateBusiness from "./pages/CreateBusiness.jsx";
-import MyBusinesses from "./pages/BusinessDashboard.jsx";
-import AdminApproval from "./pages/AdminApproval.jsx";
-import AddService from "./pages/AddService.jsx";
-import MyServices from "./pages/MyServices.jsx";
-import BusinessServices from "./pages/BusinessServices.jsx";
-import SlotBooking from "./pages/slots/SlotBoking.jsx";
-import WorkingHours from "./pages/owner/WorkingHours.jsx";
-import MyAppointments from "./pages/user/MyAppointments.jsx";
-import BusinessDashboard from "./pages/BusinessDashboard.jsx";
-import BusinessAppointments from "./pages/BusinessAppointments.jsx";
-import CreateReview from "./pages/CreateReview.jsx";
-import BusinessReviews from "./pages/BusinessReviews.jsx";
-import MyAppointmentsWithReview from "./pages/MyAppointmentsWithReview.jsx";
+import Login from './pages/Login';
+import Register from './pages/Register';
+import OAuth2Callback from './pages/OAuth2Callback';
+import Dashboard from './pages/Dashboard';
+import BusinessList from './pages/BusinessList';
+import BusinessDetails from './pages/BusinessDetails';
+import Booking from './pages/Booking';
+import MyAppointments from './pages/MyAppointments';
+import AllServices from './pages/AllServices';
+import OwnerDashboard from './pages/OwnerDashboard';
+import ManageServices from './pages/ManageServices';
+import WorkingHours from './pages/WorkingHours';
+import OwnerAppointments from './pages/OwnerAppointments';
+import AdminApproval from './pages/AdminApproval';
 
-function App() {
-
-    return (
-        <BrowserRouter>
-            <Routes>
-                <Route path="/" element={<Login/>} />
-                <Route path="/register" element={<Register/>} />
-                <Route path="/dashboard" element={
-                                                <ProtectedRoute>
-                                                    <Dashboard />
-                                                </ProtectedRoute>
-                                                }
-                />
-
-                <Route path="/businesses" element={<BusinessList/>} />
-                <Route path="/create-business" element={<CreateBusiness/>} />
-                <Route path="/my-businesses" element={<MyBusinesses/>} />
-                <Route path="/admin" element={<AdminApproval/>} />
-
-                <Route path="/add-service" element={<AddService/>} />
-                <Route path="/my-services" element={<MyServices/>} />
-                <Route path="/services" element={<BusinessServices/>} />
-
-                <Route path="/book" element={<SlotBooking/>} />
-                <Route path="/working-hours" element={<WorkingHours/>} />
-                {/* <Route path="/my-appointments" element={<MyAppointments/>} /> */}
-                <Route path="/business-dashboard" element={<BusinessDashboard />} />
-
-                <Route path="/business-appointments" element={<BusinessAppointments/>} />
-
-                <Route path="/review" element={<CreateReview/>} />
-                <Route path="/reviews" element={<BusinessReviews/>} />
-                <Route path="/my-appointments" element={<MyAppointmentsWithReview/>} />
-            </Routes>
-        </BrowserRouter>
-    );
+function AppLayout({ children }) {
+  return (
+    <div className="app-layout">
+      <Navbar />
+      <main style={{ flex: 1 }}>{children}</main>
+    </div>
+  );
 }
 
-export default App;
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public */}
+          <Route path="/" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/oauth2/callback" element={<OAuth2Callback />} />
+
+          {/* Protected */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <AppLayout><Dashboard /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          {/* Customer Routes */}
+          <Route path="/businesses" element={
+            <ProtectedRoute roles={['CUSTOMER']}>
+              <AppLayout><BusinessList /></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/business/:id" element={
+            <ProtectedRoute>
+              <AppLayout><BusinessDetails /></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/book/:businessId" element={
+            <ProtectedRoute>
+              <AppLayout><Booking /></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/my-appointments" element={
+            <ProtectedRoute>
+              <AppLayout><MyAppointments /></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/all-services" element={
+            <ProtectedRoute>
+              <AppLayout><AllServices /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          {/* Business Owner Routes */}
+          <Route path="/my-businesses" element={
+            <ProtectedRoute roles={['BUSINESS_OWNER']}>
+              <AppLayout><OwnerDashboard /></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/manage-services" element={
+            <ProtectedRoute roles={['BUSINESS_OWNER']}>
+              <AppLayout><ManageServices /></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/working-hours" element={
+            <ProtectedRoute roles={['BUSINESS_OWNER']}>
+              <AppLayout><WorkingHours /></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/owner-appointments" element={
+            <ProtectedRoute roles={['BUSINESS_OWNER']}>
+              <AppLayout><OwnerAppointments /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          {/* Admin Routes */}
+          <Route path="/admin" element={
+            <ProtectedRoute roles={['SUPER_ADMIN']}>
+              <AppLayout><AdminApproval /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}

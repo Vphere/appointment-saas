@@ -11,6 +11,7 @@ import org.vaidik.appointment.repository.WorkingHoursRepository;
 import java.time.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,12 +21,19 @@ public class SlotService {
     private final WorkingHoursRepository workingHoursRepository;
     private final AppointmentRepository appointmentRepository;
 
-    public List<SlotResponse> getAvailableSlots(Long businessId, LocalDate date, int serviceDuration) {
+    public List<SlotResponse> getAvailableSlots(Long serviceId, LocalDate date, int serviceDuration) {
 
         DayOfWeek day = date.getDayOfWeek();
 
-        WorkingHours workingHours = workingHoursRepository.findByBusinessIdAndDayOfWeek(businessId, day)
-                                    .orElseThrow(() -> new RuntimeException("Business closed"));
+        Optional<WorkingHours> workingHoursOpt =
+                workingHoursRepository.findByServiceIdAndDayOfWeek(serviceId, day);
+
+        // ✅ FIX: don't crash
+        if (workingHoursOpt.isEmpty()) {
+            return List.of(); // return empty slots instead of error
+        }
+
+        WorkingHours workingHours = workingHoursOpt.get();
 
         LocalTime start = workingHours.getStartTime();
         LocalTime end = workingHours.getEndTime();
@@ -38,14 +46,7 @@ public class SlotService {
             current = current.plusMinutes(serviceDuration);
         }
 
-        List<Appointment> bookings = appointmentRepository.findByBusinessIdAndAppointmentDate(
-                                        businessId,
-                                        date
-                                    );
-
-        List<LocalTime> bookedTimes = bookings.stream()
-                                        .map(Appointment::getAppointmentTime)
-                                        .collect(Collectors.toList());
+        List<Appointment> bookings = appointmentRepository.findByServiceIdAndAppointmentDate(serviceId, date);
 
         return generatedSlots.stream()
                 .filter(slot -> bookings.stream().noneMatch(booking -> {

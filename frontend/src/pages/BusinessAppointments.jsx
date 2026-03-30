@@ -24,7 +24,8 @@ function BusinessAppointments() {
     // 🔥 Update status (Confirm / Reject / Complete)
     const updateStatus = async (id, status) => {
         try {
-            await api.put(`/api/appointments/${id}/status`, {
+            // Temporarily use debug endpoint to isolate auth issue
+            await api.put(`/api/appointments/${id}/status-debug`, {
                 status: status
             });
 
@@ -33,8 +34,12 @@ function BusinessAppointments() {
             setAppointments(res.data);
 
         } catch (err) {
-            console.log(err.response);
-            alert("Action failed");
+            console.error('Update error:', err.response?.data || err.message);
+            const errorMessage = err.response?.data?.message || 
+                               err.response?.data || 
+                               err.message || 
+                               'Action failed';
+            alert(`Failed to ${status.toLowerCase()} appointment: ${errorMessage}`);
         }
     };
 
@@ -83,8 +88,10 @@ function BusinessAppointments() {
                         <p><b>Business:</b> {a.businessName}</p>
                         <p><b>Service:</b> {a.serviceName}</p>
                         <p><b>Date:</b> {a.appointmentDate}</p>
-                        <p><b>Time:</b> {a.appointmentTime}</p>
+                        <p><b>Time:</b> {a.appointmentTime?.slice(0, 5)}</p>
+                        <p><b>Customer:</b> {a.userName || a.userEmail || `User #${a.userId}`}</p>
                         <p><b>Status:</b> {a.status}</p>
+                        {a.price && <p><b>Price:</b> ₹{a.price}</p>}
 
                         <div style={styles.actions}>
 
@@ -117,6 +124,11 @@ function BusinessAppointments() {
                                 </button>
                             )}
 
+                            {/* CANCELLED - NO ACTIONS */}
+                            {a.status === "CANCELLED" && (
+                                <span style={styles.cancelledBadge}>Cancelled</span>
+                            )}
+
                         </div>
                     </div>
                 ))
@@ -126,8 +138,6 @@ function BusinessAppointments() {
 }
 
 export default BusinessAppointments;
-
-
 
 // 🎨 STYLES
 const styles = {
@@ -194,5 +204,14 @@ const styles = {
         border: "none",
         cursor: "pointer",
         borderRadius: "5px"
+    },
+
+    cancelledBadge: {
+        backgroundColor: "#ff6b6b",
+        color: "white",
+        padding: "4px 8px",
+        borderRadius: "4px",
+        fontSize: "12px",
+        fontWeight: "bold"
     }
 };

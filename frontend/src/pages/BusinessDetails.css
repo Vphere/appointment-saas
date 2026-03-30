@@ -1,0 +1,70 @@
+/* BusinessDetails.css */
+
+.business-details-hero {
+  background: linear-gradient(135deg, var(--bg-card), var(--surface));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 36px 40px;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.business-details-hero::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -5%;
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(108,99,255,0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.business-details-icon {
+  font-size: 3.5rem;
+  margin-bottom: 12px;
+}
+
+.business-details-name {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.business-details-desc {
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.business-details-meta-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.service-card-selectable {
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.service-card-selectable:hover {
+  border-color: rgba(108,99,255,0.5);
+}
+
+.service-card-selectable.selected {
+  border-color: var(--primary);
+  background: var(--primary-glow);
+}
+
+.business-details-book-cta {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}

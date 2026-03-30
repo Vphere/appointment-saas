@@ -22,10 +22,8 @@ public class AppointmentController {
     @PostMapping
     public AppointmentResponse bookAppointment(@RequestBody CreateAppointmentRequest request,
                                                Authentication authentication) {
-        return appointmentService.bookAppointment(
-                request,
-                authentication.getName()   // 🔥 email from JWT
-        );
+
+        return appointmentService.bookAppointment(request, authentication.getName());
     }
 
     @GetMapping("/my")
@@ -39,17 +37,67 @@ public class AppointmentController {
         return appointmentService.getAppointmentsForOwner(authentication.getName());
     }
 
+    /** Generic status update (used by PUT endpoint) */
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('BUSINESS_OWNER')")
-    public AppointmentResponse updateStatus(
+    public AppointmentResponse updateStatus(@PathVariable("id") Long id,
+                                            @RequestBody UpdateAppointmentStatusRequest request,
+                                            Authentication authentication) {
+        
+        return appointmentService.updateAppointmentStatus(id, request.getStatus(), authentication.getName());
+    }
+
+//    @PutMapping("/{id}/status-debug")
+//    public AppointmentResponse updateStatusDebug(@PathVariable("id") Long id,
+//                                                 @RequestBody UpdateAppointmentStatusRequest request,
+//                                                 Authentication authentication) {
+//
+//        return appointmentService.updateAppointmentStatus(id, request.getStatus(), authentication.getName());
+//    }
+
+    @PatchMapping("/{id}/confirm")
+    @PreAuthorize("hasRole('BUSINESS_OWNER')")
+    public AppointmentResponse confirm(
             @PathVariable Long id,
-            @RequestBody UpdateAppointmentStatusRequest request,
             Authentication authentication
     ) {
-        return appointmentService.updateAppointmentStatus(
-                id,
-                request.getStatus(),
-                authentication.getName()
-        );
+        return appointmentService.updateAppointmentStatus(id, AppointmentStatus.CONFIRMED, authentication.getName());
+    }
+
+    @PatchMapping("/{id}/reject")
+    @PreAuthorize("hasRole('BUSINESS_OWNER')")
+    public AppointmentResponse reject(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        return appointmentService.updateAppointmentStatus(id, AppointmentStatus.CANCELLED, authentication.getName());
+    }
+
+    @PatchMapping("/{id}/complete")
+    @PreAuthorize("hasRole('BUSINESS_OWNER')")
+    public AppointmentResponse complete(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        return appointmentService.updateAppointmentStatus(id, AppointmentStatus.COMPLETED, authentication.getName());
+    }
+
+    @PatchMapping("/{id}/cancel")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public AppointmentResponse cancel(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        return appointmentService.cancelByUser(id, authentication.getName());
+    }
+
+    @PutMapping("/{id}/reschedule")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public AppointmentResponse reschedule(
+            @PathVariable Long id,
+            @RequestBody CreateAppointmentRequest request,
+            Authentication authentication
+    ) {
+        return appointmentService.rescheduleAppointment(id, request, authentication.getName());
     }
 }

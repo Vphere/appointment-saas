@@ -16,14 +16,10 @@ public class SlotController {
     private final SlotService slotService;
 
     @GetMapping
-    public List<SlotResponse> getAvailableSlots(
-            @RequestParam Long businessId,
-            @RequestParam String date,
-            @RequestParam int duration
-    ) {
-
+    public List<SlotResponse> getAvailableSlots(@RequestParam Long serviceId, @RequestParam String date,
+                                                @RequestParam int duration) {
         return slotService.getAvailableSlots(
-                businessId,
+                serviceId,
                 LocalDate.parse(date),
                 duration
         );

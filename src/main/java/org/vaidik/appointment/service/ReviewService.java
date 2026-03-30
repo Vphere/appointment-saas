@@ -32,17 +32,17 @@ public class ReviewService {
         Appointment appointment = appointmentRepository.findById(request.getAppointmentId())
                 .orElseThrow(() -> new RuntimeException("Appointment not found"));
 
-        // 🔥 Ownership check
+        // Ownership check
         if (!appointment.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("Not your appointment");
         }
 
-        // 🔥 Only completed allowed
+        // Only completed allowed
         if (appointment.getStatus() != AppointmentStatus.COMPLETED) {
             throw new RuntimeException("Only completed appointments can be reviewed");
         }
 
-        // 🔥 Prevent duplicate review PER APPOINTMENT
+        // Prevent duplicate review PER APPOINTMENT
         boolean alreadyReviewed = reviewRepository.existsByAppointmentId(appointment.getId());
 
         if (alreadyReviewed) {
@@ -54,8 +54,12 @@ public class ReviewService {
                 .comment(request.getComment())
                 .business(appointment.getBusiness())
                 .user(user)
-                .appointment(appointment)   // 🔥 IMPORTANT
+                .appointment(appointment)   
                 .build();
+
+        // Mark appointment as reviewed
+        appointment.setReviewed(true);
+        appointmentRepository.save(appointment);
 
         return mapper.toResponse(reviewRepository.save(review));
     }

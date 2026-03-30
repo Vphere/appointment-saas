@@ -14,19 +14,18 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     List<Appointment> findByBusinessId(Long businessId);
 
-    boolean existsByBusinessIdAndAppointmentDateAndAppointmentTime(
-            Long businessId,
+    boolean existsByServiceIdAndAppointmentDateAndAppointmentTime(
+            Long serviceId,
             LocalDate date,
             LocalTime time
     );
 
-    List<Appointment> findByBusinessIdAndAppointmentDate(
-            Long businessId,
+    List<Appointment> findByServiceIdAndAppointmentDate(
+            Long serviceId,
             LocalDate appointmentDate
     );
 
     long countByBusinessId(Long businessId);
 
     long countByBusinessIdAndStatus(Long businessId, AppointmentStatus status);
-
 }

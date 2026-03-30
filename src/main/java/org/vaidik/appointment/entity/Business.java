@@ -2,6 +2,9 @@ package org.vaidik.appointment.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -25,6 +28,12 @@ public class Business {
     private String city;
 
     private String phone;
+
+    private String category;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
     @Enumerated(EnumType.STRING)
     private BusinessStatus status;

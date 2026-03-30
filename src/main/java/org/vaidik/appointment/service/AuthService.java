@@ -43,23 +43,21 @@ public class AuthService {
                 )
         );
 
-        /*    This code does security check manually but above code automates it by delegating call to AuthenticationManager so,
-                   now it will handle this task we don't have to manually do it.
-
-                    User user = userRepository.findByEmail(request.getEmail()).orElseThrow(() -> new RuntimeException("Invalid credentials"));
-                    if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                        throw new RuntimeException("Invalid credentials");
-                    }
-         */
-
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         String token = jwtUtil.generateToken(
                 user.getEmail(),
-                user.getRole().name()
+                user.getRole().name(),
+                user.getName()
         );
 
-        return new AuthResponse(token);
+        // Return token + name + email + role so frontend doesn't need to decode JWT
+        return new AuthResponse(
+                token,
+                user.getName(),
+                user.getEmail(),
+                user.getRole().name()
+        );
     }
 }

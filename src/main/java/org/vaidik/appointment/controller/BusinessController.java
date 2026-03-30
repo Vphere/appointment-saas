@@ -21,19 +21,18 @@ public class BusinessController {
     @PostMapping
     @PreAuthorize("hasRole('BUSINESS_OWNER')")
     public BusinessResponse createBusiness(@RequestBody BusinessRequest request, Authentication authentication) {
-
-        System.out.println(authentication.getAuthorities());
-
-        return businessService.createBusiness(
-                request,
-                authentication.getName()
-        );
+        return businessService.createBusiness(request, authentication.getName());
     }
 
     // CUSTOMER VIEW (ONLY APPROVED)
     @GetMapping("/approved")
     public List<BusinessResponse> getApprovedBusinesses() {
         return businessService.getApprovedBusinesses();
+    }
+
+    @GetMapping("/{id}")
+    public BusinessResponse getBusinessById(@PathVariable Long id) {
+        return businessService.getBusinessById(id);
     }
 
     // OWNER VIEW (ONLY THEIR BUSINESS)
@@ -43,6 +42,7 @@ public class BusinessController {
         return businessService.getMyBusinesses(authentication.getName());
     }
 
+
     // ADMIN VIEW (ALL)
     @GetMapping("/all")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
@@ -50,10 +50,24 @@ public class BusinessController {
         return businessService.getAllBusinesses();
     }
 
-    // APPROVE BUSINESS
-    @PutMapping("/{id}/{status}")
+    // ADMIN VIEW (PENDING ONLY)
+    @GetMapping("/pending")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public void updateStatus(@PathVariable Long id, @PathVariable BusinessStatus status) {
-        businessService.updateBusinessStatus(id, status);
+    public List<BusinessResponse> getPendingBusinesses() {
+        return businessService.getPendingBusinesses();
+    }
+
+    // APPROVE BUSINESS (explicit PathVariable names to avoid Spring binding issues)
+    @PutMapping("/{id}/approve")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public BusinessResponse approve(@PathVariable("id") Long id) {
+        return businessService.updateBusinessStatus(id, BusinessStatus.APPROVED);
+    }
+
+    // REJECT BUSINESS
+    @PutMapping("/{id}/reject")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public BusinessResponse reject(@PathVariable("id") Long id) {
+        return businessService.updateBusinessStatus(id, BusinessStatus.REJECTED);
     }
 }

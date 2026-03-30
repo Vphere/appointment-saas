@@ -11,4 +11,5 @@ public class BusinessRequest {
     private String address;
     private String city;
     private String phone;
+    private String category;
 }

@@ -1,4 +1,5 @@
 package org.vaidik.appointment.config;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.*;
 import org.springframework.http.HttpMethod;
@@ -20,31 +21,46 @@ import java.util.List;
 @Configuration
 @RequiredArgsConstructor
 @EnableMethodSecurity
-public class SecurityConfig
-{
+public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception
-    {
-        http.cors(cors -> cors.configurationSource(corsConfigurationSource()))   // Allows frontend to access backend.
-                .csrf(csrf -> csrf.disable())    // CSRF protection is mainly for session-based authentication, Since you are using JWT stateless authentication, it is disabled.
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource()))      // Allows frontend to access backend.
+                .csrf(csrf -> csrf.disable())       // CSRF protection is mainly for session-based authentication, Since we are using JWT stateless authentication, we disable it.
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/services").hasRole("BUSINESS_OWNER")
+                        // AUTH
+                        .requestMatchers("/api/auth/**", "/oauth2/**", "/login/**").permitAll()
+
+                        // SERVICES
+                        .requestMatchers(HttpMethod.GET, "/api/services").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/services/**").hasRole("BUSINESS_OWNER")
                         .requestMatchers(HttpMethod.PUT, "/api/services/**").hasRole("BUSINESS_OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/api/services/**").hasRole("BUSINESS_OWNER")
                         .requestMatchers(HttpMethod.GET, "/api/services/**").permitAll()
+
+                        // BUSINESS
+                        .requestMatchers(HttpMethod.GET, "/api/business").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/business/**").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/business/**").permitAll()
+
+                        // SLOTS
                         .requestMatchers(HttpMethod.GET, "/api/slots/**").permitAll()
-                        .requestMatchers("/api/business/approved").permitAll()
-                        .requestMatchers("/api/business/my").hasRole("BUSINESS_OWNER")
-                        .requestMatchers("/api/business/all").hasRole("SUPER_ADMIN")
+
+                        // APPOINTMENTS
+                        .requestMatchers(HttpMethod.POST, "/api/appointments").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/appointments/my").authenticated()
+
+                        .requestMatchers(HttpMethod.PATCH, "/api/appointments/*/cancel").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.PUT, "/api/appointments/*/reschedule").hasRole("CUSTOMER")
+
                         .requestMatchers("/api/appointments/my-business").hasRole("BUSINESS_OWNER")
-                        .requestMatchers("/api/appointments/**").authenticated()
-                        .anyRequest().authenticated()
-                )
+                        .requestMatchers(HttpMethod.PUT, "/api/appointments/**").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/appointments/**").hasRole("BUSINESS_OWNER")
+                        .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);    // Request -> JwtAuthenticationFilter -> UsernamePasswordAuthenticationFilter -> Controller
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -63,7 +79,7 @@ public class SecurityConfig
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE","PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 
