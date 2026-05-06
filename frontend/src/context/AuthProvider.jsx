@@ -1,15 +1,7 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import { AuthContext } from './AuthContext';
 
-const AuthContext = createContext(null);
-
-/**
- * Spring Boot JWT tokens typically encode the role in one of:
- *   - decoded.role  (e.g. "CUSTOMER")
- *   - decoded.roles (array, e.g. ["CUSTOMER"])
- *   - decoded.authorities (array, e.g. ["ROLE_CUSTOMER"])
- *   - decoded.scope
- */
 function extractRole(decoded) {
   // Direct role field
   if (decoded.role) return decoded.role.replace('ROLE_', '');
@@ -85,8 +77,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }

@@ -15,16 +15,36 @@ export default function MyAppointments() {
   const [editingId, setEditingId] = useState(null);
   const [slots, setSlots] = useState([]);
   const [selectedTime, setSelectedTime] = useState('');
+  const [existingReviews, setExistingReviews] = useState({}); 
+
+  useEffect(() => { fetchAppointments(); }, []);
 
   const fetchAppointments = () => {
     setLoading(true);
     getMyAppointments()
-      .then((r) => setAppointments(r.data))
+      .then(async (r) => {
+        const appts = r.data;
+        setAppointments(appts);
+
+        // ✅ Fetch existing reviews for all completed+reviewed appointments
+        const reviewMap = {};
+        await Promise.all(
+          appts
+            .filter((a) => a.status === 'COMPLETED' && a.reviewed)
+            .map(async (a) => {
+              try {
+                const res = await api.get(`/api/reviews/appointment/${a.id}`);
+                if (res.data) reviewMap[a.id] = res.data;
+              } catch {
+                // no review found
+              }
+            })
+        );
+        setExistingReviews(reviewMap);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   };
-
-  useEffect(() => { fetchAppointments(); }, []);
 
   const fetchSlots = async (appt, date) => {
     try {
@@ -211,13 +231,41 @@ export default function MyAppointments() {
                   {appt.status === 'COMPLETED' && !appt.reviewed && (
                     <button
                       className="btn btn-primary btn-sm"
-                      onClick={() => setReviewTarget(appt)}
+                      onClick={() => setReviewTarget({ appt, existingReview: null })}
                     >
                       ⭐ Give Review
                     </button>
                   )}
                   {appt.status === 'COMPLETED' && appt.reviewed && (
-                    <span className="badge badge-approved">Reviewed ✓</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+                      {/* ✅ Show existing review */}
+                      {existingReviews[appt.id] && (
+                        <div style={{
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: 8,
+                          padding: '8px 12px',
+                          fontSize: '0.85rem',
+                        }}>
+                          <div style={{ color: '#f59e0b', marginBottom: 2 }}>
+                            {'★'.repeat(existingReviews[appt.id].rating)}{'☆'.repeat(5 - existingReviews[appt.id].rating)}
+                          </div>
+                          <div style={{ color: 'var(--text-secondary)' }}>
+                            {existingReviews[appt.id].comment}
+                          </div>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <span className="badge badge-approved">Reviewed ✓</span>
+                        {/* ✅ Edit review button */}
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => setReviewTarget({ appt, existingReview: existingReviews[appt.id] })}
+                        >
+                          ✏️ Edit Review
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
@@ -228,7 +276,8 @@ export default function MyAppointments() {
 
       {reviewTarget && (
         <ReviewModal
-          appointment={reviewTarget}
+          appointment={reviewTarget.appt}
+          existingReview={reviewTarget.existingReview}
           onClose={() => setReviewTarget(null)}
           onSuccess={fetchAppointments}
         />

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllServices } from '../api/services';
 import { getApprovedBusinesses } from '../api/business';
+import { getServiceAverageRating } from '../api/reviews';
 import Spinner from '../components/Spinner';
 import './AllServices.css';
 
@@ -10,16 +11,32 @@ export default function AllServices() {
   const [businesses, setBusinesses] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [serviceRatings, setServiceRatings] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
     Promise.all([getAllServices(), getApprovedBusinesses()])
-      .then(([sRes, bRes]) => {
-        setServices(Array.isArray(sRes.data) ? sRes.data : []);
-        // Build a map for quick business name lookup
+      .then(async ([sRes, bRes]) => {
+        const svcs = Array.isArray(sRes.data) ? sRes.data : [];
+        setServices(svcs);
+
         const bMap = {};
         (bRes.data || []).forEach((b) => { bMap[b.id] = b; });
         setBusinesses(bMap);
+
+        // ✅ Fetch average rating for each service
+        const ratingMap = {};
+        await Promise.all(
+          svcs.map(async (s) => {
+            try {
+              const res = await getServiceAverageRating(s.id);
+              ratingMap[s.id] = res.data ? Number(res.data).toFixed(1) : '–';
+            } catch {
+              ratingMap[s.id] = '–'; // ✅ always set a value, never null
+            }
+          })
+        );
+        setServiceRatings(ratingMap);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -116,11 +133,19 @@ export default function AllServices() {
                   <span style={{ color: 'var(--primary-light)', fontWeight: 700, fontSize: '1.1rem' }}>
                     ₹{service.price}
                   </span>
-                  {(service.duration || service.durationMinutes) && (
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                      ⏱ {service.duration || service.durationMinutes} min
-                    </span>
-                  )}
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    {/* ✅ Show service average rating */}
+                    {serviceRatings[service.id] && (
+                      <span style={{ color: '#f59e0b', fontSize: '0.85rem', fontWeight: 600 }}>
+                        ★ {serviceRatings[service.id] !== undefined ? serviceRatings[service.id] : '–'}
+                      </span>
+                    )}
+                    {(service.duration || service.durationMinutes) && (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                        ⏱ {service.duration || service.durationMinutes} min
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <button

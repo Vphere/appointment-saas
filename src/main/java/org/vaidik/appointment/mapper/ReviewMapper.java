@@ -14,6 +14,12 @@ public class ReviewMapper {
                 .rating(review.getRating())
                 .comment(review.getComment())
                 .userId(review.getUser().getId())
+                .customerName(review.getUser().getName())
+                .appointmentDate(
+                        review.getAppointment() != null
+                                ? review.getAppointment().getAppointmentDate()
+                                : null
+                )
                 .build();
     }
 }

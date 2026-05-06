@@ -71,4 +71,27 @@ public class ReviewService {
                 .map(mapper::toResponse)
                 .collect(Collectors.toList());
     }
+
+    public ReviewResponse updateReview(Long reviewId, CreateReviewRequest request, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new RuntimeException("Review not found"));
+
+        if (!review.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Not your review");
+        }
+
+        review.setRating(request.getRating());
+        review.setComment(request.getComment());
+
+        return mapper.toResponse(reviewRepository.save(review));
+    }
+
+    public ReviewResponse getReviewByAppointment(Long appointmentId) {
+        return reviewRepository.findByAppointmentId(appointmentId)
+                .map(mapper::toResponse)
+                .orElse(null);
+    }
 }

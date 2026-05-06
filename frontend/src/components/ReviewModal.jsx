@@ -1,24 +1,32 @@
 import { useState } from 'react';
 import { StarRating } from './StarRating';
-import { submitReview } from '../api/reviews';
+import { submitReview, updateReview } from '../api/reviews'; // ✅ import updateReview
 
-export default function ReviewModal({ appointment, onClose, onSuccess }) {
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState('');
+export default function ReviewModal({ appointment, onClose, onSuccess, existingReview }) { // ✅ add existingReview prop
+  const [rating, setRating] = useState(existingReview?.rating || 0);   // ✅ pre-fill if editing
+  const [comment, setComment] = useState(existingReview?.comment || ''); // ✅ pre-fill if editing
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const isEditing = !!existingReview; // ✅ true if editing
 
   const handleSubmit = async () => {
     if (rating === 0) return setError('Please select a rating');
     setLoading(true);
     setError('');
     try {
-      await submitReview({
-        appointmentId: appointment.id,
-        businessId: appointment.businessId,
-        rating,
-        comment,
-      });
+      if (isEditing) {
+        // ✅ Update existing review using PUT
+        await updateReview(existingReview.id, { rating, comment });
+      } else {
+        // ✅ Create new review using POST
+        await submitReview({
+          appointmentId: appointment.id,
+          businessId: appointment.businessId,
+          rating,
+          comment,
+        });
+      }
       onSuccess?.();
       onClose();
     } catch (e) {
@@ -32,7 +40,9 @@ export default function ReviewModal({ appointment, onClose, onSuccess }) {
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
-          <h3 className="modal-title">Leave a Review ✨</h3>
+          <h3 className="modal-title">
+            {isEditing ? '✏️ Edit Review' : 'Leave a Review ✨'} {/* ✅ dynamic title */}
+          </h3>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
@@ -66,7 +76,7 @@ export default function ReviewModal({ appointment, onClose, onSuccess }) {
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
           <button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Submitting...' : '⭐ Submit Review'}
+            {loading ? 'Submitting...' : isEditing ? '✏️ Update Review' : '⭐ Submit Review'} {/* ✅ dynamic button */}
           </button>
         </div>
       </div>

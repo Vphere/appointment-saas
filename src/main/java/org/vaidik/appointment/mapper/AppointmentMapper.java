@@ -24,6 +24,7 @@ public class AppointmentMapper {
                 .status(appointment.getStatus())
                 .reviewed(appointment.getReviewed())
                 .createdAt(appointment.getCreatedAt())
+                .updatedAt(appointment.getUpdatedAt())
                 .duration(appointment.getService().getDuration())
                 .build();
     }

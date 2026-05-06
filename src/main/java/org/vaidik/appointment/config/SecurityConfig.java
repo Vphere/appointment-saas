@@ -58,8 +58,15 @@ public class SecurityConfig {
                         .requestMatchers("/api/appointments/my-business").hasRole("BUSINESS_OWNER")
                         .requestMatchers(HttpMethod.PUT, "/api/appointments/**").hasRole("BUSINESS_OWNER")
                         .requestMatchers(HttpMethod.PATCH, "/api/appointments/**").hasRole("BUSINESS_OWNER")
+
+                        // Review
+                        .requestMatchers(HttpMethod.PUT, "/api/reviews/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .oauth2Login(oauth -> oauth
+                        .successHandler(oAuth2SuccessHandler)  // ✅ your custom handler
+                )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

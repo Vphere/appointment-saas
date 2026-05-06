@@ -22,11 +22,9 @@ export default function BusinessDetails() {
   const [selectedService, setSelectedService] = useState(null);
 
   useEffect(() => {
-    if (!id) {
-      setError('Invalid business ID');
-      setLoading(false);
-      return;
-    }
+    if (!id) return;
+
+    let isMounted = true;
 
     const fetchAll = async () => {
       setLoading(true);
@@ -47,6 +45,8 @@ export default function BusinessDetails() {
         }
       }
 
+      if (!isMounted) return;
+
       if (!biz) {
         setError('Business not found');
         setLoading(false);
@@ -57,31 +57,35 @@ export default function BusinessDetails() {
       // 2) Fetch services — critical for booking
       try {
         const sRes = await getServicesByBusiness(id);
-        setServices(Array.isArray(sRes.data) ? sRes.data : []);
+        if (isMounted) setServices(Array.isArray(sRes.data) ? sRes.data : []);
       } catch {
-        setServices([]);
+        if (isMounted) setServices([]);
       }
 
       // 3) Fetch rating — non-critical, ignore failure
       try {
         const rRes = await getAverageRating(id);
-        setRating(rRes.data);
+        if (isMounted) setRating(rRes.data);
       } catch {
-        setRating(null);
+        if (isMounted) setRating(null);
       }
 
       // 4) Fetch reviews — non-critical, ignore failure
       try {
         const revRes = await getBusinessReviews(id);
-        setReviews(Array.isArray(revRes.data) ? revRes.data : []);
+        if (isMounted) setReviews(Array.isArray(revRes.data) ? revRes.data : []);
       } catch {
-        setReviews([]);
+        if (isMounted) setReviews([]);
       }
 
-      setLoading(false);
+      if (isMounted) setLoading(false);
     };
 
     fetchAll();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   if (loading) {
@@ -215,6 +219,14 @@ export default function BusinessDetails() {
                   </span>
                   <StarRating value={r.rating} readonly size="1rem" />
                 </div>
+                {/* ✅ Show appointment date for authenticity of booking*/}
+                {r.appointmentDate && (
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                    📅 Visited on {new Date(r.appointmentDate).toLocaleDateString('en-IN', {
+                      day: '2-digit', month: 'short', year: 'numeric'
+                    })}
+                  </div>
+                )}
                 {r.comment && <p className="review-comment">{r.comment}</p>}
               </div>
             ))}

@@ -40,4 +40,21 @@ public class ReviewController {
     public Double getAverage(@PathVariable Long businessId) {
         return reviewRepository.getAverageRating(businessId);
     }
+
+    @PutMapping("/{id}")
+    public ReviewResponse updateReview(@PathVariable Long id,
+                                       @RequestBody CreateReviewRequest request,
+                                       Authentication authentication) {
+        return reviewService.updateReview(id, request, authentication.getName());
+    }
+
+    @GetMapping("/appointment/{appointmentId}")
+    public ReviewResponse getReviewByAppointment(@PathVariable Long appointmentId) {
+        return reviewService.getReviewByAppointment(appointmentId);
+    }
+
+    @GetMapping("/avg/service/{serviceId}")
+    public Double getServiceAverage(@PathVariable Long serviceId) {
+        return reviewRepository.getAverageRatingByServiceId(serviceId);
+    }
 }

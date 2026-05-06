@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link} from 'react-router-dom';
 import { login } from '../api/auth';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth'; 
 
 const GOOGLE_OAUTH_URL = 'http://localhost:8080/oauth2/authorization/google';
 
@@ -9,13 +9,22 @@ export default function Login() {
   const { loginUser, user } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
+  const [error, setError] = useState(() => {
+  const params = new URLSearchParams(window.location.search);
+    return params.get('error') === 'use_password'
+      ? 'This account was registered with email/password. Please sign in normally.'
+      : '';
+  });
   const [loading, setLoading] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user) navigate('/dashboard', { replace: true });
-  }, [user, navigate]);
+  const params = new URLSearchParams(window.location.search);
+  const hasError = params.get('error');
+  if (user && !hasError) {
+    navigate('/dashboard', { replace: true });
+  }
+}, [user, navigate]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -28,7 +37,11 @@ export default function Login() {
       loginUser(res.data.token || res.data.jwt || res.data);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      // ✅ Show exact backend message first, generic fallback only if nothing comes
+      const message = err.response?.data?.message
+        || err.response?.data
+        || 'Invalid email or password';
+      setError(message);
     } finally {
       setLoading(false);
     }

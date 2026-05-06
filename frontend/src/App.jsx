@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider } from './context/AuthProvider'; 
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -17,6 +17,7 @@ import ManageServices from './pages/ManageServices';
 import WorkingHours from './pages/WorkingHours';
 import OwnerAppointments from './pages/OwnerAppointments';
 import AdminApproval from './pages/AdminApproval';
+import CompleteProfile from './pages/CompleteProfile';
 
 function AppLayout({ children }) {
   return (
@@ -35,6 +36,7 @@ export default function App() {
           {/* Public */}
           <Route path="/" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/complete-profile" element={<CompleteProfile/>} />
           <Route path="/oauth2/callback" element={<OAuth2Callback />} />
 
           {/* Protected */}

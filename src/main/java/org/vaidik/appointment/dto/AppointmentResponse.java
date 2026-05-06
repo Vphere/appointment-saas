@@ -26,5 +26,6 @@ public class AppointmentResponse {
     private Double price;
     private Boolean reviewed;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private Integer duration;
 }

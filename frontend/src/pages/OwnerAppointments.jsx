@@ -149,7 +149,12 @@ export default function OwnerAppointments() {
                 <div className="appointment-meta">
                   <span>📅 Date: {formatDate(appt.appointmentDate)}</span>
                   <span>🕐 Time: {formatTime(appt.appointmentTime)}</span>
-                  <span>📥 Requested: {formatDateTime(appt.createdAt)}</span>
+                  <span>
+                        {appt.updatedAt 
+                          ? `✏️ Modified: ${formatDateTime(appt.updatedAt)}`
+                          : `📥 Requested: ${formatDateTime(appt.createdAt)}`
+                        }
+                  </span>
                   {appt.price && <span>💰 Price: ₹{appt.price}</span>}
                 </div>
 
