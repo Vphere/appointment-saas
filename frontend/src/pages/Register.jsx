@@ -13,6 +13,7 @@ export default function Register() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -80,16 +81,54 @@ export default function Register() {
 
             <div className="form-group">
               <label className="form-label">Password</label>
-              <input
-                className="form-input"
-                type="password"
-                name="password"
-                placeholder="Min. 8 characters"
-                value={form.password}
-                onChange={handleChange}
-                required
-              />
-            </div>
+
+              <div style={{ position: 'relative' }}>
+                <input
+                  className="form-input"
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                  style={{ paddingRight: '70px' }}
+                />
+                <div
+                  style={{
+                    marginTop: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    fontSize: '15px',
+                    color: '#f6f2f2'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={showPassword}
+                    onChange={() => setShowPassword(!showPassword)}
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      cursor: 'pointer',
+                      accentColor: '#4f46e5'
+                    }}
+                  />
+
+                  <label
+                    style={{
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      fontWeight: '500'
+                    }}
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    Show Password
+                  </label>
+                </div>
+              </div>
+                
+          </div>
 
             <div className="form-group">
               <label className="form-label">I am a...</label>

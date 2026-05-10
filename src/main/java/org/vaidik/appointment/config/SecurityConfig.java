@@ -43,6 +43,7 @@ public class SecurityConfig {
                         // BUSINESS
                         .requestMatchers(HttpMethod.GET, "/api/business").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/business/**").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/business/analytics").hasRole("BUSINESS_OWNER")
                         .requestMatchers(HttpMethod.GET, "/api/business/**").permitAll()
 
                         // SLOTS
@@ -62,6 +63,30 @@ public class SecurityConfig {
                         // Review
                         .requestMatchers(HttpMethod.PUT, "/api/reviews/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
+
+                        .requestMatchers("/api/auth/forgot-password",
+                                        "/api/auth/verify-otp",
+                                        "/api/auth/reset-password"
+                        ).permitAll()
+
+                        .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/users/profile").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/users/change-password").authenticated()
+
+                        // HOLIDAYS
+                        .requestMatchers(HttpMethod.GET, "/api/holidays/public/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/holidays/business/**").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/holidays/service/**").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/holidays/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/holidays").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/holidays/**").hasRole("BUSINESS_OWNER")
+
+                        // PHOTOS
+                        .requestMatchers(HttpMethod.GET, "/api/photos/service/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/photos/service/**").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/photos/**").hasRole("BUSINESS_OWNER")
+                        .requestMatchers("/uploads/**").permitAll()
+
                         .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .oauth2Login(oauth -> oauth

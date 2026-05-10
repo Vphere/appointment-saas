@@ -9,6 +9,7 @@ export default function Login() {
   const { loginUser, user } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(() => {
   const params = new URLSearchParams(window.location.search);
     return params.get('error') === 'use_password'
@@ -78,15 +79,76 @@ export default function Login() {
 
           <div className="form-group">
             <label className="form-label">Password</label>
+
             <input
               className="form-input"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               name="password"
               placeholder="••••••••"
               value={form.password}
               onChange={handleChange}
               required
             />
+
+            <div
+              style={{
+                marginTop: '12px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '10px'
+              }}
+            >
+
+              {/* Show Password */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '14px',
+                  color: '#d1d5db'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={showPassword}
+                  onChange={() => setShowPassword(!showPassword)}
+                  style={{
+                    width: '17px',
+                    height: '17px',
+                    cursor: 'pointer',
+                    accentColor: '#6d5efc'
+                  }}
+                />
+
+                <label
+                  style={{
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    fontWeight: '500'
+                  }}
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  Show Password
+                </label>
+              </div>
+
+              {/* Forgot Password */}
+              <Link
+                to="/forgot-password"
+                style={{
+                  color: '#8b7fff',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}
+              >
+                Forgot Password?
+              </Link>
+
+            </div>
           </div>
 
           <button

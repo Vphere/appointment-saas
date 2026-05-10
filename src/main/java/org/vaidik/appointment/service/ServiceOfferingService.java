@@ -1,5 +1,6 @@
 package org.vaidik.appointment.service;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.vaidik.appointment.dto.CreateServiceRequest;

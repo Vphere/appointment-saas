@@ -6,6 +6,7 @@ import org.vaidik.appointment.dto.SlotResponse;
 import org.vaidik.appointment.entity.Appointment;
 import org.vaidik.appointment.entity.WorkingHours;
 import org.vaidik.appointment.repository.AppointmentRepository;
+import org.vaidik.appointment.repository.BusinessHolidayRepository;
 import org.vaidik.appointment.repository.WorkingHoursRepository;
 
 import java.time.*;
@@ -20,6 +21,7 @@ public class SlotService {
 
     private final WorkingHoursRepository workingHoursRepository;
     private final AppointmentRepository appointmentRepository;
+    private final BusinessHolidayRepository holidayRepository;
 
     public List<SlotResponse> getAvailableSlots(Long serviceId, LocalDate date, int serviceDuration) {
 
@@ -34,6 +36,17 @@ public class SlotService {
         }
 
         WorkingHours workingHours = workingHoursOpt.get();
+
+        Long businessId = workingHours.getService().getBusiness().getId();
+
+        boolean isHoliday = holidayRepository
+                .findByBusinessIdAndServiceIdOrAllServices(businessId, serviceId)
+                .stream()
+                .anyMatch(h -> h.getDate().equals(date));
+
+        if (isHoliday) {
+            return List.of(); // No slots available on holidays
+        }
 
         LocalTime start = workingHours.getStartTime();
         LocalTime end = workingHours.getEndTime();

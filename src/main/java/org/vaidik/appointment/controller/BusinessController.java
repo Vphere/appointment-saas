@@ -6,6 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.vaidik.appointment.dto.*;
 import org.vaidik.appointment.entity.BusinessStatus;
+import org.vaidik.appointment.service.BusinessAnalyticsService;
 import org.vaidik.appointment.service.BusinessServiceService;
 
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.List;
 public class BusinessController {
 
     private final BusinessServiceService businessService;
+    private final BusinessAnalyticsService analyticsService;
 
     // CREATE BUSINESS (OWNER)
     @PostMapping
@@ -41,7 +43,6 @@ public class BusinessController {
     public List<BusinessResponse> getMyBusinesses(Authentication authentication) {
         return businessService.getMyBusinesses(authentication.getName());
     }
-
 
     // ADMIN VIEW (ALL)
     @GetMapping("/all")
@@ -69,5 +70,11 @@ public class BusinessController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public BusinessResponse reject(@PathVariable("id") Long id) {
         return businessService.updateBusinessStatus(id, BusinessStatus.REJECTED);
+    }
+
+    @GetMapping("/analytics")
+    @PreAuthorize("hasRole('BUSINESS_OWNER')")
+    public BusinessAnalyticsResponse getAnalytics(Authentication authentication) {
+        return analyticsService.getAnalytics(authentication.getName());
     }
 }

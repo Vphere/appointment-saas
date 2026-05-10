@@ -40,4 +40,40 @@ public class AuthController {
         return authService.completeProfile(request);
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestParam String email) {
+
+        String result = authService.sendOtp(email);
+
+        if (result.equals("GOOGLE_ACCOUNT")) {
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(
+                            "This account was created using Google Sign-In. Please continue with Google Sign-In."
+                    );
+        }
+
+        return ResponseEntity.ok("OTP sent successfully");
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<?> verifyOtp(@RequestParam String email, @RequestParam String otp) {
+
+        boolean isValid = authService.verifyOtp(email, otp);
+
+        if (!isValid) {
+            return ResponseEntity.badRequest().body("Invalid or expired OTP");
+        }
+
+        return ResponseEntity.ok("OTP verified");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestParam String email, @RequestParam String newPassword) {
+
+        authService.resetPassword(email, newPassword);
+
+        return ResponseEntity.ok("Password updated successfully");
+    }
 }

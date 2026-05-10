@@ -14,10 +14,13 @@ import MyAppointments from './pages/MyAppointments';
 import AllServices from './pages/AllServices';
 import OwnerDashboard from './pages/OwnerDashboard';
 import ManageServices from './pages/ManageServices';
-import WorkingHours from './pages/WorkingHours';
 import OwnerAppointments from './pages/OwnerAppointments';
 import AdminApproval from './pages/AdminApproval';
 import CompleteProfile from './pages/CompleteProfile';
+import ForgotPassword from './pages/ForgotPassword';
+import ProfilePage from './pages/ProfilePage';
+import BusinessAnalytics from './pages/BusinessAnalytics';
+import BusinessSettings from './pages/BusinessSettings';
 
 function AppLayout({ children }) {
   return (
@@ -38,6 +41,8 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/complete-profile" element={<CompleteProfile/>} />
           <Route path="/oauth2/callback" element={<OAuth2Callback />} />
+          <Route path="/forgot-password" element={<ForgotPassword/>} />
+          <Route path="/profile" element={<ProfilePage/>} />
 
           {/* Protected */}
           <Route path="/dashboard" element={
@@ -50,6 +55,11 @@ export default function App() {
           <Route path="/businesses" element={
             <ProtectedRoute roles={['CUSTOMER']}>
               <AppLayout><BusinessList /></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/business/analytics" element={
+            <ProtectedRoute roles={['BUSINESS_OWNER']}>
+              <AppLayout><BusinessAnalytics /></AppLayout>
             </ProtectedRoute>
           } />
           <Route path="/business/:id" element={
@@ -84,9 +94,9 @@ export default function App() {
               <AppLayout><ManageServices /></AppLayout>
             </ProtectedRoute>
           } />
-          <Route path="/working-hours" element={
+          <Route path="/business-settings" element={
             <ProtectedRoute roles={['BUSINESS_OWNER']}>
-              <AppLayout><WorkingHours /></AppLayout>
+              <AppLayout><BusinessSettings/></AppLayout>
             </ProtectedRoute>
           } />
           <Route path="/owner-appointments" element={

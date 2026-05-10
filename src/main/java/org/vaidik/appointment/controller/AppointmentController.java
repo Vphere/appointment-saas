@@ -47,19 +47,9 @@ public class AppointmentController {
         return appointmentService.updateAppointmentStatus(id, request.getStatus(), authentication.getName());
     }
 
-//    @PutMapping("/{id}/status-debug")
-//    public AppointmentResponse updateStatusDebug(@PathVariable("id") Long id,
-//                                                 @RequestBody UpdateAppointmentStatusRequest request,
-//                                                 Authentication authentication) {
-//
-//        return appointmentService.updateAppointmentStatus(id, request.getStatus(), authentication.getName());
-//    }
-
     @PatchMapping("/{id}/confirm")
     @PreAuthorize("hasRole('BUSINESS_OWNER')")
-    public AppointmentResponse confirm(
-            @PathVariable Long id,
-            Authentication authentication
+    public AppointmentResponse confirm(@PathVariable Long id, Authentication authentication
     ) {
         return appointmentService.updateAppointmentStatus(id, AppointmentStatus.CONFIRMED, authentication.getName());
     }
@@ -84,19 +74,15 @@ public class AppointmentController {
 
     @PatchMapping("/{id}/cancel")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public AppointmentResponse cancel(
-            @PathVariable Long id,
-            Authentication authentication
+    public AppointmentResponse cancel(@PathVariable Long id, Authentication authentication
     ) {
         return appointmentService.cancelByUser(id, authentication.getName());
     }
 
     @PutMapping("/{id}/reschedule")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public AppointmentResponse reschedule(
-            @PathVariable Long id,
-            @RequestBody CreateAppointmentRequest request,
-            Authentication authentication
+    public AppointmentResponse reschedule(@PathVariable Long id, @RequestBody CreateAppointmentRequest request,
+                                            Authentication authentication
     ) {
         return appointmentService.rescheduleAppointment(id, request, authentication.getName());
     }
