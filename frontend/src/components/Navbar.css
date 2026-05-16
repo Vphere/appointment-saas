@@ -281,3 +281,30 @@
   /* Hide mobile-only items on desktop */
   .mobile-only { display: none !important; }
 }
+
+/* Admin pill next to BookEase brand name */
+.navbar-admin-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  border-radius: 99px;
+  vertical-align: middle;
+  line-height: 1.4;
+}
+
+.avatar-dropdown-role-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #ef4444;
+  margin: 2px 0 0;
+}
+
+select option {
+  background-color: #1a1a2e;
+  color: #e2e8f0;
+}

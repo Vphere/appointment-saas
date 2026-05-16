@@ -16,6 +16,117 @@ function resolvePhotoUrl(url) {
   return `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
+// ── Per-service photo carousel ────────────────────────────────────────────────
+function PhotoCarousel({ photos, serviceName, onOpenLightbox }) {
+  const [index, setIndex] = useState(0);
+
+  if (!photos || photos.length === 0) return null;
+
+  const current = photos[index];
+  const src     = resolvePhotoUrl(current.url);
+  const isFirst = index === 0;
+  const isLast  = index === photos.length - 1;
+
+  return (
+    <div className="bd-carousel">
+      <div className="bd-carousel-img-wrap">
+        <img
+          src={src}
+          alt={current.caption || serviceName}
+          className="bd-carousel-img"
+          onClick={() => onOpenLightbox({ ...current, resolvedUrl: src, serviceName })}
+          onError={(e) => { e.currentTarget.closest('.bd-carousel').style.display = 'none'; }}
+        />
+
+        {/* Prev arrow — hidden when on first */}
+        <button
+          className={`bd-carousel-arrow bd-carousel-arrow-left${isFirst ? ' bd-arrow-hidden' : ''}`}
+          onClick={() => setIndex((i) => Math.max(0, i - 1))}
+          aria-label="Previous photo"
+          disabled={isFirst}
+        >
+          ‹
+        </button>
+
+        {/* Next arrow — hidden when on last */}
+        <button
+          className={`bd-carousel-arrow bd-carousel-arrow-right${isLast ? ' bd-arrow-hidden' : ''}`}
+          onClick={() => setIndex((i) => Math.min(photos.length - 1, i + 1))}
+          aria-label="Next photo"
+          disabled={isLast}
+        >
+          ›
+        </button>
+
+        {/* Counter pill */}
+        {photos.length > 1 && (
+          <div className="bd-carousel-counter">{index + 1} / {photos.length}</div>
+        )}
+      </div>
+
+      {current.caption && (
+        <div className="bd-carousel-caption">{current.caption}</div>
+      )}
+
+      {/* Dot indicators */}
+      {photos.length > 1 && (
+        <div className="bd-carousel-dots">
+          {photos.map((_, i) => (
+            <button
+              key={i}
+              className={`bd-carousel-dot${i === index ? ' active' : ''}`}
+              onClick={() => setIndex(i)}
+              aria-label={`Go to photo ${i + 1}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Review card ────────────────────────────────────────────────────────────────
+function ReviewCard({ review: r }) {
+  const bookedLabel = r.appointmentDate
+    ? `Used this service on ${new Date(r.appointmentDate).toLocaleDateString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric',
+      })}`
+    : 'Verified booking';
+
+  const displayName = r.customerName || r.userName || r.userEmail || 'Anonymous';
+  const initials = displayName
+    .trim()
+    .split(/\s+/)
+    .map((w) => w[0]?.toUpperCase())
+    .slice(0, 2)
+    .join('');
+
+  return (
+    <div className="bd-review-card">
+      {/* Top row: avatar · name · verified · stars */}
+      <div className="bd-review-top">
+        <div className="bd-review-avatar" aria-hidden="true">{initials}</div>
+        <div className="bd-review-meta">
+          <span className="bd-review-name">{displayName}</span>
+          <span className="bd-review-verified">✅ {bookedLabel}</span>
+        </div>
+        <div className="bd-review-stars">
+          <StarRating value={r.rating} readonly size="0.88rem" />
+        </div>
+      </div>
+
+      {/* Review text */}
+      {r.comment && (
+        <div className="bd-review-body">
+          <span className="bd-review-quote" aria-hidden="true">❝</span>
+          <p className="bd-review-comment">{r.comment}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
 export default function BusinessDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -27,17 +138,14 @@ export default function BusinessDetails() {
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState('');
 
-  // Service selection (drives Book CTA only)
   const [selectedService, setSelectedService] = useState(null);
 
-  // Photos: keyed by serviceId → array of photo objects
   const [photoMap, setPhotoMap]           = useState({});
   const [photosLoading, setPhotosLoading] = useState(false);
 
-  // Lightbox
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
 
-  // ── Fetch everything ───────────────────────────────────────────────────────
+  // ── Fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!id) return;
     let isMounted = true;
@@ -46,7 +154,6 @@ export default function BusinessDetails() {
       setLoading(true);
       setError('');
 
-      // 1) Business
       let biz = null;
       try {
         const res = await getBusinessById(id);
@@ -62,7 +169,6 @@ export default function BusinessDetails() {
       if (!biz) { setError('Business not found'); setLoading(false); return; }
       setBusiness(biz);
 
-      // 2) Services
       let fetchedServices = [];
       try {
         const sRes = await getServicesByBusiness(id);
@@ -72,13 +178,11 @@ export default function BusinessDetails() {
         if (isMounted) setServices([]);
       }
 
-      // 3) Rating
       try {
         const rRes = await getAverageRating(id);
         if (isMounted) setRating(rRes.data);
       } catch { if (isMounted) setRating(null); }
 
-      // 4) Reviews
       try {
         const revRes = await getBusinessReviews(id);
         if (isMounted) setReviews(Array.isArray(revRes.data) ? revRes.data : []);
@@ -86,7 +190,6 @@ export default function BusinessDetails() {
 
       if (isMounted) setLoading(false);
 
-      // 5) Photos — parallel fetch for every service
       if (fetchedServices.length > 0) {
         if (isMounted) setPhotosLoading(true);
         const results = await Promise.allSettled(
@@ -131,16 +234,8 @@ export default function BusinessDetails() {
     };
   }, [lightboxPhoto, handleKeyDown]);
 
-  // ── Flatten all photos with their service name attached ───────────────────
-  const allPhotos = Object.entries(photoMap).flatMap(([svcId, photos]) => {
-    const svc = services.find((s) => String(s.id) === String(svcId));
-    return photos.map((p) => ({ ...p, serviceName: svc?.name || '' }));
-  });
-
   // ── Guards ─────────────────────────────────────────────────────────────────
-  if (loading) {
-    return <div className="page-container"><Spinner message="Loading business details..." /></div>;
-  }
+  if (loading) return <div className="page-container"><Spinner message="Loading business details..." /></div>;
 
   if (error || !business) {
     return (
@@ -162,6 +257,18 @@ export default function BusinessDetails() {
   };
   const icon = categoryIcons[business.category?.toLowerCase()] || categoryIcons.default;
 
+  // Group reviews by serviceId
+  const reviewsByService = reviews.reduce((acc, r) => {
+    const key = r.serviceId ? String(r.serviceId) : '__general__';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(r);
+    return acc;
+  }, {});
+
+  const servicesWithPhotos  = services.filter((s) => (photoMap[s.id] || []).length > 0);
+  const servicesWithReviews = services.filter((s) => (reviewsByService[String(s.id)] || []).length > 0);
+  const generalReviews      = reviewsByService['__general__'] || [];
+
   return (
     <div className="page-container" style={{ maxWidth: 900 }}>
 
@@ -179,7 +286,7 @@ export default function BusinessDetails() {
           <RatingDisplay rating={rating} count={reviews.length} />
         </div>
         <button
-          className="btn btn-primary btn-lg"
+          className="btn btn-book btn-lg"
           onClick={() => navigate(`/book/${id}`, { state: { business, services } })}
         >
           📅 Book Appointment
@@ -192,39 +299,52 @@ export default function BusinessDetails() {
         {services.length === 0 ? (
           <div className="alert alert-info">No services listed yet for this business.</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {services.map((s) => (
-              <div
-                key={s.id}
-                className={`service-card service-card-selectable${selectedService?.id === s.id ? ' selected' : ''}`}
-                onClick={() => setSelectedService(selectedService?.id === s.id ? null : s)}
-              >
-                <div>
-                  <div className="service-name">{s.name}</div>
-                  {s.description && (
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>{s.description}</div>
-                  )}
-                </div>
-                <div className="service-meta">
-                  {(s.duration || s.durationMinutes) && <span>⏱ {s.duration || s.durationMinutes} min</span>}
-                  <span className="service-price">₹{s.price}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {services.map((s) => {
+                const isSelected = selectedService?.id === s.id;
+                return (
+                  <div key={s.id} className="bd-service-block">
+                    {/* Service row */}
+                    <div
+                      className={`service-card service-card-selectable${isSelected ? ' selected' : ''}`}
+                      onClick={() => setSelectedService(isSelected ? null : s)}
+                    >
+                      <div>
+                        <div className="service-name">{s.name}</div>
+                        {s.description && (
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>{s.description}</div>
+                        )}
+                      </div>
+                      <div className="service-meta">
+                        {(s.duration || s.durationMinutes) && <span>⏱ {s.duration || s.durationMinutes} min</span>}
+                        <span className="service-price">₹{s.price}</span>
+                      </div>
+                    </div>
 
-        {selectedService && (
-          <div style={{ marginTop: 16 }}>
-            <button
-              className="btn btn-primary"
-              onClick={() =>
-                navigate(`/book/${id}`, { state: { business, services, preSelectedServiceId: selectedService.id } })
-              }
-            >
-              📅 Book — {selectedService.name} (₹{selectedService.price})
-            </button>
-          </div>
+                    {/* Book button — slides in when this service is selected */}
+                    <div className={`bd-service-book-row${isSelected ? ' visible' : ''}`}>
+                      <button
+                        className="btn btn-book bd-service-book-btn"
+                        onClick={() =>
+                          navigate(`/book/${id}`, {
+                            state: { business, services, preSelectedServiceId: s.id },
+                          })
+                        }
+                      >
+                        📅 Book — {s.name}
+                        <span className="bd-book-price"> (₹{s.price})</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {!selectedService && (
+              <p className="bd-select-hint">👆 Tap a service to book it</p>
+            )}
+          </>
         )}
       </div>
 
@@ -236,36 +356,30 @@ export default function BusinessDetails() {
           <div className="photo-section-loading">
             <span className="photo-spinner" /> Loading photos…
           </div>
-        ) : allPhotos.length === 0 ? (
+        ) : servicesWithPhotos.length === 0 ? (
           <div className="empty-state" style={{ padding: '30px 20px' }}>
             <div className="empty-icon">📷</div>
             <h3>No photos yet</h3>
             <p>Photos will appear here once added by the business.</p>
           </div>
         ) : (
-          <div className="photo-grid">
-            {allPhotos.map((photo) => {
-              const src = resolvePhotoUrl(photo.url);
-              return (
-                <button
-                  key={photo.id}
-                  className="photo-thumb-btn"
-                  onClick={() => setLightboxPhoto({ ...photo, resolvedUrl: src })}
-                  title={photo.caption || photo.serviceName || 'View photo'}
-                >
-                  <img
-                    src={src}
-                    alt={photo.caption || photo.serviceName || 'Service photo'}
-                    className="photo-thumb"
-                    onError={(e) => { e.currentTarget.closest('.photo-thumb-btn').style.display = 'none'; }}
-                  />
-                  <div className="photo-caption-bar">
-                    {photo.caption    && <span className="photo-caption-text">{photo.caption}</span>}
-                    {photo.serviceName && <span className="photo-service-tag">{photo.serviceName}</span>}
-                  </div>
-                </button>
-              );
-            })}
+          <div className="bd-photo-sections">
+            {servicesWithPhotos.map((svc) => (
+              <div key={svc.id} className="bd-photo-service-group">
+                <div className="bd-section-service-label">
+                  <span className="bd-section-service-name">{svc.name}</span>
+                  <span className="bd-section-service-meta">
+                    {(svc.duration || svc.durationMinutes) && `⏱ ${svc.duration || svc.durationMinutes} min · `}
+                    ₹{svc.price}
+                  </span>
+                </div>
+                <PhotoCarousel
+                  photos={photoMap[svc.id] || []}
+                  serviceName={svc.name}
+                  onOpenLightbox={setLightboxPhoto}
+                />
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -280,23 +394,41 @@ export default function BusinessDetails() {
             <p>Be the first to review!</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {reviews.map((r) => (
-              <div key={r.id} className="review-card">
-                <div className="review-header">
-                  <span className="reviewer-name">{r.customerName || r.userName || r.userEmail || 'Anonymous'}</span>
-                  <StarRating value={r.rating} readonly size="1rem" />
+          <div className="bd-review-sections">
+            {servicesWithReviews.map((svc) => (
+              <div key={svc.id} className="bd-review-service-group">
+                <div className="bd-section-service-label">
+                  <span className="bd-section-service-name">{svc.name}</span>
+                  <span className="bd-section-service-meta">
+                    {(reviewsByService[String(svc.id)] || []).length} review
+                    {(reviewsByService[String(svc.id)] || []).length !== 1 ? 's' : ''}
+                  </span>
                 </div>
-                {r.appointmentDate && (
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                    📅 Visited on {new Date(r.appointmentDate).toLocaleDateString('en-IN', {
-                      day: '2-digit', month: 'short', year: 'numeric',
-                    })}
-                  </div>
-                )}
-                {r.comment && <p className="review-comment">{r.comment}</p>}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {(reviewsByService[String(svc.id)] || []).map((r) => (
+                    <ReviewCard key={r.id} review={r} />
+                  ))}
+                </div>
               </div>
             ))}
+
+            {generalReviews.length > 0 && (
+              <div className="bd-review-service-group">
+                {servicesWithReviews.length > 0 && (
+                  <div className="bd-section-service-label">
+                    <span className="bd-section-service-name">General Reviews</span>
+                    <span className="bd-section-service-meta">
+                      {generalReviews.length} review{generalReviews.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {generalReviews.map((r) => (
+                    <ReviewCard key={r.id} review={r} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

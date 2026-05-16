@@ -40,3 +40,8 @@
 .read-the-docs {
   color: #888;
 }
+
+select option {
+  background-color: #1a1a2e;
+  color: #e2e8f0;
+}

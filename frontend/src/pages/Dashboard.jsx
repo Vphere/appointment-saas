@@ -13,7 +13,30 @@ const OWNER_ACTIONS = [
 ];
 
 const ADMIN_ACTIONS = [
-  { to: '/admin', icon: '✅', title: 'Approve Businesses', desc: 'Review and approve pending businesses' },
+  {
+    to: '/admin',
+    icon: '📊',
+    title: 'Analytics Dashboard',
+    desc: 'Platform overview — users, bookings, businesses',
+  },
+  {
+    to: '/admin/approvals',
+    icon: '✅',
+    title: 'Approve Businesses',
+    desc: 'Review and approve pending registrations',
+  },
+  {
+    to: '/admin/users',
+    icon: '👥',
+    title: 'User Management',
+    desc: 'View, change roles, and remove users',
+  },
+  {
+    to: '/admin/reviews',
+    icon: '⭐',
+    title: 'Review Moderation',
+    desc: 'Browse and delete inappropriate reviews',
+  },
 ];
 
 // Customer-specific dashboard with services
@@ -143,6 +166,13 @@ function CustomerDashboard() {
 
 export default function Dashboard() {
   const { user, role } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (role === 'SUPER_ADMIN') {
+      navigate('/admin', { replace: true });
+    }
+  }, [role, navigate]);
 
   const actions = role === 'BUSINESS_OWNER' ? OWNER_ACTIONS : role === 'SUPER_ADMIN' ? ADMIN_ACTIONS : [];
   const firstName = user?.name?.split(' ')[0] || user?.sub?.split('@')[0] || 'there';

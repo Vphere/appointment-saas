@@ -39,7 +39,141 @@
 }
 
 @keyframes bounceIn {
-  0% { transform: scale(0.5); opacity: 0; }
-  70% { transform: scale(1.1); }
-  100% { transform: scale(1); opacity: 1; }
+  0%   { transform: scale(0.5); opacity: 0; }
+  70%  { transform: scale(1.1); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* ── Slots section ── */
+
+/*
+  Reserve a fixed minimum height so the card doesn't jump when slots
+  appear or disappear. The height is tall enough to show ~2 rows of chips
+  plus the loading state without causing a reflow.
+*/
+.slots-area {
+  min-height: 96px;
+  /* smooth height changes when content grows beyond min */
+  transition: min-height 0.25s ease;
+}
+
+/* Skeleton / loading placeholder — same visual footprint as a typical slot row */
+.slots-skeleton {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.slots-skeleton-chip {
+  height: 36px;
+  border-radius: 8px;
+  background: var(--border, rgba(255,255,255,0.08));
+  /* shimmer */
+  background: linear-gradient(
+    90deg,
+    var(--border, rgba(255,255,255,0.06)) 25%,
+    rgba(255,255,255,0.11) 50%,
+    var(--border, rgba(255,255,255,0.06)) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.3s infinite linear;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Fade-in for the real grid once it arrives */
+.slots-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0;
+  animation: fadeUp 0.22s ease both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* No-slots message — same animation, same min-height so card stays still */
+.slots-empty-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  background: var(--surface, rgba(255,255,255,0.03));
+  border: 1px solid var(--border);
+  animation: fadeUp 0.2s ease both;
+}
+
+/* ── Slot chips ── */
+
+.slot-chip {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface, rgba(255,255,255,0.04));
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.12s;
+  white-space: nowrap;
+}
+
+.slot-chip:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary-glow, rgba(108,99,255,0.08));
+  transform: translateY(-1px);
+}
+
+.slot-chip.selected {
+  border-color: var(--primary);
+  background: var(--primary-glow, rgba(108,99,255,0.15));
+  color: var(--primary-light, #a78bfa);
+  font-weight: 700;
+}
+
+.slot-chip.slot-booked {
+  opacity: 0.35;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+/* ── Booking summary ── */
+
+.booking-summary {
+  margin-top: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  animation: fadeUp 0.2s ease both;
+}
+
+.booking-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  font-size: 0.875rem;
+}
+
+.booking-summary-row:not(:last-child) {
+  border-bottom: 1px solid var(--border);
+}
+
+.booking-summary-row span:first-child {
+  color: var(--text-muted);
+}
+
+.booking-summary-row span:last-child {
+  color: var(--text-primary);
+  font-weight: 600;
 }

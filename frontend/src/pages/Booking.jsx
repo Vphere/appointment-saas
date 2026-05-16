@@ -13,29 +13,42 @@ function dateToDayName(dateStr) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
 }
 
+// Shimmer skeleton that mimics ~6 slot chips
+function SlotsSkeleton() {
+  // Vary widths slightly so it looks natural
+  const widths = [64, 56, 72, 56, 64, 56];
+  return (
+    <div className="slots-skeleton">
+      {widths.map((w, i) => (
+        <div key={i} className="slots-skeleton-chip" style={{ width: w }} />
+      ))}
+    </div>
+  );
+}
+
 export default function Booking() {
   const { businessId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const initialBusiness   = location.state?.business || null;
-  const initialServices   = location.state?.services  || [];
+  const initialBusiness      = location.state?.business || null;
+  const initialServices      = location.state?.services  || [];
   const preSelectedServiceId = location.state?.preSelectedServiceId;
 
-  const [services, setServices]       = useState(initialServices);
+  const [services, setServices]             = useState(initialServices);
   const [selectedService, setSelectedService] = useState(
     preSelectedServiceId ? String(preSelectedServiceId) : ''
   );
-  const [selectedDate, setSelectedDate] = useState('');
-  const [computedDay, setComputedDay]   = useState('');
-  const [slots, setSlots]               = useState([]);
-  const [selectedSlot, setSelectedSlot] = useState('');
+  const [selectedDate, setSelectedDate]     = useState('');
+  const [computedDay, setComputedDay]       = useState('');
+  const [slots, setSlots]                   = useState([]);
+  const [selectedSlot, setSelectedSlot]     = useState('');
   const [loadingServices, setLoadingServices] = useState(false);
-  const [slotsLoading, setSlotsLoading] = useState(false);
-  const [loading, setLoading]           = useState(false);
-  const [error, setError]               = useState('');
-  const [slotsError, setSlotsError]     = useState('');
-  const [success, setSuccess]           = useState(false);
+  const [slotsLoading, setSlotsLoading]     = useState(false);
+  const [loading, setLoading]               = useState(false);
+  const [error, setError]                   = useState('');
+  const [slotsError, setSlotsError]         = useState('');
+  const [success, setSuccess]               = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -50,8 +63,7 @@ export default function Booking() {
     }
   }, [businessId]);
 
-  // ─── KEY FIX: Fetch slots using businessId + date + DURATION (from selected service) ───
-  // Backend endpoint: GET /api/slots?businessId=&date=&duration=
+  // Fetch slots whenever date / service changes
   useEffect(() => {
     if (!selectedDate || !businessId) {
       setSlots([]);
@@ -62,28 +74,23 @@ export default function Booking() {
     const day = dateToDayName(selectedDate);
     setComputedDay(day);
 
-    // Look up the selected service's duration
     const currentService = services.find((s) => String(s.id) === String(selectedService));
-    // duration is required by backend; if no service selected, default to 30 min
     const duration = currentService?.duration || currentService?.durationMinutes || 30;
 
-    // Ensure date is YYYY-MM-DD
-    const formattedDate = selectedDate; // already YYYY-MM-DD from <input type="date">
-
-    console.log('[Booking] Fetching slots:', { businessId, date: formattedDate, duration, day });
+    console.log('[Booking] Fetching slots:', { businessId, date: selectedDate, duration, day });
 
     setSlotsLoading(true);
     setSlotsError('');
     setSlots([]);
     setSelectedSlot('');
 
-    getAvailableSlots(selectedService, formattedDate, duration)
+    getAvailableSlots(selectedService, selectedDate, duration)
       .then((r) => {
         const data = Array.isArray(r.data) ? r.data : [];
         console.log('[Booking] Slots received:', data);
         setSlots(data);
         if (data.length === 0) {
-          setSlotsError(`No slots available on ${day} (${formattedDate})`);
+          setSlotsError(`No slots available on ${day} (${selectedDate})`);
         }
       })
       .catch((e) => {
@@ -110,8 +117,8 @@ export default function Booking() {
       const payload = {
         businessId: parseInt(businessId),
         serviceId: parseInt(selectedService),
-        appointmentDate: selectedDate,              // ✅ correct key
-        appointmentTime: selectedSlot + ":00"       // ✅ convert to HH:mm:ss
+        appointmentDate: selectedDate,
+        appointmentTime: selectedSlot + ':00',
       };
       console.log('[Booking] Booking appointment:', payload);
       await bookAppointment(payload);
@@ -128,7 +135,6 @@ export default function Booking() {
     }
   };
 
-  // Normalize slot — backend returns { time: LocalTime } serialized as "HH:mm:ss"
   const getSlotTime = (slot) => {
     if (typeof slot === 'string') return slot;
     if (slot?.time) return typeof slot.time === 'string' ? slot.time.slice(0, 5) : slot.time;
@@ -161,7 +167,7 @@ export default function Booking() {
       <div className="card">
         {error && <div className="alert alert-error">{error}</div>}
 
-        {/* Service Selection */}
+        {/* ── Service Selection ── */}
         <div className="form-group">
           <label className="form-label">
             Select Service {loadingServices ? '(loading...)' : ''}
@@ -187,7 +193,7 @@ export default function Booking() {
           )}
         </div>
 
-        {/* Date Selection */}
+        {/* ── Date Selection ── */}
         <div className="form-group">
           <label className="form-label">Select Date</label>
           <input
@@ -205,45 +211,46 @@ export default function Booking() {
           )}
         </div>
 
-        {/* Time Slots */}
+        {/* ── Time Slots ──
+            Always render the wrapper once a date is picked so the card
+            height is reserved and no layout jump occurs.
+        ── */}
         {selectedDate && (
           <div className="form-group">
-            <label className="form-label">
-              Available Time Slots
-              {slotsLoading && (
-                <span style={{ color: 'var(--text-muted)', marginLeft: 8, fontWeight: 400 }}>
-                  loading...
-                </span>
-              )}
-            </label>
+            <label className="form-label">Available Time Slots</label>
 
-            {slotsLoading ? (
-              <Spinner message={`Checking availability for ${computedDay}...`} />
-            ) : slotsError ? (
-              <div className="alert alert-info">{slotsError}</div>
-            ) : slots.length === 0 ? null : (
-              <div className="slots-grid">
-                {slots.map((slot, i) => {
-                  const time = getSlotTime(slot);
-                  const booked = isSlotBooked(slot);
-                  return (
-                    <button
-                      key={time || i}
-                      className={`slot-chip${booked ? ' slot-booked' : ''}${selectedSlot === time ? ' selected' : ''}`}
-                      onClick={() => !booked && time && setSelectedSlot(time)}
-                      disabled={booked}
-                      type="button"
-                    >
-                      {time}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            {/* Fixed-height area — prevents card from jumping */}
+            <div className="slots-area">
+              {slotsLoading ? (
+                <SlotsSkeleton />
+              ) : slotsError ? (
+                <div className="slots-empty-msg">
+                  <span>📭</span> {slotsError}
+                </div>
+              ) : slots.length > 0 ? (
+                <div className="slots-grid">
+                  {slots.map((slot, i) => {
+                    const time   = getSlotTime(slot);
+                    const booked = isSlotBooked(slot);
+                    return (
+                      <button
+                        key={time || i}
+                        className={`slot-chip${booked ? ' slot-booked' : ''}${selectedSlot === time ? ' selected' : ''}`}
+                        onClick={() => !booked && time && setSelectedSlot(time)}
+                        disabled={booked}
+                        type="button"
+                      >
+                        {time}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
           </div>
         )}
 
-        {/* Booking Summary */}
+        {/* ── Booking Summary ── */}
         {selectedSlot && (
           <div className="booking-summary">
             {currentService && (

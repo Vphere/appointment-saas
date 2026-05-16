@@ -21,6 +21,9 @@ import ForgotPassword from './pages/ForgotPassword';
 import ProfilePage from './pages/ProfilePage';
 import BusinessAnalytics from './pages/BusinessAnalytics';
 import BusinessSettings from './pages/BusinessSettings';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminUserManagement from './pages/Adminusermanagement';
+import AdminReviews from './pages/AdminReviews';
 
 function AppLayout({ children }) {
   return (
@@ -105,10 +108,25 @@ export default function App() {
             </ProtectedRoute>
           } />
 
-          {/* Admin Routes */}
+          {/* ── Admin Routes ── */}
           <Route path="/admin" element={
             <ProtectedRoute roles={['SUPER_ADMIN']}>
-              <AppLayout><AdminApproval /></AppLayout>
+              <AppLayout><AdminDashboard/></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/approvals" element={
+            <ProtectedRoute roles={['SUPER_ADMIN']}>
+              <AppLayout><AdminApproval/></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/users" element={
+            <ProtectedRoute roles={['SUPER_ADMIN']}>
+              <AppLayout><AdminUserManagement /></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/reviews" element={
+            <ProtectedRoute roles={['SUPER_ADMIN']}>
+              <AppLayout><AdminReviews/></AppLayout>
             </ProtectedRoute>
           } />
 

@@ -30,9 +30,8 @@ public class SlotService {
         Optional<WorkingHours> workingHoursOpt =
                 workingHoursRepository.findByServiceIdAndDayOfWeek(serviceId, day);
 
-        // ✅ FIX: don't crash
         if (workingHoursOpt.isEmpty()) {
-            return List.of(); // return empty slots instead of error
+            return List.of();
         }
 
         WorkingHours workingHours = workingHoursOpt.get();

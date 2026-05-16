@@ -53,4 +53,8 @@ public class Appointment {
     @Builder.Default
     @Column(nullable = false)
     private Boolean reviewed = false;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean reminderSent = false;
 }

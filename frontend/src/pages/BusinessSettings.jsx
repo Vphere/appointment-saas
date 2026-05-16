@@ -191,12 +191,12 @@ function BusinessServiceSelector({
   selectedBusiness, onBusinessChange,
   services, loadingServices,
   selectedService, onServiceChange,
-  serviceLabel = '② Select Service',
+  serviceLabel = 'Select Service',
 }) {
   return (
     <>
       <Card>
-        <Label>① Select Business</Label>
+        <Label>Select Business</Label>
         <SelectInput value={selectedBusiness} onChange={e => onBusinessChange(e.target.value)}>
           <option value="">Choose a business…</option>
           {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -345,7 +345,7 @@ function WorkingHoursTab({ businesses }) {
           {loadingHours ? <Spinner message="Loading hours…" /> : (
             <>
               <Toast msg={msg} />
-              <SectionTitle sub="Apply one time range to several days at once">③ Bulk Apply</SectionTitle>
+              <SectionTitle sub="Apply one time range to several days at once">Bulk Apply</SectionTitle>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
                 <ChipBtn label="All"
                   active={DAYS.every(d => selectedDays.includes(d))}
@@ -379,7 +379,7 @@ function WorkingHoursTab({ businesses }) {
                 </Btn>
               </div>
               <div style={{ borderTop: `1px solid ${T.border}`, marginBottom: 20 }} />
-              <SectionTitle sub="Fine-tune each day individually">④ Individual Days</SectionTitle>
+              <SectionTitle sub="Fine-tune each day individually">Individual Days</SectionTitle>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {DAYS.map(day => {
                   const h = hours[day] || {};
@@ -502,7 +502,7 @@ function HolidaysTab({ businesses }) {
 
       {/* Business selector */}
       <Card>
-        <Label>① Select Business</Label>
+        <Label>Select Business</Label>
         <SelectInput value={selectedBusiness} onChange={e => handleBusinessChange(e.target.value)}>
           <option value="">Choose a business…</option>
           {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -539,7 +539,7 @@ function HolidaysTab({ businesses }) {
             {/* Service selector when not applying to all */}
             {!applyToAll && (
               <div style={{ marginBottom: 16 }}>
-                <Label>② Select Service</Label>
+                <Label>Select Service</Label>
                 {loadingServices ? <Spinner message="Loading services…" /> : services.length === 0 ? (
                   <p style={{ color: T.muted, fontSize: 13, margin: '8px 0 0' }}>No services found</p>
                 ) : (
@@ -556,7 +556,7 @@ function HolidaysTab({ businesses }) {
             {/* Date + Reason + Button */}
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
               <div style={{ flex: '0 0 160px' }}>
-                <Label>{applyToAll ? '②' : '③'} Date</Label>
+                <Label> Date</Label>
                 <input type="date" value={date} min={today} onChange={e => setDate(e.target.value)}
                   style={{ width: '100%', background: T.surface, border: `1px solid ${T.border}`,
                     borderRadius: 8, padding: '9px 12px', color: T.text, fontSize: 13, outline: 'none' }} />
@@ -760,7 +760,7 @@ function PhotosTab({ businesses }) {
         services={services} loadingServices={loadingServices}
         selectedService={selectedService}
         onServiceChange={v => { setSelectedService(v); if (v) loadPhotos(v); else setPhotos([]); }}
-        serviceLabel="② Select Service to manage photos"
+        serviceLabel="Select Service to manage photos"
       />
 
       {selectedService && (

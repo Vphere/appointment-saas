@@ -16,13 +16,15 @@ const OWNER_NAV = [
   { to: '/manage-services',    label: '⚙️ Services' },
   { to: '/business-settings',  label: '🕐 Hours' },
   { to: '/owner-appointments', label: '📋 Appointments' },
-  { to: '/business/analytics', label: '📊 Analytics'},
-
+  { to: '/business/analytics', label: '📊 Analytics' },
 ];
 
+// ── Admin nav: meaningful labels, key pages accessible directly ──
 const ADMIN_NAV = [
-  { to: '/dashboard', label: '🏠 Home' },
-  { to: '/admin',     label: '✅ Approve Businesses' },
+  { to: '/admin',           label: '📊 Dashboard' },
+  { to: '/admin/approvals', label: '✅ Approvals' },
+  { to: '/admin/users',     label: '👥 Users' },
+  { to: '/admin/reviews',   label: '⭐ Reviews' },
 ];
 
 function getInitials(name = '') {
@@ -55,7 +57,6 @@ export default function Navbar() {
     navigate('/');
   };
 
-  // Close avatar dropdown when clicking outside
   useEffect(() => {
     function onClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -70,10 +71,16 @@ export default function Navbar() {
     <nav className="navbar">
       <div className="navbar-inner">
 
-        {/* Brand */}
-        <NavLink to="/dashboard" className="navbar-brand">
+        {/* Brand — admins go to /admin, others to /dashboard */}
+        <NavLink
+          to={role === 'SUPER_ADMIN' ? '/admin' : '/dashboard'}
+          className="navbar-brand"
+        >
           <div className="brand-icon">📆</div>
           BookEase
+          {role === 'SUPER_ADMIN' && (
+            <span className="navbar-admin-badge">ADMIN</span>
+          )}
         </NavLink>
 
         {/* Desktop nav links */}
@@ -82,6 +89,7 @@ export default function Navbar() {
             <li key={item.to}>
               <NavLink
                 to={item.to}
+                end={item.to === '/admin'} // exact match for /admin only
                 className={({ isActive }) => (isActive ? 'active' : '')}
                 onClick={() => setMenuOpen(false)}
               >
@@ -107,10 +115,8 @@ export default function Navbar() {
           </li>
         </ul>
 
-        {/* Desktop right zone: avatar dropdown + logout */}
+        {/* Desktop right zone */}
         <div className="navbar-right desktop-only">
-
-          {/* Avatar button */}
           <div className="avatar-wrapper" ref={dropdownRef}>
             <button
               className="avatar-btn"
@@ -122,7 +128,6 @@ export default function Navbar() {
 
             {avatarOpen && (
               <div className="avatar-dropdown">
-                {/* User info header */}
                 <div className="avatar-dropdown-header">
                   <div className="avatar-dropdown-avatar">
                     {getInitials(user.name || 'U')}
@@ -130,18 +135,24 @@ export default function Navbar() {
                   <div>
                     <p className="avatar-dropdown-name">{user.name || 'User'}</p>
                     <p className="avatar-dropdown-email">{user.email || ''}</p>
+                    {role === 'SUPER_ADMIN' && (
+                      <p className="avatar-dropdown-role-tag">⚡ Super Admin</p>
+                    )}
                   </div>
                 </div>
 
                 <div className="avatar-dropdown-divider" />
 
-                <NavLink
-                  to="/profile"
-                  className="avatar-dropdown-item"
-                  onClick={() => setAvatarOpen(false)}
-                >
-                  👤 My Profile
-                </NavLink>
+                {/* Non-admins get profile link */}
+                {role !== 'SUPER_ADMIN' && (
+                  <NavLink
+                    to="/profile"
+                    className="avatar-dropdown-item"
+                    onClick={() => setAvatarOpen(false)}
+                  >
+                    👤 My Profile
+                  </NavLink>
+                )}
 
                 {role === 'CUSTOMER' && (
                   <NavLink
@@ -151,6 +162,16 @@ export default function Navbar() {
                   >
                     📅 My Appointments
                   </NavLink>
+                )}
+
+                {/* Admin-specific quick links in dropdown */}
+                {role === 'SUPER_ADMIN' && (
+                  <>
+                    <NavLink to="/admin"           className="avatar-dropdown-item" onClick={() => setAvatarOpen(false)}>📊 Analytics</NavLink>
+                    <NavLink to="/admin/approvals" className="avatar-dropdown-item" onClick={() => setAvatarOpen(false)}>✅ Approvals</NavLink>
+                    <NavLink to="/admin/users"     className="avatar-dropdown-item" onClick={() => setAvatarOpen(false)}>👥 Users</NavLink>
+                    <NavLink to="/admin/reviews"   className="avatar-dropdown-item" onClick={() => setAvatarOpen(false)}>⭐ Reviews</NavLink>
+                  </>
                 )}
 
                 <div className="avatar-dropdown-divider" />
@@ -165,7 +186,6 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Inline logout */}
           <button className="nav-logout" onClick={handleLogout}>
             ↩ Logout
           </button>
