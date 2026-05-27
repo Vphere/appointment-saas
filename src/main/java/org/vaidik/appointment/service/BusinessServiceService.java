@@ -3,9 +3,16 @@ package org.vaidik.appointment.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.vaidik.appointment.dto.*;
-import org.vaidik.appointment.entity.*;
-import org.vaidik.appointment.repository.*;
+import org.vaidik.appointment.dto.BusinessRequest;
+import org.vaidik.appointment.dto.BusinessResponse;
+import org.vaidik.appointment.entity.Business;
+import org.vaidik.appointment.entity.BusinessStatus;
+import org.vaidik.appointment.entity.BusinessType;
+import org.vaidik.appointment.entity.User;
+import org.vaidik.appointment.mapper.BusinessMapper;
+import org.vaidik.appointment.repository.BusinessRepository;
+import org.vaidik.appointment.repository.UserRepository;
+
 import java.util.List;
 
 @Service
@@ -14,6 +21,7 @@ public class BusinessServiceService {
 
     private final BusinessRepository businessRepository;
     private final UserRepository userRepository;
+    private final BusinessMapper businessMapper;
 
     // CREATE BUSINESS
     public BusinessResponse createBusiness(BusinessRequest request, String ownerEmail) {
@@ -24,17 +32,19 @@ public class BusinessServiceService {
         Business business = Business.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .address(request.getAddress())
-                .city(request.getCity())
                 .phone(request.getPhone())
-                .category(request.getCategory())
+                .businessType(BusinessType.valueOf(request.getBusinessType()))
+                .panNumber(request.getPanNumber())
+                .annualTurnover(request.getAnnualTurnover())
+                .gstNumber(request.getGstNumber())
+                .udyamNumber(request.getUdyamNumber())
                 .status(BusinessStatus.PENDING)
                 .owner(owner)
                 .build();
 
         Business saved = businessRepository.save(business);
 
-        return mapToResponse(saved);
+        return businessMapper.toResponse(saved);
     }
 
     // GET ALL APPROVED (for customers)
@@ -42,7 +52,7 @@ public class BusinessServiceService {
 
         return businessRepository.findByStatus(BusinessStatus.APPROVED)
                 .stream()
-                .map(this::mapToResponse)
+                .map(businessMapper::toResponse)
                 .toList();
     }
 
@@ -51,7 +61,7 @@ public class BusinessServiceService {
 
         return businessRepository.findByOwnerEmail(email)
                 .stream()
-                .map(this::mapToResponse)
+                .map(businessMapper::toResponse)
                 .toList();
     }
 
@@ -60,7 +70,7 @@ public class BusinessServiceService {
 
         return businessRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
                 .stream()
-                .map(this::mapToResponse)
+                .map(businessMapper::toResponse)
                 .toList();
     }
 
@@ -69,7 +79,7 @@ public class BusinessServiceService {
 
         return businessRepository.findByStatus(BusinessStatus.PENDING)
                 .stream()
-                .map(this::mapToResponse)
+                .map(businessMapper::toResponse)
                 .toList();
     }
 
@@ -80,32 +90,18 @@ public class BusinessServiceService {
                 .orElseThrow(() -> new RuntimeException("Business not found"));
 
         business.setStatus(status);
+
         Business saved = businessRepository.save(business);
-        
-        return mapToResponse(saved);
+
+        return businessMapper.toResponse(saved);
     }
 
+    // GET BUSINESS BY ID
     public BusinessResponse getBusinessById(Long id) {
-        Business b = businessRepository.findById(id)
+
+        Business business = businessRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Business not found"));
 
-        return mapToResponse(b);
-    }
-
-    // COMMON MAPPER
-    private BusinessResponse mapToResponse(Business b) {
-        return BusinessResponse.builder()
-                .id(b.getId())
-                .name(b.getName())
-                .description(b.getDescription())
-                .status(b.getStatus() != null ? b.getStatus().name() : "PENDING")
-                .address(b.getAddress())
-                .city(b.getCity())
-                .phone(b.getPhone())
-                .category(b.getCategory())
-                .ownerName(b.getOwner() != null ? b.getOwner().getName() : null)
-                .ownerEmail(b.getOwner() != null ? b.getOwner().getEmail() : null)
-                .createdAt(b.getCreatedAt())
-                .build();
+        return businessMapper.toResponse(business);
     }
 }

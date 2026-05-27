@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { getAllBusinesses, getPendingBusinesses, approveBusiness, rejectBusiness } from '../api/business';
-import axiosInstance from '../api/axiosInstance';
+import { getAllBusinesses, approveBusiness, rejectBusiness } from '../api/business';
+import { getDocuments } from '../api/documents';
+import api from '../api/axiosInstance';
 import StatusBadge from '../components/StatusBadge';
 import Spinner from '../components/Spinner';
 import './AdminApproval.css';
@@ -8,25 +9,247 @@ import './AdminApproval.css';
 const formatDateTime = (dateStr) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
-  return d.toLocaleString('en-IN', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+  return d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
 };
 
+const formatINR = (val) => {
+  const n = Number(val);
+  if (!n) return '—';
+  if (n >= 10_000_000) return `₹${(n / 10_000_000).toFixed(1)} Cr`;
+  if (n >= 100_000)    return `₹${(n / 100_000).toFixed(1)} L`;
+  if (n >= 1_000)      return `₹${(n / 1_000).toFixed(1)} K`;
+  return `₹${n}`;
+};
+
+const DOC_LABELS = {
+  PAN_CARD:                   '🪪 PAN Card',
+  GST_CERTIFICATE:            '📄 GST Certificate',
+  SHOP_ESTABLISHMENT_LICENSE: '🏪 Shop & Establishment License',
+  TRADE_LICENSE:              '📋 Trade License',
+  INCORPORATION_CERTIFICATE:  '🏛 Incorporation Certificate',
+  UDYAM_CERTIFICATE:          '🏭 Udyam / MSME Certificate',
+  OTHER:                      '📁 Other Document',
+};
+
+// ── Document Viewer ───────────────────────────────────────────────
+// We must fetch files via axios so the JWT is included in the request.
+// Opening a raw URL in a new tab has no Authorization header → Spring
+// redirects to Google login. Solution: fetch as blob → create object URL.
+
+async function openDocumentWithAuth(fileUrl, originalName) {
+  try {
+    const response = await api.get(fileUrl, { responseType: 'blob' });
+    const blob = response.data;
+    const objectUrl = URL.createObjectURL(blob);
+
+    // Open in new tab
+    const tab = window.open(objectUrl, '_blank');
+
+    // Clean up the object URL after the tab has loaded
+    if (tab) {
+      tab.addEventListener('load', () => URL.revokeObjectURL(objectUrl), { once: true });
+    }
+  } catch (err) {
+    alert('Failed to load document. Please try again.');
+  }
+}
+
+function DocumentsSection({ businessId }) {
+  const [docs, setDocs]           = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [loadingDoc, setLoadingDoc] = useState(null); // docId being fetched
+
+  useEffect(() => {
+    getDocuments(businessId)
+      .then(r => setDocs(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setDocs([]))
+      .finally(() => setLoading(false));
+  }, [businessId]);
+
+  const handleView = async (doc) => {
+    setLoadingDoc(doc.id);
+    await openDocumentWithAuth(doc.fileUrl, doc.originalName);
+    setLoadingDoc(null);
+  };
+
+  if (loading) return (
+    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Loading documents…</div>
+  );
+  if (docs.length === 0) return (
+    <div className="aa-no-docs">⚠️ No documents uploaded by owner</div>
+  );
+
+  return (
+    <div className="aa-docs-grid">
+      {docs.map(doc => (
+        <div key={doc.id} className="aa-doc-chip">
+          <span className="aa-doc-label">{DOC_LABELS[doc.documentType] || doc.documentType}</span>
+          <span className="aa-doc-filename">{doc.originalName}</span>
+          <button
+            className="btn btn-outline btn-sm aa-doc-view-btn"
+            onClick={() => handleView(doc)}
+            disabled={loadingDoc === doc.id}
+          >
+            {loadingDoc === doc.id ? '⏳' : '👁 View'}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Business Card ─────────────────────────────────────────────────
+function BusinessCard({ b, onAction, actionLoading }) {
+  const [expanded, setExpanded] = useState(false);
+  const status = (b.status || b.approvalStatus || 'PENDING').toUpperCase();
+  const isPending = status === 'PENDING';
+
+  const gstRequired = b.annualTurnover && Number(b.annualTurnover) > 2_000_000;
+
+  return (
+    <div className="card aa-biz-card">
+
+      {/* ── Top row ── */}
+      <div className="aa-card-header">
+        <div>
+          <h3 className="aa-biz-name">{b.name}</h3>
+          <div className="aa-biz-owner">
+            Owner: <strong>{b.ownerName || b.ownerEmail || `ID #${b.ownerId || '?'}`}</strong>
+            {b.ownerEmail && b.ownerName && (
+              <span style={{ color: 'var(--text-muted)', marginLeft: 6 }}>· {b.ownerEmail}</span>
+            )}
+          </div>
+          <div className="aa-biz-time">🕒 Submitted: {formatDateTime(b.createdAt)}</div>
+        </div>
+        <StatusBadge status={status} />
+      </div>
+
+      {/* ── Quick info chips ── */}
+      <div className="aa-info-chips">
+        {b.category && (
+          <div className="aa-chip">
+            <div className="aa-chip-label">CATEGORY</div>
+            <div className="aa-chip-value">🏷 {b.category}</div>
+          </div>
+        )}
+        {b.phone && (
+          <div className="aa-chip">
+            <div className="aa-chip-label">PHONE</div>
+            <div className="aa-chip-value">📞 {b.phone}</div>
+          </div>
+        )}
+        {b.businessType && (
+          <div className="aa-chip">
+            <div className="aa-chip-label">BUSINESS TYPE</div>
+            <div className="aa-chip-value">🏛 {b.businessType.replace('_', ' ')}</div>
+          </div>
+        )}
+        {b.annualTurnover && (
+          <div className="aa-chip">
+            <div className="aa-chip-label">ANNUAL TURNOVER</div>
+            <div className="aa-chip-value">💰 {formatINR(b.annualTurnover)}</div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Verification section ── */}
+      <div className="aa-verify-row">
+        {/* PAN */}
+        <div className={`aa-verify-chip ${b.panNumber ? 'aa-verify-ok' : 'aa-verify-missing'}`}>
+          <span className="aa-verify-icon">{b.panNumber ? '✓' : '✗'}</span>
+          <div>
+            <div className="aa-verify-type">PAN Number</div>
+            <div className="aa-verify-val">{b.panNumber || 'Not provided'}</div>
+          </div>
+        </div>
+
+        {/* GST */}
+        <div className={`aa-verify-chip ${
+          b.gstNumber ? 'aa-verify-ok' :
+          gstRequired ? 'aa-verify-missing' : 'aa-verify-optional'
+        }`}>
+          <span className="aa-verify-icon">
+            {b.gstNumber ? '✓' : gstRequired ? '✗' : '—'}
+          </span>
+          <div>
+            <div className="aa-verify-type">
+              GST Number {gstRequired && !b.gstNumber && <span className="aa-verify-req">(Required)</span>}
+              {!gstRequired && <span className="aa-verify-opt">(Exempt)</span>}
+            </div>
+            <div className="aa-verify-val">{b.gstNumber || (gstRequired ? 'Not provided' : 'Below threshold')}</div>
+          </div>
+        </div>
+
+        {/* Udyam */}
+        {b.udyamNumber && (
+          <div className="aa-verify-chip aa-verify-ok">
+            <span className="aa-verify-icon">✓</span>
+            <div>
+              <div className="aa-verify-type">Udyam / MSME</div>
+              <div className="aa-verify-val">{b.udyamNumber}</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {b.description && (
+        <p className="aa-biz-desc">"{b.description}"</p>
+      )}
+
+      {/* ── Documents toggle ── */}
+      <button
+        className="aa-docs-toggle"
+        onClick={() => setExpanded(v => !v)}
+      >
+        {expanded ? '▲ Hide Documents' : '📎 View Submitted Documents'}
+      </button>
+
+      {expanded && (
+        <div className="aa-docs-section">
+          <DocumentsSection businessId={b.id} />
+        </div>
+      )}
+
+      {/* ── Actions ── */}
+      {isPending ? (
+        <div className="aa-actions">
+          <button
+            className="btn btn-success"
+            onClick={() => onAction(b.id, 'approve')}
+            disabled={!!actionLoading}
+          >
+            {actionLoading === `${b.id}-approve` ? '⏳ Approving...' : '✓ Approve'}
+          </button>
+          <button
+            className="btn btn-danger"
+            onClick={() => onAction(b.id, 'reject')}
+            disabled={!!actionLoading}
+          >
+            {actionLoading === `${b.id}-reject` ? '⏳ Rejecting...' : '✕ Reject'}
+          </button>
+        </div>
+      ) : (
+        <div className="aa-no-action">
+          No actions available — business already {status.toLowerCase()}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main page ────────────────────────────────────────────────────
 export default function AdminApproval() {
-  const [businesses, setBusinesses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('PENDING');
+  const [businesses, setBusinesses]   = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [filter, setFilter]           = useState('PENDING');
   const [actionLoading, setActionLoading] = useState(null);
-  const [message, setMessage] = useState({ text: '', type: '' });
+  const [message, setMessage]         = useState({ text: '', type: '' });
 
   const fetchBusinesses = async () => {
     setLoading(true);
     try {
-      const res = await getAllBusinesses(); // ✅ ALWAYS FETCH ALL
-      const data = Array.isArray(res.data) ? res.data : [];
-      setBusinesses(data);
+      const res = await getAllBusinesses();
+      setBusinesses(Array.isArray(res.data) ? res.data : []);
     } catch {
       setBusinesses([]);
     } finally {
@@ -41,32 +264,29 @@ export default function AdminApproval() {
     setMessage({ text: '', type: '' });
     try {
       if (action === 'approve') await approveBusiness(id);
-      if (action === 'reject') await rejectBusiness(id);
+      if (action === 'reject')  await rejectBusiness(id);
       setMessage({ text: `✓ Business ${action}d successfully`, type: 'success' });
       fetchBusinesses();
     } catch (e) {
-      const msg = e.response?.data?.message || `Failed to ${action}`;
-      setMessage({ text: `✗ ${msg}`, type: 'error' });
+      setMessage({ text: `✗ ${e.response?.data?.message || `Failed to ${action}`}`, type: 'error' });
     } finally {
       setActionLoading(null);
     }
   };
 
   const FILTERS = ['ALL', 'PENDING', 'APPROVED', 'REJECTED'];
+  const statusOf = (b) => (b.status || b.approvalStatus || '').toUpperCase();
+
+  const counts = {
+    ALL:      businesses.length,
+    PENDING:  businesses.filter(b => statusOf(b) === 'PENDING').length,
+    APPROVED: businesses.filter(b => statusOf(b) === 'APPROVED').length,
+    REJECTED: businesses.filter(b => statusOf(b) === 'REJECTED').length,
+  };
 
   const filtered = filter === 'ALL'
     ? businesses
-    : businesses.filter((b) => {
-        const status = (b.status || b.approvalStatus || '').toUpperCase();
-        return status === filter;
-      });
-
-  const counts = {
-    ALL: businesses.length,
-    PENDING: businesses.filter((b) => (b.status || b.approvalStatus || '').toUpperCase() === 'PENDING').length,
-    APPROVED: businesses.filter((b) => (b.status || b.approvalStatus || '').toUpperCase() === 'APPROVED').length,
-    REJECTED: businesses.filter((b) => (b.status || b.approvalStatus || '').toUpperCase() === 'REJECTED').length,
-  };
+    : businesses.filter(b => statusOf(b) === filter);
 
   if (loading) return <div className="page-container"><Spinner message="Loading businesses..." /></div>;
 
@@ -75,19 +295,21 @@ export default function AdminApproval() {
       <div className="page-header flex-between flex-wrap" style={{ gap: 12 }}>
         <div>
           <h1 className="page-title">Business Approvals</h1>
-          <p className="page-subtitle">{counts.PENDING} business{counts.PENDING !== 1 ? 'es' : ''} pending review</p>
+          <p className="page-subtitle">
+            {counts.PENDING} business{counts.PENDING !== 1 ? 'es' : ''} pending review
+          </p>
         </div>
         <button className="btn btn-secondary btn-sm" onClick={fetchBusinesses}>↻ Refresh</button>
       </div>
 
-      {/* Stats row */}
+      {/* Stats */}
       <div className="grid grid-4" style={{ marginBottom: 24 }}>
         {[
-          { label: 'Total', value: counts.ALL, color: 'var(--primary-light)' },
-          { label: 'Pending', value: counts.PENDING, color: 'var(--pending)' },
+          { label: 'Total',    value: counts.ALL,      color: 'var(--primary-light)' },
+          { label: 'Pending',  value: counts.PENDING,  color: 'var(--pending)' },
           { label: 'Approved', value: counts.APPROVED, color: 'var(--completed)' },
           { label: 'Rejected', value: counts.REJECTED, color: 'var(--cancelled)' },
-        ].map((s) => (
+        ].map(s => (
           <div key={s.label} className="stat-card">
             <div className="stat-value" style={{ backgroundImage: `linear-gradient(135deg, ${s.color}, ${s.color})` }}>
               {s.value}
@@ -105,12 +327,10 @@ export default function AdminApproval() {
 
       {/* Filter tabs */}
       <div className="filter-bar" style={{ marginBottom: 20 }}>
-        {FILTERS.map((f) => (
-          <button
-            key={f}
+        {FILTERS.map(f => (
+          <button key={f}
             className={`filter-btn ${filter === f ? 'active' : ''}`}
-            onClick={() => setFilter(f)}
-          >
+            onClick={() => setFilter(f)}>
             {f} ({counts[f]})
           </button>
         ))}
@@ -124,70 +344,14 @@ export default function AdminApproval() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {filtered.map((b) => {
-            const status = (b.status || b.approvalStatus || 'PENDING').toUpperCase();
-            return (
-              <div key={b.id} className="card">
-                <div className="card-header">
-                  <div>
-                    <h3 style={{ fontWeight: 700, fontSize: '1.05rem' }}>{b.name}</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: 2 }}>
-                      Owner: {b.ownerName || b.ownerEmail || `ID #${b.ownerId || b.userId || '?'}`}
-                    </p>
-
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: 4 }}>
-                      🕒 Requested on: {formatDateTime(b.createdAt)}
-                    </p>
-                  </div>
-                  <StatusBadge status={status} />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12, margin: '12px 0' }}>
-                  {[
-                    { label: 'CITY', value: b.city ? `📍 ${b.city}` : null },
-                    { label: 'ADDRESS', value: b.address ? `🏠 ${b.address}` : null },
-                    { label: 'CATEGORY', value: b.category ? `🏷 ${b.category}` : null },
-                    { label: 'PHONE', value: b.phone ? `📞 ${b.phone}` : null },
-                  ].filter((x) => x.value).map((x) => (
-                    <div key={x.label}>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 2 }}>{x.label}</div>
-                      <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>{x.value}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {b.description && (
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: 16 }}>
-                    {b.description}
-                  </p>
-                )}
-
-                {status === 'PENDING' && (
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <button
-                      className="btn btn-success"
-                      onClick={() => handleAction(b.id, 'approve')}
-                      disabled={!!actionLoading}
-                    >
-                      {actionLoading === `${b.id}-approve` ? '⏳ Approving...' : '✓ Approve'}
-                    </button>
-                    <button
-                      className="btn btn-danger"
-                      onClick={() => handleAction(b.id, 'reject')}
-                      disabled={!!actionLoading}
-                    >
-                      {actionLoading === `${b.id}-reject` ? '⏳ Rejecting...' : '✕ Reject'}
-                    </button>
-                  </div>
-                )}
-                {status !== 'PENDING' && (
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    No actions available — business already {status.toLowerCase()}
-                  </span>
-                )}
-              </div>
-            );
-          })}
+          {filtered.map(b => (
+            <BusinessCard
+              key={b.id}
+              b={b}
+              onAction={handleAction}
+              actionLoading={actionLoading}
+            />
+          ))}
         </div>
       )}
     </div>

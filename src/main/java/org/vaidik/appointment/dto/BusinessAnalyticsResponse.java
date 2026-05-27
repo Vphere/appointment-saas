@@ -11,6 +11,9 @@ import java.util.Map;
 @Builder
 public class BusinessAnalyticsResponse {
 
+    // ── NEW: needed for Reviews tab in frontend ────────────────────
+    private Long businessId;
+
     // KPI cards
     private double totalRevenue;
     private long totalCompleted;

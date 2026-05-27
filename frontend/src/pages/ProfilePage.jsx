@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import api from "../api/axios"; // ✅ use configured api instance
+import api from "../api/axiosInstance"; // ✅ use configured api instance
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function getInitials(name = "") {

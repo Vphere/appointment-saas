@@ -1,0 +1,282 @@
+/* ManageServices.css */
+
+/* ── Service type toggle ───────────────────────────────────────── */
+.ms-type-toggle {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin-bottom: 4px;
+}
+.ms-type-card {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 14px; border-radius: 10px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  transition: all 0.15s;
+}
+.ms-type-card:hover { border-color: rgba(108,99,255,0.3); }
+.ms-type-active {
+  border-color: var(--primary-light, #6c63ff) !important;
+  background: rgba(108,99,255,0.1) !important;
+}
+.ms-type-icon  { font-size: 1.2rem; flex-shrink: 0; line-height: 1.4; }
+.ms-type-label { font-weight: 700; font-size: 0.85rem; color: var(--text-primary); margin-bottom: 2px; }
+.ms-type-desc  { font-size: 0.73rem; color: var(--text-muted); line-height: 1.3; }
+
+/* ── Service type badge ────────────────────────────────────────── */
+.ms-stype-badge {
+  font-size: 0.68rem; font-weight: 700; padding: 2px 8px;
+  border-radius: 99px; vertical-align: middle; flex-shrink: 0;
+}
+.ms-badge-fixed   { background: rgba(56,189,248,0.12);  color: #38bdf8;  border: 1px solid rgba(56,189,248,0.2); }
+.ms-badge-consult { background: rgba(167,139,250,0.12); color: #a78bfa;  border: 1px solid rgba(167,139,250,0.2); }
+
+/* ── Form card ─────────────────────────────────────────────────── */
+.ms-form-card { padding: 22px 24px; }
+
+.ms-form-header { margin-bottom: 18px; display: flex; flex-direction: column; gap: 10px; }
+
+.ms-form-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ms-form-title { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0; }
+
+/* Cancel context note — tells owner what the button does */
+.ms-cancel-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  padding: 9px 13px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-left: 3px solid rgba(251,191,36,0.4);
+  border-radius: 0 8px 8px 0;
+}
+
+/* Auto-save notice */
+.ms-draft-notice {
+  font-size: 0.75rem;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  opacity: 0.85;
+}
+
+.ms-bulk-info {
+  font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;
+  padding: 10px 14px;
+  background: rgba(108,99,255,0.07);
+  border: 1px solid rgba(108,99,255,0.2);
+  border-radius: 8px;
+}
+
+/* ── Bulk locations ────────────────────────────────────────────── */
+.ms-bulk-locations { margin-top: 4px; }
+.ms-bulk-label {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-muted);
+  margin-bottom: 12px; margin-top: 10px;
+  padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06);
+}
+.ms-bulk-hint { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 0.75rem; }
+.ms-bulk-loc-row { padding: 14px 18px; margin-bottom: 12px; }
+.ms-bulk-loc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.ms-bulk-loc-index { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.ms-add-loc-btn { width: 100%; border-style: dashed; margin-bottom: 14px; }
+
+/* ── Form footer ───────────────────────────────────────────────── */
+.ms-form-footer {
+  display: flex; gap: 10px; justify-content: flex-end;
+  margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ── Modal — themed scrollbar ───────────────────────────────────── */
+.ms-modal { max-width: 680px; width: 100%; }
+
+.ms-modal-body {
+  padding: 0 4px;
+  max-height: 75vh;
+  overflow-y: auto;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(108,99,255,0.45) rgba(255,255,255,0.04);
+}
+
+/* Webkit (Chrome, Safari, Edge) */
+.ms-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+.ms-modal-body::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.03);
+  border-radius: 99px;
+}
+.ms-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(108,99,255,0.45);
+  border-radius: 99px;
+  transition: background 0.2s;
+}
+.ms-modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(108,99,255,0.7);
+}
+
+.ms-optional { font-weight: 400; color: var(--text-muted); font-size: 0.78rem; }
+
+/* ── Service Card ──────────────────────────────────────────────── */
+.ms-service-card {
+  padding: 20px 24px;
+  background: var(--bg-card, rgba(255,255,255,0.03));
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  position: relative;
+}
+.ms-service-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(90deg, var(--primary, #6c63ff), var(--primary-light, #818cf8));
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.ms-service-card:hover {
+  border-color: rgba(108,99,255,0.3);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.ms-service-card:hover::before { opacity: 1; }
+
+/* Row 1: name + badge + actions */
+.ms-sc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ms-sc-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.ms-sc-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.ms-sc-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ms-sc-btn-edit {
+  border-color: rgba(108,99,255,0.35);
+  color: #a78bfa;
+}
+.ms-sc-btn-edit:hover {
+  background: rgba(108,99,255,0.1);
+  border-color: #a78bfa;
+}
+
+/* Row 2: detail chips */
+.ms-sc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ms-sc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 9px;
+  min-width: 90px;
+}
+
+.ms-sc-chip--price {
+  border-color: rgba(16,185,129,0.15);
+  background: rgba(16,185,129,0.04);
+}
+.ms-sc-chip--fixed {
+  border-color: rgba(56,189,248,0.15);
+  background: rgba(56,189,248,0.04);
+}
+.ms-sc-chip--consult {
+  border-color: rgba(167,139,250,0.15);
+  background: rgba(167,139,250,0.04);
+}
+.ms-sc-chip--fixed .ms-sc-chip-value   { color: #38bdf8; }
+.ms-sc-chip--consult .ms-sc-chip-value { color: #a78bfa; }
+
+.ms-sc-chip-icon {
+  font-size: 0.95rem;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.ms-sc-chip-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ms-sc-chip-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.ms-sc-chip-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.ms-sc-chip--price .ms-sc-chip-value { color: #34d399; }
+
+/* Row 3: description */
+.ms-sc-desc {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.ms-sc-desc-label {
+  font-weight: 700;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .ms-type-toggle { grid-template-columns: 1fr; }
+  .ms-sc-header { flex-direction: column; align-items: flex-start; }
+  .ms-sc-actions { width: 100%; }
+  .ms-sc-actions button { flex: 1; }
+  .ms-sc-chips { gap: 6px; }
+  .ms-form-header-top { flex-direction: column; align-items: flex-start; }
+}

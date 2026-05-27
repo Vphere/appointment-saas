@@ -7,7 +7,6 @@ import org.vaidik.appointment.dto.ReviewResponse;
 import org.vaidik.appointment.entity.*;
 import org.vaidik.appointment.mapper.ReviewMapper;
 import org.vaidik.appointment.repository.AppointmentRepository;
-import org.vaidik.appointment.repository.BusinessRepository;
 import org.vaidik.appointment.repository.ReviewRepository;
 import org.vaidik.appointment.repository.UserRepository;
 
@@ -19,7 +18,6 @@ import java.util.stream.Collectors;
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
-    private final BusinessRepository businessRepository;
     private final UserRepository userRepository;
     private final ReviewMapper mapper;
     private final AppointmentRepository appointmentRepository;
@@ -37,35 +35,40 @@ public class ReviewService {
             throw new RuntimeException("Not your appointment");
         }
 
-        // Only completed allowed
+        // Only completed appointments can be reviewed
         if (appointment.getStatus() != AppointmentStatus.COMPLETED) {
             throw new RuntimeException("Only completed appointments can be reviewed");
         }
 
-        // Prevent duplicate review PER APPOINTMENT
-        boolean alreadyReviewed = reviewRepository.existsByAppointmentId(appointment.getId());
-
-        if (alreadyReviewed) {
+        // Prevent duplicate review per appointment
+        if (reviewRepository.existsByAppointmentId(appointment.getId())) {
             throw new RuntimeException("Already reviewed this appointment");
         }
 
         Review review = Review.builder()
                 .rating(request.getRating())
                 .comment(request.getComment())
-                .business(appointment.getBusiness())
+                .service(appointment.getService())           // ← service, not business
                 .user(user)
-                .appointment(appointment)   
+                .appointment(appointment)
                 .build();
 
-        // Mark appointment as reviewed
         appointment.setReviewed(true);
         appointmentRepository.save(appointment);
 
         return mapper.toResponse(reviewRepository.save(review));
     }
 
-    public List<ReviewResponse> getBusinessReviews(Long businessId) {
+    // Reviews for a specific service (used on the service detail page)
+    public List<ReviewResponse> getServiceReviews(Long serviceId) {
+        return reviewRepository.findByServiceId(serviceId)
+                .stream()
+                .map(mapper::toResponse)
+                .collect(Collectors.toList());
+    }
 
+    // Reviews for all services of a business (used on the business detail page / owner dashboard)
+    public List<ReviewResponse> getBusinessReviews(Long businessId) {
         return reviewRepository.findByBusinessId(businessId)
                 .stream()
                 .map(mapper::toResponse)
@@ -81,6 +84,11 @@ public class ReviewService {
 
         if (!review.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("Not your review");
+        }
+
+        // ── Security guard: admin-removed reviews cannot be edited ──
+        if (review.isRemovedByAdmin()) {
+            throw new RuntimeException("This review has been removed by an administrator and cannot be edited");
         }
 
         review.setRating(request.getRating());

@@ -35,7 +35,7 @@ export default function Login() {
     setLoading(true);
     try {
       const res = await login(form);
-      loginUser(res.data.token || res.data.jwt || res.data);
+      loginUser(res.data.token || res.data.accessToken || res.data.jwt);
       navigate('/dashboard');
     } catch (err) {
       // ✅ Show exact backend message first, generic fallback only if nothing comes

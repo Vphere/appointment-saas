@@ -1,8 +1,10 @@
 package org.vaidik.appointment.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 import org.vaidik.appointment.entity.Appointment;
 import org.vaidik.appointment.entity.AppointmentStatus;
 
@@ -61,4 +63,5 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("in24Hours") LocalDateTime in24Hours,
             @Param("statuses") List<AppointmentStatus> statuses
     );
+
 }

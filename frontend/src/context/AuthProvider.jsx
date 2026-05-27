@@ -1,76 +1,56 @@
-import { useState, useCallback } from 'react';
+// AuthProvider.jsx
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { AuthContext } from './AuthContext';
-
-function extractRole(decoded) {
-  // Direct role field
-  if (decoded.role) return decoded.role.replace('ROLE_', '');
-
-  // Array of roles
-  if (Array.isArray(decoded.roles) && decoded.roles.length) {
-    return decoded.roles[0].replace('ROLE_', '');
-  }
-
-  // Spring Security "authorities" claim (list of { authority: "ROLE_X" } or plain strings)
-  if (Array.isArray(decoded.authorities) && decoded.authorities.length) {
-    const first = decoded.authorities[0];
-    const raw = typeof first === 'string' ? first : first?.authority || '';
-    return raw.replace('ROLE_', '');
-  }
-
-  // scope (e.g. "CUSTOMER")
-  if (decoded.scope) return decoded.scope.replace('ROLE_', '');
-
-  return null;
-}
+import api from '../api/axiosInstance';
+import { setInMemoryToken, clearInMemoryToken } from './tokenStore';
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return null;
-    try {
-      const decoded = jwtDecode(token);
-      const role = extractRole(decoded);
-      const name =
-        decoded.name ||                     // from JWT (best case)
-        decoded.fullName ||                // optional future
-        decoded.sub?.split('@')[0];        // fallback
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const didAttemptRefresh = useRef(false); // ← ADD THIS
 
-      return {
-        ...decoded,
-        role,
-        name,      // ✅ ensure name always exists
-        email: decoded.sub,
-        token
-      };
-    } catch {
-      return null;
-    }
-  });
+  const buildUser = (token) => {
+    const decoded = jwtDecode(token);
+    const role = decoded.role?.replace('ROLE_', '');
+    const name = decoded.name || decoded.fullName || decoded.sub?.split('@')[0];
+    return { ...decoded, role, name, email: decoded.sub, token };
+  };
+
+useEffect(() => {
+    if (didAttemptRefresh.current) return;
+    didAttemptRefresh.current = true;
+
+    api.post('/api/auth/refresh')
+        .then(res => {
+            const token = res.data.accessToken;
+            setInMemoryToken(token);
+            setUser(buildUser(token));
+        })
+        .catch((err) => {
+            
+            if (err.response?.status !== 401) {
+                console.error('Unexpected error during silent refresh:', err);
+            }
+            setUser(null);
+        })
+        .finally(() => {
+            setLoading(false);
+        });
+  }, []);
 
   const loginUser = useCallback((token) => {
-    localStorage.setItem('token', token);
-    const decoded = jwtDecode(token);
-    const role = extractRole(decoded);
-
-    const name =
-      decoded.name ||
-      decoded.fullName ||
-      decoded.sub?.split('@')[0];
-
-    setUser({
-      ...decoded,
-      role,
-      name,
-      email: decoded.sub,
-      token
-    });
+    setInMemoryToken(token);
+    setUser(buildUser(token));
   }, []);
 
-  const logoutUser = useCallback(() => {
-    localStorage.removeItem('token');
+  const logoutUser = useCallback(async () => {
+    try { await api.post('/api/auth/logout'); } catch (_) {}
+    clearInMemoryToken();
     setUser(null);
   }, []);
+
+  if (loading) return null;
 
   return (
     <AuthContext.Provider value={{ user, role: user?.role || null, loginUser, logoutUser }}>

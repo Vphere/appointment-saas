@@ -14,7 +14,16 @@ public class ServiceOfferingMapper {
                 .description(service.getDescription())
                 .price(service.getPrice())
                 .duration(service.getDuration())
+                .category(service.getCategory())
+                .gapMinutes(service.getGapMinutes() != null ? service.getGapMinutes() : 0)
+                .serviceType(service.getServiceType() != null ? service.getServiceType().name() : "FIXED")
                 .businessId(service.getBusiness().getId())
+                .businessName(service.getBusiness().getName())
+                .address(service.getAddress())
+                .city(service.getCity())
+                .state(service.getState())
+                .country(service.getCountry())
+                .pincode(service.getPincode())
                 .build();
     }
 }

@@ -10,6 +10,6 @@ const STATUS_MAP = {
 export default function StatusBadge({ status }) {
   const cls = STATUS_MAP[status?.toUpperCase()] || 'pending';
   return (
-    <span className={`badge badge-${cls}`}>{status}</span>
+    <span className={`badge badge-${cls}`}>Status: {status}</span>
   );
 }

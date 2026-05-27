@@ -13,9 +13,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BusinessAnalyticsService {
 
-    private final BusinessRepository businessRepository;
+    private final BusinessRepository    businessRepository;
     private final AppointmentRepository appointmentRepository;
-    private final UserRepository userRepository;
+    private final UserRepository        userRepository;
 
     public BusinessAnalyticsResponse getAnalytics(String ownerEmail) {
 
@@ -24,7 +24,13 @@ public class BusinessAnalyticsService {
 
         List<Business> businesses = businessRepository.findByOwnerId(owner.getId());
 
-        // Collect all appointments across all owner's businesses
+        // Use first approved business as primary businessId for Reviews tab
+        Long primaryBusinessId = businesses.stream()
+                .filter(b -> b.getStatus() == BusinessStatus.APPROVED)
+                .findFirst()
+                .map(Business::getId)
+                .orElse(businesses.isEmpty() ? null : businesses.get(0).getId());
+
         List<Appointment> allAppointments = businesses.stream()
                 .flatMap(b -> appointmentRepository.findByBusinessId(b.getId()).stream())
                 .toList();
@@ -33,17 +39,12 @@ public class BusinessAnalyticsService {
                 .filter(a -> a.getStatus() == AppointmentStatus.COMPLETED)
                 .toList();
 
-        // ── KPIs ──────────────────────────────────────────────────────────────
-        double totalRevenue = completed.stream()
-                .mapToDouble(a -> a.getService().getPrice())
-                .sum();
+        double totalRevenue   = completed.stream().mapToDouble(a -> a.getService().getPrice()).sum();
+        long totalCompleted   = completed.size();
+        long totalCancelled   = allAppointments.stream().filter(a -> a.getStatus() == AppointmentStatus.CANCELLED).count();
+        long totalPending     = allAppointments.stream().filter(a -> a.getStatus() == AppointmentStatus.PENDING).count();
+        long totalConfirmed   = allAppointments.stream().filter(a -> a.getStatus() == AppointmentStatus.CONFIRMED).count();
 
-        long totalCompleted  = completed.size();
-        long totalCancelled  = allAppointments.stream().filter(a -> a.getStatus() == AppointmentStatus.CANCELLED).count();
-        long totalPending    = allAppointments.stream().filter(a -> a.getStatus() == AppointmentStatus.PENDING).count();
-        long totalConfirmed  = allAppointments.stream().filter(a -> a.getStatus() == AppointmentStatus.CONFIRMED).count();
-
-        // ── Revenue by Month (completed only) ─────────────────────────────────
         Map<String, Double> revenueByMonth = completed.stream()
                 .collect(Collectors.groupingBy(
                         a -> a.getAppointmentDate().getYear() + "-"
@@ -52,7 +53,6 @@ public class BusinessAnalyticsService {
                         Collectors.summingDouble(a -> a.getService().getPrice())
                 ));
 
-        // ── Appointments by Month (all statuses) ──────────────────────────────
         Map<String, Long> appointmentsByMonth = allAppointments.stream()
                 .collect(Collectors.groupingBy(
                         a -> a.getAppointmentDate().getYear() + "-"
@@ -61,21 +61,18 @@ public class BusinessAnalyticsService {
                         Collectors.counting()
                 ));
 
-        // ── Revenue by Service ────────────────────────────────────────────────
         Map<String, Double> revenueByService = completed.stream()
                 .collect(Collectors.groupingBy(
                         a -> a.getService().getName(),
                         Collectors.summingDouble(a -> a.getService().getPrice())
                 ));
 
-        // ── Revenue by Business ───────────────────────────────────────────────
         Map<String, Double> revenueByBusiness = completed.stream()
                 .collect(Collectors.groupingBy(
                         a -> a.getBusiness().getName(),
                         Collectors.summingDouble(a -> a.getService().getPrice())
                 ));
 
-        // ── Recent Completed Appointments (last 10) ───────────────────────────
         List<BusinessAnalyticsResponse.RecentAppointmentDTO> recent = completed.stream()
                 .sorted(Comparator.comparing(Appointment::getAppointmentDate).reversed())
                 .limit(10)
@@ -90,6 +87,7 @@ public class BusinessAnalyticsService {
                 .toList();
 
         return BusinessAnalyticsResponse.builder()
+                .businessId(primaryBusinessId)          // ← NEW
                 .totalRevenue(totalRevenue)
                 .totalCompleted(totalCompleted)
                 .totalCancelled(totalCancelled)

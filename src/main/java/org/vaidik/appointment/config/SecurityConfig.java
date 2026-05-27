@@ -1,5 +1,6 @@
 package org.vaidik.appointment.config;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.*;
 import org.springframework.http.HttpMethod;
@@ -27,11 +28,28 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.cors(cors -> cors.configurationSource(corsConfigurationSource()))      // Allows frontend to access backend.
-                .csrf(csrf -> csrf.disable())       // CSRF protection is mainly for session-based authentication, Since we are using JWT stateless authentication, we disable it.
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                        })
+                )
+
                 .authorizeHttpRequests(auth -> auth
                         // AUTH
-                        .requestMatchers("/api/auth/**", "/oauth2/**", "/login/**").permitAll()
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/refresh",
+                                "/api/auth/logout",
+                                "/api/auth/forgot-password",
+                                "/api/auth/verify-otp",
+                                "/api/auth/reset-password",
+                                "/oauth2/**",
+                                "/login/**"
+                        ).permitAll()
 
                         // SERVICES
                         .requestMatchers(HttpMethod.GET, "/api/services").permitAll()
@@ -46,29 +64,35 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/business/analytics").hasRole("BUSINESS_OWNER")
                         .requestMatchers(HttpMethod.GET, "/api/business/**").permitAll()
 
+                        // DOCUMENTS — owners upload, admin + owner view
+                        .requestMatchers(HttpMethod.GET, "/api/documents/*/file").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/documents/**").hasAnyRole("BUSINESS_OWNER", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/documents/**").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/documents/**").hasRole("BUSINESS_OWNER")
+
                         // SLOTS
                         .requestMatchers(HttpMethod.GET, "/api/slots/**").permitAll()
 
                         // APPOINTMENTS
                         .requestMatchers(HttpMethod.POST, "/api/appointments").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/appointments/my").authenticated()
-
                         .requestMatchers(HttpMethod.PATCH, "/api/appointments/*/cancel").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.PUT, "/api/appointments/*/reschedule").hasRole("CUSTOMER")
-
                         .requestMatchers("/api/appointments/my-business").hasRole("BUSINESS_OWNER")
                         .requestMatchers(HttpMethod.PUT, "/api/appointments/**").hasRole("BUSINESS_OWNER")
                         .requestMatchers(HttpMethod.PATCH, "/api/appointments/**").hasRole("BUSINESS_OWNER")
 
-                        // Review
+                        // REVIEWS
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/avg/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/avg/service/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/reviews").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/reviews/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
 
-                        .requestMatchers("/api/auth/forgot-password",
-                                        "/api/auth/verify-otp",
-                                        "/api/auth/reset-password"
-                        ).permitAll()
+                        // ADMIN
+                        .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
 
+                        // USER PROFILE
                         .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/users/profile").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/users/change-password").authenticated()
@@ -87,20 +111,18 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/photos/**").hasRole("BUSINESS_OWNER")
                         .requestMatchers("/uploads/**").permitAll()
 
+                        .requestMatchers(HttpMethod.GET, "/api/services/by-category/**").permitAll()
+
                         .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .oauth2Login(oauth -> oauth
-                        .successHandler(oAuth2SuccessHandler)  // ✅ your custom handler
-                )
+                .oauth2Login(oauth -> oauth.successHandler(oAuth2SuccessHandler))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
@@ -111,10 +133,9 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE","PATCH", "OPTIONS"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

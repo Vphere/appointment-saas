@@ -4,10 +4,7 @@ import lombok.Data;
 
 @Data
 public class CreateReviewRequest {
-
-    private Long businessId;
-    private Long userId;
+    private Long appointmentId;
     private int rating;
     private String comment;
-    private Long appointmentId;
 }

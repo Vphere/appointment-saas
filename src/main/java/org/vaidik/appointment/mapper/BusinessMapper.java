@@ -13,9 +13,17 @@ public class BusinessMapper {
                 .id(business.getId())
                 .name(business.getName())
                 .description(business.getDescription())
-                .address(business.getAddress())
-                .city(business.getCity())
+                .status( business.getStatus().name())
                 .phone(business.getPhone())
+                .businessType( business.getBusinessType() != null ? business.getBusinessType().name() : null )
+                .panNumber(business.getPanNumber())
+                .annualTurnover(business.getAnnualTurnover())
+                .gstNumber(business.getGstNumber())
+                .udyamNumber(business.getUdyamNumber())
+                .gstRequired(business.isGstRequired())
+                .ownerName( business.getOwner().getName() )
+                .ownerEmail( business.getOwner().getEmail())
+                .createdAt(business.getCreatedAt())
                 .build();
     }
 }

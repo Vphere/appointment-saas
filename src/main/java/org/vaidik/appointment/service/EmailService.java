@@ -3,7 +3,6 @@ package org.vaidik.appointment.service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -135,36 +134,6 @@ public class EmailService {
                 """.formatted(otp);
 
         sendHtmlEmail(toEmail, subject, html);
-    }
-
-    public void sendBookingConfirmationEmail(Appointment appointment) {
-        String to = appointment.getUser().getEmail();
-        String userName = appointment.getUser().getName() != null
-                ? appointment.getUser().getName()
-                : to;
-        String businessName = appointment.getBusiness().getName();
-        String serviceName  = appointment.getService().getName();
-        String date = appointment.getAppointmentDate()
-                .format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
-        String time = appointment.getAppointmentTime().toString().substring(0, 5);
-
-        String subject = "Appointment Confirmed — " + businessName;
-        String html = buildEmailHtml(
-                "Booking Confirmed! 🎉",
-                "Hi " + userName + ",",
-                "Your appointment has been successfully booked. Here are your details:",
-                new String[][]{
-                        {"Business",  businessName},
-                        {"Service",   serviceName},
-                        {"Date",      date},
-                        {"Time",      time},
-                        {"Status",    "Pending — awaiting owner confirmation"}
-                },
-                "We'll notify you once the owner confirms your booking.",
-                "#10B981"
-        );
-
-        sendHtmlEmail(to, subject, html);
     }
 
     public void sendStatusChangeEmail(Appointment appointment) {

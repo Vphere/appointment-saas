@@ -18,15 +18,19 @@ public class ReviewResponse {
     private String customerName;
     private String customerEmail;
 
-    // Business & service info
+    // Service info (direct association)
+    private Long serviceId;
+    private String serviceName;
+
+    // Business info (derived from service → business)
     private Long businessId;
     private String businessName;
-    private String serviceName;
 
     // Appointment info
     private Long appointmentId;
     private LocalDate appointmentDate;
 
+    // Admin moderation
     private boolean removedByAdmin;
     private String removalReason;
     private LocalDateTime removedAt;

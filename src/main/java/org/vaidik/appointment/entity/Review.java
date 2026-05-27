@@ -22,15 +22,15 @@ public class Review {
 
     private String comment;
 
-    @ManyToOne
-    @JoinColumn(name = "business_id", nullable = false)
-    private Business business;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_id", nullable = false)
+    private ServiceOffering service;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "appointment_id")
     private Appointment appointment;
 

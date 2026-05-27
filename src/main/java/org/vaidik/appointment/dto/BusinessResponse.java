@@ -15,10 +15,13 @@ public class BusinessResponse {
     private String name;
     private String description;
     private String status;
-    private String address;
-    private String city;
     private String phone;
-    private String category;
+    private String businessType;
+    private String panNumber;
+    private Long annualTurnover;
+    private String gstNumber;
+    private String udyamNumber;
+    private boolean gstRequired;
     private String ownerName;
     private String ownerEmail;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

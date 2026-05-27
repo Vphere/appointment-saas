@@ -3,6 +3,7 @@ package org.vaidik.appointment.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 import org.vaidik.appointment.entity.BusinessHoliday;
 
 import java.util.List;
@@ -29,4 +30,7 @@ public interface BusinessHolidayRepository extends JpaRepository<BusinessHoliday
     // Check duplicate
     boolean existsByBusinessIdAndServiceIdAndDate(Long businessId, Long serviceId, java.time.LocalDate date);
     boolean existsByBusinessIdAndAllServicesTrueAndDate(Long businessId, java.time.LocalDate date);
+
+    @Transactional
+    void deleteByServiceId(Long serviceId);
 }

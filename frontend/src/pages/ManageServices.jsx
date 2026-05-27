@@ -3,182 +3,446 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getMyBusinesses } from '../api/business';
 import { getMyServices, createService, updateService, deleteService } from '../api/services';
 import Spinner from '../components/Spinner';
+import LocationFields from '../components/LocationFields';
 import '../styles/owner.css';
+import '../components/LocationFields.css';
+import './ManageServices.css';
 
+// ── Draft keys ───────────────────────────────────────────────────
+const DRAFT_KEY      = 'manageServices_draft';
+const EDIT_DRAFT_KEY = 'manageServices_editDraft';
+
+// ── Session-storage helpers ──────────────────────────────────────
+const saveDraft     = d  => { try { sessionStorage.setItem(DRAFT_KEY,      JSON.stringify(d));  } catch (_) {} };
+const loadDraft     = () => { try { const d = sessionStorage.getItem(DRAFT_KEY);      return d ? JSON.parse(d) : null; } catch (_) { return null; } };
+const clearDraft    = () => { try { sessionStorage.removeItem(DRAFT_KEY);      } catch (_) {} };
+const saveEditDraft = d  => { try { sessionStorage.setItem(EDIT_DRAFT_KEY, JSON.stringify(d));  } catch (_) {} };
+const loadEditDraft = () => { try { const d = sessionStorage.getItem(EDIT_DRAFT_KEY); return d ? JSON.parse(d) : null; } catch (_) { return null; } };
+const clearEditDraft= () => { try { sessionStorage.removeItem(EDIT_DRAFT_KEY); } catch (_) {} };
+
+// ── Constants ────────────────────────────────────────────────────
+const EMPTY_LOC = { address: '', pincode: '', city: '', state: '', country: '' };
+const emptyForm = {
+  name: '', description: '', price: '',
+  serviceType: 'FIXED', duration: '', gapMinutes: '',
+  location:  { ...EMPTY_LOC },
+  locations: [{ ...EMPTY_LOC }],
+};
+
+// ── Lazy-init helpers — read sessionStorage ONCE at component boot ─
+// This fixes the "dialog disappears on refresh" bug:
+// useState(fn) calls fn synchronously before the first render,
+// so the form is open/populated from frame 0 — no flicker, no blank flash.
+const initFromDraft = (urlBizId) => {
+  const draft = loadDraft();
+  if (!draft) return { form: emptyForm, showForm: false, bulkMode: false, selectedBusiness: urlBizId || '' };
+  return {
+    form:             draft.form     ?? emptyForm,
+    showForm:         draft.showForm ?? false,
+    bulkMode:         draft.bulkMode ?? false,
+    selectedBusiness: urlBizId || draft.selectedBusiness || '',
+  };
+};
+
+// ── Service Type Toggle ──────────────────────────────────────────
+function ServiceTypeToggle({ value, onChange }) {
+  return (
+    <div className="ms-type-toggle">
+      {[
+        { val: 'FIXED',        icon: '⏱', label: 'Fixed Appointment', desc: 'Fixed duration (e.g. Haircut 30 min)' },
+        { val: 'CONSULTATION', icon: '💬', label: 'Open Consultation',  desc: 'Flexible — set gap between slots' },
+      ].map(opt => (
+        <div key={opt.val}
+          className={`ms-type-card ${value === opt.val ? 'ms-type-active' : ''}`}
+          onClick={() => onChange(opt.val)}>
+          <div className="ms-type-icon">{opt.icon}</div>
+          <div>
+            <div className="ms-type-label">{opt.label}</div>
+            <div className="ms-type-desc">{opt.desc}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Service form (shared by create + edit) ───────────────────────
+function ServiceForm({ form, setForm, onSubmit, submitting, submitLabel, onCancel, showBulk, cancelLabel }) {
+  return (
+    <form onSubmit={onSubmit}>
+      <div className="grid grid-2">
+        <div className="form-group">
+          <label className="form-label">Service Name *</label>
+          <input className="form-input" placeholder="e.g. Haircut"
+            value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Price (₹) *</label>
+          {/* step="0.01" but NOT step="any" — prevents browser value-snapping */}
+          <input className="form-input" type="number"  placeholder="500" step="any"
+            value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} required />
+        </div>
+        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+          <label className="form-label">Description</label>
+          <input className="form-input" placeholder="Brief description (optional)"
+            value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Service Type *</label>
+        <ServiceTypeToggle value={form.serviceType}
+          onChange={val => setForm({ ...form, serviceType: val, duration: '' })} />
+      </div>
+
+      <div className="grid grid-2">
+        {form.serviceType === 'FIXED' && (
+          <div className="form-group">
+            <label className="form-label">Duration (minutes) *</label>
+            {/* step="1" — no snapping */}
+            <input className="form-input" type="number" step="any" placeholder="e.g. 45"
+              value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })} />
+          </div>
+        )}
+        <div className="form-group">
+          <label className="form-label">
+            Gap Between Appointments (min)
+            {form.serviceType=="FIXED" && <span className="ms-optional"> optional</span>}
+          </label>
+          {/* step="1" — no snapping */}
+          <input className="form-input" type="number" step="any" placeholder="e.g. 15"
+            value={form.gapMinutes} onChange={e => setForm({ ...form, gapMinutes: e.target.value })} />
+          <span className="form-hint">Buffer/cleanup time after each booking</span>
+        </div>
+      </div>
+
+      {showBulk ? (
+        <div className="ms-bulk-locations">
+          <div className="ms-bulk-label">
+            📍 Service Locations
+            <span className="ms-bulk-hint"> — a separate service entry is created for each location</span>
+          </div>
+          {form.locations.map((loc, i) => (
+            <div key={i} className="ms-bulk-loc-row card">
+              <div className="ms-bulk-loc-header">
+                <span className="ms-bulk-loc-index">Location {i + 1}</span>
+                {form.locations.length > 1 && (
+                  <button type="button" className="btn btn-danger btn-sm"
+                    onClick={() => setForm({ ...form, locations: form.locations.filter((_, idx) => idx !== i) })}>
+                    ✕ Remove
+                  </button>
+                )}
+              </div>
+              <LocationFields values={loc}
+                onChange={val => setForm({ ...form, locations: form.locations.map((l, idx) => idx === i ? val : l) })} />
+            </div>
+          ))}
+          <button type="button" className="btn btn-outline btn-sm ms-add-loc-btn"
+            onClick={() => setForm({ ...form, locations: [...form.locations, { ...EMPTY_LOC }] })}>
+            + Add Another Location
+          </button>
+        </div>
+      ) : (
+        <LocationFields values={form.location}
+          onChange={val => setForm({ ...form, location: val })} />
+      )}
+
+      <div className="ms-form-footer">
+        {onCancel && (
+          <button type="button" className="btn btn-secondary" onClick={onCancel}>
+            {cancelLabel || 'Cancel'}
+          </button>
+        )}
+        <button type="submit" className="btn btn-primary" disabled={submitting}>
+          {submitting ? '⏳ Saving...' : submitLabel}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// ── Edit Modal ───────────────────────────────────────────────────
 function EditServiceModal({ service, onClose, onSaved }) {
-  const [form, setForm] = useState({
-    name: service.name || '',
-    description: service.description || '',
-    address: service.address || '',
-    price: service.price ?? '',
-    duration: service.duration ?? '',
+  const buildForm = (svc) => ({
+    name:        svc.name        || '',
+    description: svc.description || '',
+    price:       svc.price       ?? '',
+    serviceType: svc.serviceType || 'FIXED',
+    duration:    svc.duration    ?? '',
+    gapMinutes:  svc.gapMinutes  ?? '',
+    location: {
+      address: svc.address || '',
+      pincode: svc.pincode || '',
+      city:    svc.city    || '',
+      state:   svc.state   || '',
+      country: svc.country || '',
+    },
+    _serviceId: svc.id,
+  });
+
+  const [form, setForm] = useState(() => {
+    // Only restore draft if it's for the same service AND was saved 
+    // less than 30 minutes ago (prevents stale drafts causing confusion)
+    const draft = loadEditDraft();
+    if (
+      draft &&
+      draft._serviceId === service.id &&
+      draft._savedAt &&
+      Date.now() - draft._savedAt < 30 * 60 * 1000  // 30 min expiry
+    ) {
+      return draft;
+    }
+    // No valid draft — start fresh from the actual service data
+    clearEditDraft();
+    return buildForm(service);
   });
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]   = useState('');
+
+  useEffect(() => {
+    saveEditDraft({ ...form, _serviceId: service.id, _savedAt: Date.now() });
+  }, [form]);
+
+  const handleClose = () => { clearEditDraft(); onClose(); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!form.name.trim()) return setError('Service name is required');
+    if (!form.price)       return setError('Price is required');
+    if (form.serviceType === 'FIXED' && !form.duration) return setError('Duration required for fixed type');
     setSaving(true);
     try {
       await updateService(service.id, {
-        name: form.name.trim(),
+        name:        form.name.trim(),
         description: form.description.trim() || undefined,
-        address: form.address.trim() || undefined,
-        price: parseFloat(form.price),
-        duration: parseInt(form.duration),
+        price:       parseFloat(form.price),
+        serviceType: form.serviceType,
+        // Send null for duration/gap when empty so backend's partial update skips them
+        duration:    form.duration !== '' ? parseInt(form.duration)   : null,
+        gapMinutes:  form.gapMinutes !== '' ? parseInt(form.gapMinutes) : null,
+        ...form.location,
       });
+      clearEditDraft();
       onSaved();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update service');
+      setError(err.response?.data?.message || 'Failed to update');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="owner-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="owner-modal">
+    <div className="owner-modal-overlay" onClick={e => e.target === e.currentTarget && handleClose()}>
+      <div className="owner-modal ms-modal">
         <div className="owner-modal-header">
           <span className="owner-modal-title">✏️ Edit Service</span>
-          <button className="owner-modal-close" onClick={onClose}>✕</button>
+          <button className="owner-modal-close" onClick={handleClose}>✕</button>
         </div>
-        <form onSubmit={handleSubmit}>
-          {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
-          <div className="grid grid-2">
-            <div className="form-group">
-              <label className="form-label">Service Name *</label>
-              <input className="form-input" value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Price (₹) *</label>
-              <input className="form-input" type="number" min="0" step="0.01" value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })} required />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Duration (min) *</label>
-              <input className="form-input" type="number" min="1" value={form.duration}
-                onChange={(e) => setForm({ ...form, duration: e.target.value })} required />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Description</label>
-              <input className="form-input" placeholder="Optional description" value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            </div>
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label className="form-label">Address / Location</label>
-              <input className="form-input" placeholder="e.g. 2nd Floor, Mall Road" value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? '⏳ Saving...' : '✓ Save Changes'}
-            </button>
-          </div>
-        </form>
+        <div className="ms-modal-body">
+          {error && <div className="alert alert-error" style={{ marginBottom: 14 }}>{error}</div>}
+          <ServiceForm form={form} setForm={setForm}
+            onSubmit={handleSubmit} submitting={saving}
+            submitLabel="✓ Save Changes" showBulk={false}
+            onCancel={handleClose} cancelLabel="✕ Discard changes" />
+        </div>
       </div>
     </div>
   );
 }
 
+// ── Service Card ─────────────────────────────────────────────────
+function ServiceCard({ s, onEdit, onDelete }) {
+  const typeLabel      = s.serviceType === 'CONSULTATION' ? 'Consultation' : 'Fixed';
+  const typeBadgeClass = s.serviceType === 'CONSULTATION' ? 'ms-badge-consult' : 'ms-badge-fixed';
+
+  return (
+    <div className="ms-service-card">
+      {/* Row 1 — name + type badge + action buttons */}
+      <div className="ms-sc-header">
+        <div className="ms-sc-name-row">
+          <span className="ms-sc-name">{s.name}</span>
+        </div>
+        <div className="ms-sc-actions">
+          <button className="btn btn-secondary btn-sm ms-sc-btn-edit" onClick={() => onEdit(s)}>
+            ✏️ Edit
+          </button>
+          <button className="btn btn-danger btn-sm" onClick={() => onDelete(s.id)}>
+            🗑 Delete
+          </button>
+        </div>
+      </div>
+
+      {/* Row 2 — detail chips */}
+      <div className="ms-sc-chips">
+        {/* Service type chip */}
+        <div className={`ms-sc-chip ms-sc-chip--type ${s.serviceType === 'CONSULTATION' ? 'ms-sc-chip--consult' : 'ms-sc-chip--fixed'}`}>
+          <span className="ms-sc-chip-icon">{s.serviceType === 'CONSULTATION' ? '💬' : '⏱'}</span>
+          <div className="ms-sc-chip-body">
+            <span className="ms-sc-chip-label">Type</span>
+            <span className="ms-sc-chip-value">{s.serviceType === 'CONSULTATION' ? 'Consultation' : 'Fixed'}</span>
+          </div>
+        </div>
+        {s.duration > 0 && (
+          <div className="ms-sc-chip">
+            <span className="ms-sc-chip-icon">⏱</span>
+            <div className="ms-sc-chip-body">
+              <span className="ms-sc-chip-label">Duration</span>
+              <span className="ms-sc-chip-value">{s.duration} min</span>
+            </div>
+          </div>
+        )}
+        {s.price != null && (
+          <div className="ms-sc-chip ms-sc-chip--price">
+            <span className="ms-sc-chip-icon">💰</span>
+            <div className="ms-sc-chip-body">
+              <span className="ms-sc-chip-label">Price</span>
+              <span className="ms-sc-chip-value">₹{s.price}</span>
+            </div>
+          </div>
+        )}
+        {s.gapMinutes > 0 && (
+          <div className="ms-sc-chip">
+            <span className="ms-sc-chip-icon">⏸</span>
+            <div className="ms-sc-chip-body">
+              <span className="ms-sc-chip-label">Gap</span>
+              <span className="ms-sc-chip-value">{s.gapMinutes} min</span>
+            </div>
+          </div>
+        )}
+        {s.city && (
+          <div className="ms-sc-chip">
+            <span className="ms-sc-chip-icon">📍</span>
+            <div className="ms-sc-chip-body">
+              <span className="ms-sc-chip-label">Location</span>
+              <span className="ms-sc-chip-value">{[s.city, s.state].filter(Boolean).join(', ')}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Row 3 — description */}
+      {s.description && (
+        <p className="ms-sc-desc">
+          <span className="ms-sc-desc-label">About: </span>
+          {s.description}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── Main page ────────────────────────────────────────────────────
 export default function ManageServices() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const preSelectedBusinessId = searchParams.get('businessId');
+  const navigate   = useNavigate();
+  const urlBizId   = searchParams.get('businessId') || '';
 
-  const [businesses, setBusinesses]         = useState([]);
-  const [selectedBusiness, setSelectedBusiness] = useState(preSelectedBusinessId || '');
-  const [services, setServices]             = useState([]);
-  const [loadingB, setLoadingB]             = useState(true);
-  const [loadingS, setLoadingS]             = useState(false);
-  const [showForm, setShowForm]             = useState(false);
+  // ── All state initialised LAZILY from sessionStorage ─────────────
+  // This is the key fix: useState(() => fn()) runs fn synchronously,
+  // so on a page refresh the form is already open from frame 0.
+  const [form,             setForm]             = useState(() => initFromDraft(urlBizId).form);
+  const [showForm,         setShowForm]         = useState(() => initFromDraft(urlBizId).showForm);
+  const [bulkMode,         setBulkMode]         = useState(() => initFromDraft(urlBizId).bulkMode);
+  const [selectedBusiness, setSelectedBusiness] = useState(() => initFromDraft(urlBizId).selectedBusiness);
+
+  const [businesses,     setBusinesses]     = useState([]);
+  const [services,       setServices]       = useState([]);
+  const [loadingB,       setLoadingB]       = useState(true);
+  const [loadingS,       setLoadingS]       = useState(false);
   const [editingService, setEditingService] = useState(null);
-  const [form, setForm] = useState({ name: '', description: '', address: '', price: '', duration: '' });
-  const [error, setError]   = useState('');
-  const [success, setSuccess] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting,     setSubmitting]     = useState(false);
+  const [error,          setError]          = useState('');
+  const [success,        setSuccess]        = useState('');
 
+  // ── Persist draft on every relevant state change ─────────────────
   useEffect(() => {
-  getMyBusinesses()
-    .then((r) => {
-      const approvedBusinesses = r.data.filter(
-        (b) => (b.status || b.approvalStatus || '').toUpperCase() === 'APPROVED'
-      );
+    saveDraft({ form, showForm, bulkMode, selectedBusiness });
+  }, [form, showForm, bulkMode, selectedBusiness]);
 
-      setBusinesses(approvedBusinesses);
-
-      // ✅ SAFETY CHECK (PUT IT HERE)
-      if (preSelectedBusinessId) {
-        const exists = approvedBusinesses.some(
-          (b) => String(b.id) === String(preSelectedBusinessId)
+  // ── Load approved businesses ─────────────────────────────────────
+  useEffect(() => {
+    getMyBusinesses()
+      .then(r => {
+        const approved = (r.data || []).filter(b => (b.status || '').toUpperCase() === 'APPROVED');
+        setBusinesses(approved);
+        setSelectedBusiness(prev =>
+          prev && !approved.some(b => String(b.id) === String(prev)) ? '' : prev
         );
-
-        if (!exists) {
-          setSelectedBusiness(''); // reset if invalid
-        }
-      }
-    })
-    .catch(() => {})
-    .finally(() => setLoadingB(false));
+      })
+      .catch(() => {})
+      .finally(() => setLoadingB(false));
   }, []);
 
-  const fetchServices = (bizId) => {
+  const fetchServices = id => {
     setLoadingS(true);
-    getMyServices(bizId)
-      .then((r) => setServices(Array.isArray(r.data) ? r.data : []))
+    getMyServices(id)
+      .then(r => setServices(Array.isArray(r.data) ? r.data : []))
       .catch(() => setServices([]))
       .finally(() => setLoadingS(false));
   };
 
-  useEffect(() => {
-    if (!selectedBusiness) return;
-    fetchServices(selectedBusiness);
-  }, [selectedBusiness]);
+  useEffect(() => { if (selectedBusiness) fetchServices(selectedBusiness); }, [selectedBusiness]);
 
-  const handleCreate = async (e) => {
+  const showMsg = (text, type = 'success') => {
+    if (type === 'success') { setSuccess(text); setTimeout(() => setSuccess(''), 4000); setError(''); }
+    else setError(text);
+  };
+
+  const resetForm = () => {
+    setForm(emptyForm);
+    setShowForm(false);
+    setBulkMode(false);
+    setError('');
+    // Persist closed state so next refresh doesn't re-open
+    saveDraft({ form: emptyForm, showForm: false, bulkMode: false, selectedBusiness });
+  };
+
+  const handleCreate = async e => {
     e.preventDefault();
-    setError(''); setSuccess('');
-    if (!selectedBusiness) return setError('Please select a business first');
-    if (!form.name.trim()) return setError('Service name is required');
-    if (!form.price || isNaN(parseFloat(form.price))) return setError('Valid price is required');
-    if (!form.duration || isNaN(parseInt(form.duration))) return setError('Duration (minutes) is required');
+    setError('');
+    if (!form.name.trim()) return showMsg('Service name is required', 'error');
+    if (!form.price)       return showMsg('Price is required', 'error');
+    if (form.serviceType === 'FIXED' && !form.duration)
+      return showMsg('Duration required for fixed appointments', 'error');
+
+    const base = {
+      businessId:  parseInt(selectedBusiness),
+      name:        form.name.trim(),
+      description: form.description.trim() || undefined,
+      price:       parseFloat(form.price),
+      serviceType: form.serviceType,
+      duration:    form.serviceType === 'FIXED' ? parseInt(form.duration) : null,
+      gapMinutes:  parseInt(form.gapMinutes) || 0,
+    };
 
     setSubmitting(true);
     try {
-      await createService({
-        businessId: parseInt(selectedBusiness),
-        name: form.name.trim(),
-        description: form.description.trim() || undefined,
-        address: form.address.trim() || undefined,
-        price: parseFloat(form.price),
-        duration: parseInt(form.duration),
-      });
-      setForm({ name: '', description: '', address: '', price: '', duration: '' });
-      setShowForm(false);
-      setSuccess('✓ Service created successfully!');
-      setTimeout(() => setSuccess(''), 4000);
+      if (bulkMode && form.locations.length > 1) {
+        await Promise.all(form.locations.map(loc => createService({ ...base, ...loc })));
+        showMsg(`✓ ${form.locations.length} service locations added!`);
+      } else {
+        const loc = bulkMode ? form.locations[0] : form.location;
+        await createService({ ...base, ...loc });
+        showMsg('✓ Service added successfully!');
+      }
+      resetForm();
       fetchServices(selectedBusiness);
     } catch (err) {
-      const msg = err.response?.data?.message ||
-        (typeof err.response?.data === 'string' ? err.response.data : null) ||
-        err.message || 'Failed to create service';
-      setError(msg);
+      showMsg(err.response?.data?.message || 'Failed to create service', 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async id => {
     if (!window.confirm('Remove this service?')) return;
     try {
       await deleteService(id);
-      setServices((prev) => prev.filter((s) => s.id !== id));
+      setServices(prev => prev.filter(s => s.id !== id));
     } catch (e) {
-      alert(e.response?.data?.message || 'Failed to delete service');
+      alert(e.response?.data?.message || 'Failed to delete');
     }
   };
 
@@ -191,31 +455,24 @@ export default function ManageServices() {
         <p className="page-subtitle">Add and manage services for your businesses</p>
       </div>
 
-      {/* Business Picker */}
+      {/* Business picker */}
       <div className="card" style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
           <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
             <label className="form-label">Select Business</label>
             <select className="form-select" value={selectedBusiness}
-              onChange={(e) => {
-                                const id = e.target.value;
-                                setSelectedBusiness(id);
-
-                                if (id) {
-                                  setSearchParams({ businessId: id });
-                                } else {
-                                  setSearchParams({});
-                                }
-                              }}>
+              onChange={e => {
+                const id = e.target.value;
+                setSelectedBusiness(id);
+                setSearchParams(id ? { businessId: id } : {});
+              }}>
               <option value="">Choose a business...</option>
-              {businesses.map((b) => (
-                <option key={b.id} value={b.id}>{b.name} — {b.city}</option>
-              ))}
+              {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           {businesses.length === 0 && (
             <button className="btn btn-primary" onClick={() => navigate('/my-businesses')}>
-              + Create Business First
+              + Register Business
             </button>
           )}
         </div>
@@ -224,95 +481,81 @@ export default function ManageServices() {
       {selectedBusiness && (
         <>
           {success && <div className="alert alert-success">{success}</div>}
+          {error   && <div className="alert alert-error">{error}</div>}
 
           <div className="flex-between" style={{ marginBottom: 16 }}>
             <h2 className="section-title" style={{ flex: 1, marginBottom: 0 }}>
               Services ({services.length})
             </h2>
-            <button className="btn btn-primary btn-sm"
-              onClick={() => { setShowForm(!showForm); setError(''); }}>
-              {showForm ? '✕ Cancel' : '+ Add Service'}
-            </button>
+            {!showForm && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn-outline btn-sm"
+                  onClick={() => { setBulkMode(true); setShowForm(true); setError(''); setForm(emptyForm); }}>
+                  📋 Add Multiple Locations
+                </button>
+                <button className="btn btn-primary btn-sm"
+                  onClick={() => { setBulkMode(false); setShowForm(true); setError(''); setForm(emptyForm); }}>
+                  + Add Service
+                </button>
+              </div>
+            )}
           </div>
 
           {showForm && (
-            <div className="card" style={{ marginBottom: 20 }}>
-              <h3 style={{ fontWeight: 700, marginBottom: 16, fontSize: '1rem' }}>New Service</h3>
-              <form onSubmit={handleCreate}>
-                {error && <div className="alert alert-error">{error}</div>}
-                <div className="grid grid-2">
-                  <div className="form-group">
-                    <label className="form-label">Service Name *</label>
-                    <input className="form-input" placeholder="e.g. Haircut" value={form.name}
-                      onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Price (₹) *</label>
-                    <input className="form-input" type="number" min="0" step="0.01" placeholder="500"
-                      value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Duration (minutes) *</label>
-                    <input className="form-input" type="number" min="1" placeholder="e.g. 60"
-                      value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} required />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Description</label>
-                    <input className="form-input" placeholder="Brief description (optional)"
-                      value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-                  </div>
-                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                    <label className="form-label">Address / Location</label>
-                    <input className="form-input" placeholder="e.g. 2nd Floor, Mall Road (optional)"
-                      value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-                  </div>
+            <div className="card ms-form-card" style={{ marginBottom: 20 }}>
+              <div className="ms-form-header">
+                <div className="ms-form-header-top">
+                  <h3 className="ms-form-title">
+                    {bulkMode ? '📋 Add Service — Multiple Locations' : '⚙️ New Service'}
+                  </h3>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={resetForm}>
+                    ✕ Cancel &amp; Discard
+                  </button>
                 </div>
-                <button className="btn btn-primary" type="submit" disabled={submitting}>
-                  {submitting ? '⏳ Adding...' : '+ Add Service'}
-                </button>
-              </form>
+
+                {/* Context note for bulk mode */}
+                {bulkMode && (
+                  <div className="ms-bulk-info">
+                    Fill in the service details once, then add as many locations as you need.
+                    A separate service entry will be created for each location.
+                  </div>
+                )}
+
+                {/* Cancel context note */}
+                <div className="ms-cancel-hint">
+                  {bulkMode
+                    ? '💡 Clicking "Cancel & Discard" will close this form and discard all locations you\'ve added. Your service won\'t be saved.'
+                    : '💡 Clicking "Cancel & Discard" will close this form without saving the service.'}
+                </div>
+              </div>
+
+              <ServiceForm form={form} setForm={setForm}
+                onSubmit={handleCreate} submitting={submitting}
+                submitLabel={bulkMode
+                  ? `+ Add ${form.locations?.length || 1} Service${(form.locations?.length || 1) > 1 ? 's' : ''}`
+                  : '+ Add Service'}
+                showBulk={bulkMode} />
             </div>
           )}
 
-          {loadingS ? (
-            <Spinner />
-          ) : services.length === 0 ? (
+          {loadingS ? <Spinner /> : services.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">⚙️</div>
               <h3>No services yet</h3>
               <p>Click "+ Add Service" to get started</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {services.map((s) => (
-                <div key={s.id} className="owner-service-card">
-                  <div className="owner-service-info">
-                    <div className="owner-service-name">{s.name}</div>
-                    <div className="owner-service-detail">
-                      <span>⏱ {s.duration} min</span>
-                      <span>💰 ₹{s.price}</span>
-                      {s.address && <span>📍 {s.address}</span>}
-                      {s.description && <span>📝 {s.description}</span>}
-                    </div>
-                  </div>
-                  <div className="owner-service-actions">
-                    <button className="btn btn-secondary btn-sm"
-                      onClick={() => setEditingService(s)}>
-                      ✏️ Edit
-                    </button>
-                    <button className="btn btn-danger btn-sm"
-                      onClick={() => handleDelete(s.id)}>
-                      ✕
-                    </button>
-                  </div>
-                </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {services.map(s => (
+                <ServiceCard key={s.id} s={s}
+                  onEdit={setEditingService}
+                  onDelete={handleDelete} />
               ))}
             </div>
           )}
         </>
       )}
 
-      {/* Edit Modal */}
       {editingService && (
         <EditServiceModal
           service={editingService}

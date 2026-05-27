@@ -106,7 +106,7 @@ export default function App() {
             <ProtectedRoute roles={['BUSINESS_OWNER']}>
               <AppLayout><OwnerAppointments /></AppLayout>
             </ProtectedRoute>
-          } />
+          } />          
 
           {/* ── Admin Routes ── */}
           <Route path="/admin" element={

@@ -15,6 +15,11 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private long expiration;
 
+    // Allow up to 60 seconds of clock skew between client and server.
+    // This prevents spurious ExpiredJwtException when a token expires in the window between the client sending the
+    // request and the server validating it.
+    private static final long CLOCK_SKEW_SECONDS = 60L;
+
     public String generateToken(String email, String role, String name) {
         return Jwts.builder()
                 .setSubject(email)
@@ -29,6 +34,7 @@ public class JwtUtil {
     public String extractEmail(String token) {
         return Jwts.parser()
                 .setSigningKey(secret)
+                .setAllowedClockSkewSeconds(CLOCK_SKEW_SECONDS)
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
@@ -38,6 +44,7 @@ public class JwtUtil {
         try {
             Jwts.parser()
                     .setSigningKey(secret)
+                    .setAllowedClockSkewSeconds(CLOCK_SKEW_SECONDS)
                     .parseClaimsJws(token);
             return true;
         } catch (JwtException e) {
@@ -48,6 +55,7 @@ public class JwtUtil {
     public String extractRole(String token) {
         return Jwts.parser()
                 .setSigningKey(secret)
+                .setAllowedClockSkewSeconds(CLOCK_SKEW_SECONDS)
                 .parseClaimsJws(token)
                 .getBody()
                 .get("role", String.class);

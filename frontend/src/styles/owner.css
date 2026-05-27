@@ -10,7 +10,6 @@
   flex-wrap: wrap;
   margin-bottom: 24px;
 }
-
 .owner-filter-bar label {
   font-size: 0.82rem;
   font-weight: 600;
@@ -20,251 +19,458 @@
   margin-right: 4px;
 }
 
-.owner-filter-select {
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg-card);
-  color: var(--text-primary);
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  min-width: 160px;
-}
-.owner-filter-select:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.12);
-}
-
-/* ── Business Cards ────────────────────────────────────────────────────────── */
-.owner-biz-card {
+/* ── Business Card shell ───────────────────────────────────────────────────── */
+.od-biz-card {
+  padding: 22px 26px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 22px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   transition: transform 0.18s, box-shadow 0.18s;
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* tooltips must overflow the card */
 }
-.owner-biz-card::before {
+.od-biz-card::before {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
   height: 3px;
+  border-radius: 14px 14px 0 0;
   background: linear-gradient(90deg, var(--primary), var(--primary-light, #818cf8));
   opacity: 0;
   transition: opacity 0.2s;
 }
-.owner-biz-card:hover {
+.od-biz-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+  z-index: 10;
+  position: relative;
 }
-.owner-biz-card:hover::before { opacity: 1; }
+.od-biz-card:hover::before { opacity: 1; }
 
-.owner-biz-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 10px;
-}
-.owner-biz-name {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.3;
-}
-.owner-biz-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.owner-biz-meta span {
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.owner-biz-desc {
-  font-size: 0.83rem;
-  color: var(--text-muted);
-  line-height: 1.5;
-  flex: 1;
-}
-.owner-biz-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 4px;
-}
+/* Status-tinted left border */
+.od-biz-card--pending  { border-left: 3px solid rgba(251,191,36,0.45); }
+.od-biz-card--approved { border-left: 3px solid rgba(16,185,129,0.45); }
+.od-biz-card--rejected { border-left: 3px solid rgba(239,68,68,0.45); }
 
-/* ── Service Cards ─────────────────────────────────────────────────────────── */
-.owner-service-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 18px 20px;
+/* ── Row 1: name + status ── */
+.od-row-1 {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  transition: box-shadow 0.18s;
-}
-.owner-service-card:hover {
-  box-shadow: 0 4px 18px rgba(0,0,0,0.14);
-}
-.owner-service-info { flex: 1; min-width: 0; }
-.owner-service-name {
-  font-weight: 700;
-  font-size: 0.97rem;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.owner-service-detail {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-top: 3px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
-.owner-service-actions {
+.od-row-1-right {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.od-created-at {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.od-biz-name {
+  font-weight: 800;
+  font-size: 1.12rem;
+  color: var(--text-primary);
+  line-height: 1.25;
 }
 
-/* ── Modal Overlay ─────────────────────────────────────────────────────────── */
-.owner-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(4px);
+/* Status badge */
+.od-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 99px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.od-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.od-status-pending  { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+.od-status-pending  .od-status-dot { background: #fbbf24; box-shadow: 0 0 5px #fbbf24; }
+.od-status-approved { background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+.od-status-approved .od-status-dot { background: #10b981; box-shadow: 0 0 5px #10b981; }
+.od-status-rejected { background: rgba(239,68,68,0.10); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+.od-status-rejected .od-status-dot { background: #ef4444; }
+
+/* ── Row 2: Category ── */
+.od-row-2 { display: flex; align-items: center; }
+.od-biz-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.73rem;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: rgba(108,99,255,0.1);
+  color: #a78bfa;
+  font-weight: 600;
+  border: 1px solid rgba(108,99,255,0.2);
+}
+
+/* ── Row 3: Info chips ── */
+.od-info-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.od-info-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  padding: 5px 10px;
+  line-height: 1.2;
+}
+.od-chip-icon  { font-size: 0.82rem; }
+.od-chip-label { color: var(--text-muted); font-weight: 600; }
+.od-chip-value { color: var(--text-secondary); font-weight: 500; }
+
+/* ── Row 4: Description ── */
+.od-biz-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
+}
+.od-desc-label {
+  font-weight: 700;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+/* ── Pending note ── */
+.od-pending-note {
+  padding: 12px 16px;
+  background: rgba(251,191,36,0.07);
+  border: 1px solid rgba(251,191,36,0.2);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: #fbbf24;
+  line-height: 1.5;
+}
+
+/* ── Rejected note ── */
+.od-rejected-note {
+  padding: 12px 16px;
+  background: rgba(239,68,68,0.07);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: #ef4444;
+  line-height: 1.5;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ *  TIMELINE
+ *
+ *  Structure:  .od-timeline (flex row, align-items:center)
+ *    ├─ .od-tl-node   (position:relative, width = circle width only)
+ *    ├─ .od-tl-line   (flex:1, height:2px  — touches circle edges)
+ *    ├─ .od-tl-node
+ *    ├─ .od-tl-line
+ *    └─ .od-tl-node
+ *
+ *  The label is absolute so the node div stays exactly 34px wide,
+ *  meaning the line truly connects edge-to-edge with the circles.
+ *  Labels are centred under each circle via left:50%/translateX(-50%).
+ * ───────────────────────────────────────────────────────────────── */
+.od-timeline {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  /* top padding = normal, bottom padding = label height (≈32px) + gap */
+  padding: 12px 0 36px;
+}
+
+/* Node: only as wide as the circle so lines touch the circle border */
+.od-tl-node {
+  position: relative;
+  flex-shrink: 0;
+  /* No width set — it will be exactly the circle's width (34px) */
+}
+
+/* Line: flex:1 fills all space between nodes, touching each circle */
+.od-tl-line {
+  flex: 1;
+  height: 2px;
+  background: rgba(255,255,255,0.1);
+  min-width: 16px;
+}
+.od-tl-line-done { background: #10b981; }
+
+/* Circle */
+.od-tl-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+.od-tl-done {
+  background: #10b981;
+  border-color: #10b981;
+  color: #fff;
+  font-weight: 800;
+  font-size: 1rem;
+}
+.od-tl-active {
+  background: rgba(251,191,36,0.15);
+  border-color: #fbbf24;
+  box-shadow: 0 0 10px rgba(251,191,36,0.25);
+}
+/* Approved (inactive last step) — hourglass replaced with a cleaner checkmark outline */
+.od-tl-inactive {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.3);
+  font-size: 0.85rem;
+}
+
+/* Label: absolutely positioned below the circle, centred on it */
+.od-tl-label {
+  position: absolute;
+  top: calc(100% + 7px);   /* 7px gap below circle */
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.3;
+}
+.od-tl-label-done   { color: #10b981; }
+.od-tl-label-active { color: #fbbf24; }
+
+/* ── Action buttons (Approved) ──────────────────────────────────── */
+.od-biz-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Tooltip wrapper — position:relative so tooltip is anchored to button */
+.od-action-tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;  /* stack: button on top, tooltip below */
+}
+
+.od-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.od-action-btn--services {
+  border-color: rgba(108,99,255,0.4);
+  color: #a78bfa;
+}
+.od-action-btn--services:hover {
+  background: rgba(108,99,255,0.12);
+  border-color: #a78bfa;
+}
+.od-action-btn--settings {
+  border-color: rgba(14,165,233,0.35);
+  color: #38bdf8;
+}
+.od-action-btn--settings:hover {
+  background: rgba(14,165,233,0.1);
+  border-color: #38bdf8;
+}
+
+/* Tooltip — appears BELOW the button.
+ *
+ * KEY: use visibility+opacity instead of display:none/block.
+ * display:none causes a layout reflow when switching to block —
+ * on the last card this makes the browser try to expand the page
+ * height, causing the blurry/jitter effect seen in the screenshot.
+ * visibility:hidden keeps the element in flow with zero visual
+ * footprint; no reflow occurs on hover.
+ */
+.od-tooltip {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 200;
+
+  background: rgba(12, 12, 22, 0.97);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 12px 16px;
+  width: 280px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  text-align: left;
+  pointer-events: none;
+
+  /* Smooth fade — no layout change */
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+/* Arrow pointing UP */
+.od-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 20px;
+  border: 6px solid transparent;
+  border-bottom-color: rgba(255,255,255,0.12);
+}
+.od-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: calc(100% - 1px);
+  left: 21px;
+  border: 5px solid transparent;
+  border-bottom-color: rgba(12, 12, 22, 0.97);
+}
+
+.od-tooltip-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 5px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Show on hover — visibility+opacity, no display change */
+.od-action-tooltip-wrap:hover .od-tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* ── Service Cards ─────────────────────────────────────────────── */
+.owner-service-card {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 18px 20px;
+  background: var(--card-bg, rgba(255,255,255,0.03));
+  border: 1px solid var(--border-color, rgba(255,255,255,0.08));
+  border-radius: 12px;
+  transition: border-color 0.15s;
+}
+.owner-service-card:hover { border-color: rgba(108,99,255,0.25); }
+.owner-service-info { flex: 1; min-width: 0; }
+.owner-service-name {
+  font-weight: 700; font-size: 0.98rem; color: var(--text-primary);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.owner-service-detail {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;
+}
+.owner-service-detail span {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.78rem; color: var(--text-secondary);
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 6px; padding: 5px 10px; line-height: 1.3;
+}
+.owner-service-actions {
+  display: flex; gap: 8px; flex-direction: column; flex-shrink: 0; align-items: flex-end;
+}
+
+/* ── Modal Overlay ─────────────────────────────────────────────── */
+.owner-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(4px); display: flex; align-items: center;
+  justify-content: center; z-index: 1000; padding: 20px;
   animation: fadeIn 0.18s ease;
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
 .owner-modal {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 28px 30px;
-  width: 100%;
-  max-width: 520px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 28px 30px; width: 100%; max-width: 520px;
+  max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 60px rgba(0,0,0,0.35);
   animation: slideUp 0.22s ease;
 }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-.owner-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 22px;
-}
-.owner-modal-title {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-.owner-modal-close {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1rem;
-  display: flex; align-items: center; justify-content: center;
-  transition: background 0.15s, color 0.15s;
+.owner-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+.owner-modal-title  { font-size: 1.15rem; font-weight: 700; color: var(--text-primary); }
+.owner-modal-close  {
+  background: none; border: 1px solid var(--border); color: var(--text-muted);
+  width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 1rem;
+  display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s;
 }
 .owner-modal-close:hover { background: var(--bg-secondary); color: var(--text-primary); }
 
-/* ── Working Hours Grid ────────────────────────────────────────────────────── */
-.wh-day-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+/* ── Working Hours Grid ─────────────────────────────────────────── */
+.wh-day-grid { display: flex; flex-direction: column; gap: 10px; }
 .wh-day-row {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
-  display: grid;
-  grid-template-columns: 24px 110px 1fr;
-  gap: 14px;
-  align-items: center;
-  transition: border-color 0.15s;
+  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; display: grid; grid-template-columns: 24px 110px 1fr;
+  gap: 14px; align-items: center; transition: border-color 0.15s;
 }
-.wh-day-row.selected { border-color: var(--primary); background: rgba(var(--primary-rgb), 0.04); }
+.wh-day-row.selected { border-color: var(--primary); background: rgba(var(--primary-rgb),0.04); }
 .wh-day-row.closed { opacity: 0.55; }
-
-.wh-day-label {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--text-primary);
-}
-.wh-time-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+.wh-day-label { font-weight: 600; font-size: 0.9rem; color: var(--text-primary); }
+.wh-time-row  { display: flex; align-items: center; gap: 8px; }
 .wh-time-row span { font-size: 0.78rem; color: var(--text-muted); }
 
-/* Toggle switch */
-.toggle-switch {
-  position: relative;
-  width: 40px;
-  height: 22px;
-  flex-shrink: 0;
-}
+.toggle-switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
 .toggle-switch input { opacity: 0; width: 0; height: 0; }
 .toggle-slider {
-  position: absolute;
-  inset: 0;
-  background: var(--border);
-  border-radius: 22px;
-  cursor: pointer;
-  transition: background 0.2s;
+  position: absolute; inset: 0; background: var(--border);
+  border-radius: 22px; cursor: pointer; transition: background 0.2s;
 }
 .toggle-slider::before {
-  content: '';
-  position: absolute;
-  width: 16px; height: 16px;
-  left: 3px; top: 3px;
-  background: white;
-  border-radius: 50%;
-  transition: transform 0.2s;
+  content: ''; position: absolute; width: 16px; height: 16px;
+  left: 3px; top: 3px; background: white; border-radius: 50%; transition: transform 0.2s;
 }
 .toggle-switch input:checked + .toggle-slider { background: var(--primary); }
 .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
 
-/* bulk-apply bar */
 .wh-bulk-bar {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
-  flex-wrap: wrap;
+  background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
 }
 .wh-bulk-bar .form-group { margin-bottom: 0; flex: 1; min-width: 140px; }
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .owner-service-card { flex-direction: column; }
+  .owner-service-actions { flex-direction: row; }
+  .owner-service-detail { grid-template-columns: 1fr 1fr; }
+  .od-biz-actions { flex-direction: column; }
+  .od-action-tooltip-wrap { width: 100%; }
+  .od-action-btn { width: 100%; justify-content: center; }
+  .od-tooltip { width: 240px; }
+  .od-tl-node { width: 64px; }
+}

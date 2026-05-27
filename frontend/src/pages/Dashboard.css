@@ -1,33 +1,22 @@
 /* Dashboard.css */
 
-.dashboard-services-section {
-  margin-top: 8px;
-}
+.dashboard-services-section { margin-top: 8px; }
 
 .dashboard-services-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 16px;
 }
 
 .dashboard-services-link {
-  color: var(--primary-light);
-  font-size: 0.875rem;
-  text-decoration: none;
-  font-weight: 500;
-  transition: opacity 0.2s;
+  color: var(--primary-light); font-size: 0.875rem;
+  text-decoration: none; font-weight: 500; transition: opacity 0.2s;
 }
-
-.dashboard-services-link:hover {
-  opacity: 0.8;
-}
+.dashboard-services-link:hover { opacity: 0.8; }
 
 .dashboard-service-card {
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
-
 .dashboard-service-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(108,99,255,0.15);
@@ -35,25 +24,245 @@
 }
 
 .dashboard-service-name {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--text-primary);
-  flex: 1;
+  font-weight: 700; font-size: 0.95rem; color: var(--text-primary); flex: 1;
 }
-
 .dashboard-service-price {
-  color: var(--primary-light);
-  font-weight: 700;
-  font-size: 0.95rem;
-  white-space: nowrap;
+  color: var(--primary-light); font-weight: 700;
+  font-size: 0.95rem; white-space: nowrap;
+}
+.dashboard-service-meta { color: var(--text-muted); font-size: 0.78rem; margin: 4px 0; }
+.dashboard-quick-actions { margin-bottom: 36px; }
+
+/* ── Tips section ── */
+.dashboard-tip-card {
+  display: flex; align-items: flex-start; gap: 14px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 18px 20px; transition: all 0.2s;
+}
+.dashboard-tip-card:hover {
+  border-color: var(--primary); background: var(--bg-card-hover);
+  transform: translateY(-2px); box-shadow: 0 6px 24px rgba(108,99,255,0.15);
+}
+.dashboard-tip-icon { font-size: 1.6rem; flex-shrink: 0; line-height: 1; margin-top: 2px; }
+.dashboard-tip-title { font-weight: 700; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 4px; }
+.dashboard-tip-desc  { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; }
+
+/* ── FAQ section ── */
+.dashboard-faq { display: flex; flex-direction: column; gap: 8px; }
+
+.faq-item {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-md); overflow: hidden; transition: border-color 0.2s;
+}
+.faq-item.faq-open { border-color: rgba(108,99,255,0.4); }
+
+.faq-question {
+  width: 100%; background: none; border: none;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 16px 20px; font-family: inherit;
+  font-size: 0.9rem; font-weight: 600; color: var(--text-primary);
+  cursor: pointer; text-align: left; transition: background 0.15s;
+}
+.faq-question:hover { background: var(--bg-card-hover); }
+.faq-chevron { font-size: 0.65rem; color: var(--text-muted); flex-shrink: 0; }
+
+.faq-answer {
+  padding: 14px 20px 16px; font-size: 0.875rem;
+  color: var(--text-secondary); line-height: 1.65;
+  border-top: 1px solid var(--border);
 }
 
-.dashboard-service-meta {
-  color: var(--text-muted);
+.dashboard-footer {
+  /* Full-bleed breakout */
+  width: 90vw;
+  margin-left: calc(-45vw + 50%);
+
+  margin-top: 80px;
+
+  /* Deep space background — clearly distinct from the dark page cards */
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 0%,  rgba(99,102,241,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 90% 10%,  rgba(139,92,246,0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 50% 100%, rgba(59,130,246,0.08) 0%, transparent 50%),
+    #03040f;
+
+  border-top: 1px solid rgba(255,255,255,0.07);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Glowing top border line */
+.dashboard-footer::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 10%; width: 80%; height: 1px;
+  background: linear-gradient(to right, transparent, #6366f1 40%, #8b5cf6 60%, transparent);
+  box-shadow: 0 0 20px 2px rgba(99,102,241,0.5);
+}
+
+/* Subtle grid texture overlay */
+.dashboard-footer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+}
+
+/* ── Top CTA banner ── */
+.footer-top-banner {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 60px 24px 30px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.footer-top-banner h2 {
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  color: #fff;
+  font-weight: 800;
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+  /* Gradient text for the heading */
+  background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.footer-top-banner p {
+  color: #94a3b8;
+  max-width: 680px;
+  margin: 0 auto;
+  line-height: 1.75;
+  font-size: 1rem;
+}
+
+/* ── Main grid ── */
+.dashboard-footer-container {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr;
+  gap: 48px;
+  padding: 52px 6% 44px;
+}
+
+/* ── Brand ── */
+.footer-logo-row {
+  display: flex; align-items: center;
+  gap: 14px; margin-bottom: 18px;
+}
+
+.footer-brand-name {
+  color: #fff;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.footer-brand-tagline {
+  color: #64748b;
+  font-size: 0.82rem;
+  margin-top: 3px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.footer-description {
+  color: #94a3b8;
+  line-height: 1.8;
+  max-width: 420px;
+  margin-top: 16px;
+  font-size: 0.875rem;
+}
+
+/* ── Column titles ── */
+.footer-links-section h3,
+.footer-contact-section h3 {
+  color: #e2e8f0;
+  margin-bottom: 18px;
   font-size: 0.78rem;
-  margin: 4px 0;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
 }
 
-.dashboard-quick-actions {
-  margin-bottom: 36px;
+/* ── Nav links ── */
+.footer-links-section {
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.footer-links-section a {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none; color: #94a3b8;
+  font-size: 0.875rem;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: color 0.2s, transform 0.2s;
+}
+.footer-links-section a:last-child { border-bottom: none; }
+.footer-links-section a:hover { color: #a5b4fc; transform: translateX(5px); }
+
+/* ── Contact ── */
+.footer-contact-section {
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+.footer-contact-item {
+  display: flex; align-items: center; gap: 10px;
+  color: #94a3b8; font-size: 0.875rem;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+}
+
+.footer-contact-text {
+  color: #64748b; line-height: 1.8; margin-top: 4px;
+  max-width: 280px; font-size: 0.82rem;
+}
+
+/* ── Bottom bar ── */
+.footer-bottom {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 20px 6%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.footer-bottom p { color: #475569; font-size: 0.82rem; }
+
+.footer-bottom-links { display: flex; gap: 20px; }
+.footer-bottom-links a {
+  color: #475569; text-decoration: none;
+  font-size: 0.82rem; transition: color 0.2s;
+}
+.footer-bottom-links a:hover { color: #818cf8; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .dashboard-footer-container { grid-template-columns: 1fr 1fr; }
+  .footer-brand-section { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .dashboard-footer-container { grid-template-columns: 1fr; gap: 32px; padding: 36px 5% 28px; }
+  .footer-top-banner { padding: 40px 16px 24px; }
+  .footer-top-banner h2 { font-size: 1.4rem; }
+  .footer-bottom { flex-direction: column; align-items: flex-start; }
 }

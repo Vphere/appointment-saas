@@ -6,12 +6,34 @@ import { getServiceAverageRating } from '../api/reviews';
 import Spinner from '../components/Spinner';
 import './AllServices.css';
 
-const ALL_CATEGORIES = ['Salon', 'Spa', 'Fitness', 'Medical', 'Restaurant', 'Cleaning', 'Beauty'];
+// ── Matches backend ServiceCategory enum exactly ─────────────────
+const SERVICE_CATEGORIES = [
+  { value: 'HEALTH_WELLNESS',    label: 'Health & Wellness',     icon: '🏥' },
+  { value: 'DENTAL',             label: 'Dental',                icon: '🦷' },
+  { value: 'FITNESS_GYM',        label: 'Fitness & Gym',         icon: '🏋️' },
+  { value: 'SALON_BEAUTY',       label: 'Salon & Beauty',        icon: '💇' },
+  { value: 'SPA_MASSAGE',        label: 'Spa & Massage',         icon: '💆' },
+  { value: 'LEGAL',              label: 'Legal',                 icon: '⚖️' },
+  { value: 'FINANCIAL',          label: 'Financial',             icon: '💰' },
+  { value: 'CONSULTING',         label: 'Consulting',            icon: '💼' },
+  { value: 'EDUCATION_TUTORING', label: 'Education & Tutoring',  icon: '📚' },
+  { value: 'CLEANING',           label: 'Cleaning',              icon: '🧹' },
+  { value: 'PLUMBING',           label: 'Plumbing',              icon: '🔧' },
+  { value: 'ELECTRICAL',         label: 'Electrical',            icon: '⚡' },
+  { value: 'CARPENTRY',          label: 'Carpentry',             icon: '🪚' },
+  { value: 'PEST_CONTROL',       label: 'Pest Control',          icon: '🐛' },
+  { value: 'PHOTOGRAPHY',        label: 'Photography',           icon: '📷' },
+  { value: 'CATERING',           label: 'Catering',              icon: '🍽️' },
+  { value: 'EVENTS',             label: 'Events',                icon: '🎉' },
+  { value: 'TRAVEL',             label: 'Travel',                icon: '✈️' },
+  { value: 'GROCERY',            label: 'Grocery',               icon: '🛒' },
+  { value: 'PHARMACY',           label: 'Pharmacy',              icon: '💊' },
+  { value: 'OTHER',              label: 'Other',                 icon: '⚙️' },
+];
 
-const CATEGORY_ICONS = {
-  salon: '💇', spa: '💆', fitness: '🏋️', medical: '🏥',
-  restaurant: '🍽️', cleaning: '🧹', beauty: '💅', default: '⚙️',
-};
+const CATEGORY_MAP = Object.fromEntries(
+  SERVICE_CATEGORIES.map(c => [c.value, c])
+);
 
 const SORT_OPTIONS = [
   { value: 'default',     label: 'Default' },
@@ -20,28 +42,30 @@ const SORT_OPTIONS = [
   { value: 'rating_desc',label: 'Top Rated' },
 ];
 
+// Large fixed max so all realistic prices fit
+const PRICE_CEILING = 50000;
+
 export default function AllServices() {
-  const [services, setServices]               = useState([]);
-  const [businesses, setBusinesses]           = useState({});
-  const [loading, setLoading]                 = useState(true);
-  const [serviceRatings, setServiceRatings]   = useState({});
+  const [services, setServices]             = useState([]);
+  const [businesses, setBusinesses]         = useState({});
+  const [loading, setLoading]               = useState(true);
+  const [serviceRatings, setServiceRatings] = useState({});
   const navigate = useNavigate();
 
-  // ── Filter state ───────────────────────────────────────────────────────────
-  const [search, setSearch]                 = useState('');
-  const [categorySearch, setCategorySearch] = useState('');
+  // ── Filter state ───────────────────────────────────────────────
+  const [search, setSearch]                     = useState('');
+  const [categorySearch, setCategorySearch]     = useState('');
   const [activeCategories, setActiveCategories] = useState([]);
-  const [citySearch, setCitySearch]         = useState('');
+  const [citySearch, setCitySearch]             = useState('');
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
-  const [selectedCity, setSelectedCity]     = useState('');
-  const [sortBy, setSortBy]                 = useState('default');
-  const [priceMax, setPriceMax]             = useState(10000);
-  const [dataMaxPrice, setDataMaxPrice]     = useState(10000);
-  const [sidebarOpen, setSidebarOpen]       = useState(true);
+  const [selectedCity, setSelectedCity]         = useState('');
+  const [sortBy, setSortBy]                     = useState('default');
+  const [priceMax, setPriceMax]                 = useState(PRICE_CEILING);
+  const [sidebarOpen, setSidebarOpen]           = useState(true);
 
   const cityRef = useRef(null);
 
-  // ── Fetch data ─────────────────────────────────────────────────────────────
+  // ── Fetch ──────────────────────────────────────────────────────
   useEffect(() => {
     Promise.all([getAllServices(), getApprovedBusinesses()])
       .then(async ([sRes, bRes]) => {
@@ -51,11 +75,6 @@ export default function AllServices() {
         const bMap = {};
         (bRes.data || []).forEach((b) => { bMap[b.id] = b; });
         setBusinesses(bMap);
-
-        const top     = Math.max(...svcs.map((s) => Number(s.price) || 0), 0);
-        const rounded = Math.ceil(top / 500) * 500 || 10000;
-        setDataMaxPrice(rounded);
-        setPriceMax(rounded);
 
         const ratingMap = {};
         await Promise.all(svcs.map(async (s) => {
@@ -70,45 +89,43 @@ export default function AllServices() {
       .finally(() => setLoading(false));
   }, []);
 
-  // ── Close city dropdown on outside click ──────────────────────────────────
+  // ── Close city dropdown on outside click ──────────────────────
   useEffect(() => {
     const handler = (e) => {
-      if (cityRef.current && !cityRef.current.contains(e.target)) {
+      if (cityRef.current && !cityRef.current.contains(e.target))
         setCityDropdownOpen(false);
-      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // ── Derive cities ──────────────────────────────────────────────────────────
+  // ── Derive cities from services ───────────────────────────────
   const allCities = useMemo(() => {
     const set = new Set();
-    Object.values(businesses).forEach((b) => {
-      const city = b.city || b.location;
-      if (city) set.add(city);
-    });
+    services.forEach((s) => { if (s.city) set.add(s.city); });
     return Array.from(set).sort();
-  }, [businesses]);
+  }, [services]);
 
   const filteredCities = useMemo(() =>
     allCities.filter((c) => c.toLowerCase().includes(citySearch.toLowerCase())),
     [allCities, citySearch]
   );
 
-  // ── Category filter with search ────────────────────────────────────────────
+  // ── Category filter with search ────────────────────────────────
   const visibleCategories = useMemo(() =>
-    ALL_CATEGORIES.filter((c) => c.toLowerCase().includes(categorySearch.toLowerCase())),
+    SERVICE_CATEGORIES.filter((c) =>
+      c.label.toLowerCase().includes(categorySearch.toLowerCase())
+    ),
     [categorySearch]
   );
 
-  const toggleCategory = (cat) => {
+  const toggleCategory = (val) => {
     setActiveCategories((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+      prev.includes(val) ? prev.filter((c) => c !== val) : [...prev, val]
     );
   };
 
-  // ── Filter + sort ──────────────────────────────────────────────────────────
+  // ── Filter + sort ──────────────────────────────────────────────
   const filtered = useMemo(() => {
     let list = services.filter((s) => {
       const biz = businesses[s.businessId] || {};
@@ -118,24 +135,22 @@ export default function AllServices() {
         s.name?.toLowerCase().includes(q) ||
         s.description?.toLowerCase().includes(q) ||
         biz.name?.toLowerCase().includes(q) ||
-        biz.city?.toLowerCase().includes(q);
+        s.city?.toLowerCase().includes(q);
 
       const matchCat = activeCategories.length === 0 ||
-        activeCategories.some((ac) => biz.category?.toLowerCase() === ac.toLowerCase());
+        activeCategories.includes(s.category);
 
-      const matchCity = !selectedCity ||
-        biz.city === selectedCity || biz.location === selectedCity;
+      const matchCity = !selectedCity || s.city === selectedCity;
 
-      const price = Number(s.price) || 0;
-      const matchPrice = price <= priceMax;
+      const matchPrice = (Number(s.price) || 0) <= priceMax;
 
       return matchSearch && matchCat && matchCity && matchPrice;
     });
 
     switch (sortBy) {
-      case 'price_asc':  list = [...list].sort((a, b) => Number(a.price) - Number(b.price)); break;
-      case 'price_desc': list = [...list].sort((a, b) => Number(b.price) - Number(a.price)); break;
-      case 'rating_desc':list = [...list].sort((a, b) => (serviceRatings[b.id] ?? -1) - (serviceRatings[a.id] ?? -1)); break;
+      case 'price_asc':   list = [...list].sort((a, b) => Number(a.price) - Number(b.price)); break;
+      case 'price_desc':  list = [...list].sort((a, b) => Number(b.price) - Number(a.price)); break;
+      case 'rating_desc': list = [...list].sort((a, b) => (serviceRatings[b.id] ?? -1) - (serviceRatings[a.id] ?? -1)); break;
       default: break;
     }
     return list;
@@ -145,7 +160,7 @@ export default function AllServices() {
     activeCategories.length > 0,
     !!selectedCity,
     sortBy !== 'default',
-    priceMax < dataMaxPrice,
+    priceMax < PRICE_CEILING,
   ].filter(Boolean).length;
 
   const resetFilters = () => {
@@ -153,9 +168,15 @@ export default function AllServices() {
     setSelectedCity('');
     setCitySearch('');
     setSortBy('default');
-    setPriceMax(dataMaxPrice);
+    setPriceMax(PRICE_CEILING);
     setSearch('');
     setCategorySearch('');
+  };
+
+  const handleHeroPill = (type, value) => {
+    resetFilters();
+    if (type === 'category') setActiveCategories([value]);
+    if (type === 'sort') setSortBy(value);
   };
 
   const handleCardClick = (service) => {
@@ -174,12 +195,26 @@ export default function AllServices() {
   return (
     <div className="page-container as-root">
 
+      {/* ── Hero banner ── */}
+      <div className="as-hero">
+        <div className="as-hero-title">✦ Browse &amp; Book</div>
+        <h1 className="as-hero-headline">All Services</h1>
+        <p className="as-hero-sub">
+          Discover and book from a wide range of professional services — healthcare, fitness, beauty, home care, and more — all in one place. Filter by category, city, or price to find exactly what you need.
+        </p>
+        <button className={`as-hero-pill${activeCategories.includes('HEALTH_WELLNESS') ? ' active' : ''}`} onClick={() => handleHeroPill('category', 'HEALTH_WELLNESS')}>🏥 Healthcare</button>
+        <button className={`as-hero-pill${activeCategories.includes('SALON_BEAUTY') ? ' active' : ''}`} onClick={() => handleHeroPill('category', 'SALON_BEAUTY')}>💇 Salon & Beauty</button>
+        <button className={`as-hero-pill${activeCategories.includes('FITNESS_GYM') ? ' active' : ''}`} onClick={() => handleHeroPill('category', 'FITNESS_GYM')}>🏋️ Fitness & Gym</button>
+        <button className={`as-hero-pill${activeCategories.includes('CLEANING') ? ' active' : ''}`} onClick={() => handleHeroPill('category', 'CLEANING')}>🧹 Cleaning</button>
+        <button className={`as-hero-pill${sortBy === 'rating_desc' ? ' active' : ''}`} onClick={() => handleHeroPill('sort', 'rating_desc')}>⭐ Top Rated</button>
+      </div>
+
       {/* ── Top bar ── */}
       <div className="as-topbar">
         <div>
-          <h1 className="page-title">All Services</h1>
-          <p className="page-subtitle">
-            <span className="as-count">{filtered.length}</span> of {services.length} services
+          <p className="page-subtitle" style={{ margin: 0 }}>
+            <span className="as-count">{filtered.length}</span>
+            <span style={{ color: 'var(--text-muted)' }}> of {services.length} services</span>
             {activeFilterCount > 0 && (
               <button className="as-filter-badge" onClick={resetFilters}>
                 {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} · clear
@@ -265,16 +300,16 @@ export default function AllServices() {
                   <p className="as-no-match">No category matches</p>
                 ) : (
                   visibleCategories.map((cat) => {
-                    const active = activeCategories.includes(cat);
+                    const active = activeCategories.includes(cat.value);
                     return (
-                      <label key={cat} className={`as-cat-row${active ? ' active' : ''}`}>
-                        <span className="as-cat-icon">{CATEGORY_ICONS[cat.toLowerCase()] || '⚙️'}</span>
-                        <span className="as-cat-name">{cat}</span>
+                      <label key={cat.value} className={`as-cat-row${active ? ' active' : ''}`}>
+                        <span className="as-cat-icon">{cat.icon}</span>
+                        <span className="as-cat-name">{cat.label}</span>
                         <input
                           type="checkbox"
                           className="as-cat-check"
                           checked={active}
-                          onChange={() => toggleCategory(cat)}
+                          onChange={() => toggleCategory(cat.value)}
                         />
                         <span className={`as-cat-cb${active ? ' checked' : ''}`} />
                       </label>
@@ -343,22 +378,22 @@ export default function AllServices() {
             <div className="as-sb-section">
               <div className="as-sb-label">
                 Max Price
-                <span className="as-price-val">up to ₹{priceMax.toLocaleString()}</span>
+                <span className="as-price-val">₹{priceMax.toLocaleString()}</span>
               </div>
               <div className="as-price-slider-wrap">
                 <input
                   type="range"
                   min={0}
-                  max={dataMaxPrice}
-                  step={100}
+                  max={PRICE_CEILING}
+                  step={500}
                   value={priceMax}
                   onChange={(e) => setPriceMax(Number(e.target.value))}
                   className="as-price-slider"
-                  style={{ '--pct': `${(priceMax / dataMaxPrice) * 100}%` }}
+                  style={{ '--pct': `${(priceMax / PRICE_CEILING) * 100}%` }}
                 />
                 <div className="as-price-ends">
                   <span>₹0</span>
-                  <span>₹{dataMaxPrice.toLocaleString()}</span>
+                  <span>₹{(PRICE_CEILING / 1000).toFixed(0)}k</span>
                 </div>
               </div>
             </div>
@@ -377,10 +412,11 @@ export default function AllServices() {
           ) : (
             <div className={`as-grid${sidebarOpen ? '' : ' as-grid-wide'}`}>
               {filtered.map((service) => {
-                const biz    = businesses[service.businessId] || {};
-                const rating = serviceRatings[service.id];
-                const icon   = CATEGORY_ICONS[biz.category?.toLowerCase()] || CATEGORY_ICONS.default;
-                const dur    = service.duration || service.durationMinutes;
+                const biz      = businesses[service.businessId] || {};
+                const rating   = serviceRatings[service.id];
+                const catInfo  = CATEGORY_MAP[service.category] || CATEGORY_MAP['OTHER'];
+                const dur      = service.duration || service.durationMinutes;
+
                 return (
                   <div
                     key={service.id}
@@ -390,17 +426,38 @@ export default function AllServices() {
                     tabIndex={0}
                     onKeyDown={(e) => e.key === 'Enter' && handleCardClick(service)}
                   >
+                    {/* Card header with icon + rating */}
                     <div className="as-card-header">
-                      <span className="as-card-icon">{icon}</span>
+                      <span className="as-card-icon">{catInfo.icon}</span>
                       {rating !== null && rating !== undefined && (
                         <span className="as-card-star">★ {Number(rating).toFixed(1)}</span>
                       )}
                     </div>
+
                     <div className="as-card-body">
+                      {/* Service name */}
                       <h3 className="as-card-name">{service.name}</h3>
-                      {service.description && (
-                        <p className="as-card-desc">{service.description}</p>
+
+                      {/* Category pill: icon · Category · Name */}
+                      {service.category && (
+                        <span className="as-card-category-pill">
+                          <span>{catInfo.icon}</span>
+                          <span className="as-card-category-type">Category</span>
+                          <span className="as-card-category-sep">:</span>
+                          <span className="as-card-category-name">{catInfo.label}</span>
+                        </span>
                       )}
+
+                      {/* Description — clamped to 2 lines */}
+                      {service.description && (
+                        <div className="bl-card-about-row">
+                          <span className="bl-card-about-icon">📋</span>
+                          <span className="bl-card-about-label">About:</span>
+                          <span className="bl-card-about-text">{service.description}</span>
+                        </div>
+                      )}
+
+                      {/* Business row */}
                       {biz.name && (
                         <div
                           className="as-card-biz"
@@ -410,18 +467,43 @@ export default function AllServices() {
                           onKeyDown={(e) => { if (e.key === 'Enter') handleBizClick(e, service.businessId); }}
                           title="View business details"
                         >
-                          <span className="as-card-biz-name">🏪 {biz.name}</span>
-                          {biz.city && <span className="as-card-biz-city">{biz.city}</span>}
-                          {/* Hint pill — makes the clickability obvious */}
-                          <span className="as-card-biz-hint">View details ↗</span>
+                          <div className="as-card-biz-top">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
+                              <span className="as-card-biz-label">🏪 Business</span>
+                              <span className="as-card-biz-name">{biz.name}</span>
+                            </div>
+                            <span className="as-card-biz-hint">View ↗</span>
+                          </div>
+                          {service.city && (
+                            <div className="as-card-biz-city-row">
+                              <span className="as-card-biz-city-label">📍 Location</span>
+                              <span className="as-card-biz-city">{service.city}</span>
+                            </div>
+                          )}
                         </div>
                       )}
-                      <div className="as-card-footer">
-                        <span className="as-card-price">₹{service.price}</span>
-                        {dur && <span className="as-card-dur">⏱ {dur} min</span>}
+
+                      {/* Price & duration */}
+                      <div className="as-card-pricing">
+                        {dur && (
+                          <div className="as-card-dur-row">
+                            <span className="as-card-dur-icon">⏱</span>
+                            <span className="as-card-dur-label">Duration</span>
+                            <span className="as-card-dur">{dur} min</span>
+                          </div>
+                        )}
+                        <div className="as-card-price-row">
+                          <span className="as-card-price-label">Price</span>
+                          <span className="as-card-price">₹{Number(service.price).toLocaleString()}</span>
+                        </div>
                       </div>
+
+                      {/* Book Now button */}
                       <div className="as-card-book-row">
-                        <span className="as-card-book-label">Book Now →</span>
+                        <button className="as-card-book-btn">
+                          Book Now
+                          <span className="as-card-book-arrow">→</span>
+                        </button>
                       </div>
                     </div>
                   </div>

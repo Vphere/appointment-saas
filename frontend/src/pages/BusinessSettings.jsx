@@ -92,18 +92,6 @@ function Label({ children }) {
   );
 }
 
-function SelectInput({ value, onChange, children }) {
-  return (
-    <select value={value} onChange={onChange} style={{
-      width: '100%', background: T.surface, border: `1px solid ${T.border}`,
-      borderRadius: 9, padding: '10px 14px', color: T.text, fontSize: 13,
-      outline: 'none', cursor: 'pointer',
-    }}>
-      {children}
-    </select>
-  );
-}
-
 function Btn({ children, onClick, disabled, variant = 'primary', size = 'md' }) {
   const styles = {
     primary: { background: 'linear-gradient(135deg,#6574f8,#7c6af7)', color: '#fff', border: 'none' },
@@ -196,16 +184,17 @@ function BusinessServiceSelector({
   return (
     <>
       <Card>
-        <Label>Select Business</Label>
-        <SelectInput value={selectedBusiness} onChange={e => onBusinessChange(e.target.value)}>
-          <option value="">Choose a business…</option>
-          {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-        </SelectInput>
+        <label className="form-label">Select Business</label>
+            <select className="form-select" value={selectedBusiness} 
+                    onChange={e => onBusinessChange(e.target.value)}>
+              <option value="">Choose a business...</option>
+              {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
       </Card>
 
       {selectedBusiness && (
         <Card>
-          <Label>{serviceLabel}</Label>
+          <label className="form-label">Select Service</label>
           {loadingServices ? (
             <Spinner message="Loading services…" />
           ) : services.length === 0 ? (
@@ -213,12 +202,13 @@ function BusinessServiceSelector({
               No services found — add services first
             </p>
           ) : (
-            <SelectInput value={selectedService} onChange={e => onServiceChange(e.target.value)}>
+            <select className="form-select"
+                    value={selectedService} onChange={e => onServiceChange(e.target.value)}>
               <option value="">Choose a service…</option>
               {services.map(s => (
                 <option key={s.id} value={s.id}>{s.name} (₹{s.price})</option>
               ))}
-            </SelectInput>
+            </select>
           )}
         </Card>
       )}
@@ -502,11 +492,12 @@ function HolidaysTab({ businesses }) {
 
       {/* Business selector */}
       <Card>
-        <Label>Select Business</Label>
-        <SelectInput value={selectedBusiness} onChange={e => handleBusinessChange(e.target.value)}>
+        <label className="form-label">Select Business</label>
+        <select className="form-select" 
+                value={selectedBusiness} onChange={e => handleBusinessChange(e.target.value)}>
           <option value="">Choose a business…</option>
           {businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-        </SelectInput>
+        </select>
       </Card>
 
       {selectedBusiness && (
@@ -539,16 +530,17 @@ function HolidaysTab({ businesses }) {
             {/* Service selector when not applying to all */}
             {!applyToAll && (
               <div style={{ marginBottom: 16 }}>
-                <Label>Select Service</Label>
+                <label className="form-label">Select Service</label>
                 {loadingServices ? <Spinner message="Loading services…" /> : services.length === 0 ? (
                   <p style={{ color: T.muted, fontSize: 13, margin: '8px 0 0' }}>No services found</p>
                 ) : (
-                  <SelectInput value={selectedService} onChange={e => setSelectedService(e.target.value)}>
+                  <select className="form-select"
+                          value={selectedService} onChange={e => setSelectedService(e.target.value)}>
                     <option value="">Choose a service…</option>
                     {services.map(s => (
                       <option key={s.id} value={s.id}>{s.name} (₹{s.price})</option>
                     ))}
-                  </SelectInput>
+                  </select>
                 )}
               </div>
             )}
@@ -928,22 +920,17 @@ export default function BusinessSettings() {
   ];
 
   return (
-    <div style={{ minHeight: '100vh', background: T.bg, padding: '32px 20px' }}>
-      <div style={{ maxWidth: 820, margin: '0 auto' }}>
-        <div style={{ marginBottom: 28 }}>
-          <h1 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800,
-            color: T.text, letterSpacing: '-0.02em' }}>
-            Business Settings
-          </h1>
-          <p style={{ margin: 0, fontSize: 13, color: T.muted }}>
-            Manage working hours, holidays, and photos for your businesses
-          </p>
-        </div>
-        <TabBar tabs={TABS} active={tab} onChange={setTab} />
-        {tab === 'hours'    && <WorkingHoursTab businesses={businesses} />}
-        {tab === 'holidays' && <HolidaysTab     businesses={businesses} />}
-        {tab === 'photos'   && <PhotosTab       businesses={businesses} />}
+    <div className="page-container">
+      <div className="page-header">
+        <h1 className="page-title">Business Settings</h1>
+        <p className="page-subtitle">
+          Manage working hours, holidays, and photos for your businesses
+        </p>
       </div>
+      <TabBar tabs={TABS} active={tab} onChange={setTab} />
+      {tab === 'hours'    && <WorkingHoursTab businesses={businesses} />}
+      {tab === 'holidays' && <HolidaysTab     businesses={businesses} />}
+      {tab === 'photos'   && <PhotosTab       businesses={businesses} />}
     </div>
   );
 }

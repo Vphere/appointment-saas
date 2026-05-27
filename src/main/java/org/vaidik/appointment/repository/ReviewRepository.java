@@ -10,17 +10,26 @@ import java.util.Optional;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
 
-    List<Review> findByBusinessId(Long businessId);
-    boolean existsByAppointmentId(Long appointmentId);
+    // Primary query — reviews for a specific service
+    List<Review> findByServiceId(Long serviceId);
 
-    @Query("SELECT AVG(r.rating) FROM Review r WHERE r.business.id = :businessId")
-    Double getAverageRating(@Param("businessId")Long businessId);
+    // All reviews for every service belonging to a business
+    // Used by the business-owner dashboard to show all their reviews in one place
+    @Query("SELECT r FROM Review r WHERE r.service.business.id = :businessId")
+    List<Review> findByBusinessId(@Param("businessId") Long businessId);
+
+    boolean existsByAppointmentId(Long appointmentId);
     Optional<Review> findByAppointmentId(Long appointmentId);
 
-    @Query("SELECT AVG(r.rating) FROM Review r WHERE r.appointment.service.id = :serviceId")
+    // Average rating for a specific service
+    @Query("SELECT AVG(r.rating) FROM Review r WHERE r.service.id = :serviceId")
     Double getAverageRatingByServiceId(@Param("serviceId") Long serviceId);
 
+    // Average rating across all services of a business
+    @Query("SELECT AVG(r.rating) FROM Review r WHERE r.service.business.id = :businessId")
+    Double getAverageRating(@Param("businessId") Long businessId);
+
+    // Overall platform average (used by AdminService)
     @Query("SELECT AVG(r.rating) FROM Review r")
     Double getOverallAverageRating();
-
 }

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import org.vaidik.appointment.dto.CreateServiceRequest;
 import org.vaidik.appointment.dto.ServiceResponse;
 import org.vaidik.appointment.dto.UpdateServiceRequest;
+import org.vaidik.appointment.entity.ServiceCategory;
 import org.vaidik.appointment.service.ServiceOfferingService;
 
 import java.util.List;
@@ -31,14 +32,14 @@ public class ServiceOfferingController {
 
     // GET SERVICES (PUBLIC)
     @GetMapping("/business/{businessId}")
-    public List<ServiceResponse> getServices(@PathVariable Long businessId) {
+    public List<ServiceResponse> getServices(@PathVariable("businessId") Long businessId) {
         return serviceOfferingService.getServicesByBusiness(businessId);
     }
 
     // UPDATE SERVICE
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('BUSINESS_OWNER')")
-    public ServiceResponse updateService(@PathVariable Long id, @RequestBody UpdateServiceRequest request, Authentication authentication) {
+    public ServiceResponse updateService(@PathVariable("id") Long id, @RequestBody UpdateServiceRequest request, Authentication authentication) {
 
         return serviceOfferingService.updateService(
                 id,
@@ -50,7 +51,7 @@ public class ServiceOfferingController {
     // DELETE SERVICE
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('BUSINESS_OWNER')")
-    public void deleteService(@PathVariable Long id, Authentication authentication) {
+    public void deleteService(@PathVariable("id") Long id, Authentication authentication) {
 
         serviceOfferingService.deleteService(id, authentication.getName());
     }
@@ -58,5 +59,21 @@ public class ServiceOfferingController {
     @GetMapping
     public List<ServiceResponse> getAllServices() {
         return serviceOfferingService.getAllServices();
+    }
+
+    @PostMapping("/bulk")
+    @PreAuthorize("hasRole('BUSINESS_OWNER')")
+    public List<ServiceResponse> createServicesBulk(
+            @RequestBody List<CreateServiceRequest> requests,
+            Authentication authentication) {
+        return serviceOfferingService.createServicesBulk(requests, authentication.getName());
+    }
+
+    @GetMapping("/by-category/{category}")
+    public List<ServiceResponse> getByCategory(
+            @PathVariable ServiceCategory category,
+            @RequestParam(required = false) String city
+    ) {
+        return serviceOfferingService.getByCategory(category, city);
     }
 }

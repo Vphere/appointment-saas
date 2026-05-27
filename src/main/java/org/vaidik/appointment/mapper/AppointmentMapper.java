@@ -3,11 +3,14 @@ package org.vaidik.appointment.mapper;
 import org.springframework.stereotype.Component;
 import org.vaidik.appointment.dto.AppointmentResponse;
 import org.vaidik.appointment.entity.Appointment;
+import org.vaidik.appointment.entity.ServiceOffering;
 
 @Component
 public class AppointmentMapper {
 
     public AppointmentResponse toResponse(Appointment appointment) {
+
+        ServiceOffering s = appointment.getService();
 
         return AppointmentResponse.builder()
                 .id(appointment.getId())
@@ -16,16 +19,16 @@ public class AppointmentMapper {
                 .userEmail(appointment.getUser().getEmail())
                 .businessId(appointment.getBusiness().getId())
                 .businessName(appointment.getBusiness().getName())
-                .serviceId(appointment.getService().getId())
-                .serviceName(appointment.getService().getName())
-                .price(appointment.getService().getPrice() != null ? appointment.getService().getPrice().doubleValue() : null)
+                .serviceId(s != null ? s.getId() : null)
+                .serviceName(s != null ? s.getName() : null)
+                .price(s != null ? appointment.getService().getPrice().doubleValue() : null)
                 .appointmentDate(appointment.getAppointmentDate())
                 .appointmentTime(appointment.getAppointmentTime())
                 .status(appointment.getStatus())
                 .reviewed(appointment.getReviewed())
                 .createdAt(appointment.getCreatedAt())
                 .updatedAt(appointment.getUpdatedAt())
-                .duration(appointment.getService().getDuration())
+                .duration(s != null ? s.getDuration() : null)
                 .build();
     }
 }

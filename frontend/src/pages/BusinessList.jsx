@@ -5,22 +5,38 @@ import { getAverageRating } from '../api/reviews';
 import Spinner from '../components/Spinner';
 import './BusinessList.css';
 
-const CATEGORIES = ['All', 'Salon', 'Spa', 'Fitness', 'Medical', 'Restaurant', 'Cleaning', 'Beauty'];
-
-const CATEGORY_ICONS = {
-  salon: '💇', spa: '💆', fitness: '🏋️', medical: '🏥',
-  restaurant: '🍽️', cleaning: '🧹', beauty: '💅', default: '🏪',
-};
-
 const SORT_OPTIONS = [
-  { value: 'default',      label: 'Default' },
-  { value: 'rating_desc',  label: 'Top Rated' },
-  { value: 'name_asc',     label: 'Name A → Z' },
-  { value: 'name_desc',    label: 'Name Z → A' },
+  { value: 'default',     label: 'Default' },
+  { value: 'rating_desc', label: 'Top Rated' },
+  { value: 'name_asc',    label: 'Name A → Z' },
+  { value: 'name_desc',   label: 'Name Z → A' },
 ];
 
+// Business type display config
+const BUSINESS_TYPES = [
+  { value: 'ALL',             label: 'All Types',         icon: '🏢' },
+  { value: 'SOLE_PROPRIETOR', label: 'Sole Proprietor',   icon: '👤' },
+  { value: 'PARTNERSHIP',     label: 'Partnership',       icon: '🤝' },
+  { value: 'PRIVATE_LIMITED', label: 'Private Limited',   icon: '🏛️' },
+  { value: 'LLP',             label: 'LLP',               icon: '⚖️' },
+  { value: 'OTHER',           label: 'Other',             icon: '🏗️' },
+];
+const BTYPE_MAP = Object.fromEntries(BUSINESS_TYPES.map(t => [t.value, t]));
+
+// Generic icon for all businesses (not category-specific)
+const BIZ_ICONS = ['🏬', '🏢', '🏪', '🏨', '🏦', '🏗️'];
+function getBizIcon(id) {
+  return BIZ_ICONS[Number(id) % BIZ_ICONS.length];
+}
+
+function formatBusinessType(raw) {
+  if (!raw) return null;
+  return BTYPE_MAP[raw] || { label: raw, icon: '🏢' };
+}
+
 function BusinessCard({ business, rating, onClick }) {
-  const icon = CATEGORY_ICONS[business.category?.toLowerCase()] || CATEGORY_ICONS.default;
+  const typeInfo = formatBusinessType(business.businessType);
+  const icon = getBizIcon(business.id);
 
   return (
     <div
@@ -30,22 +46,53 @@ function BusinessCard({ business, rating, onClick }) {
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && onClick()}
     >
+      {/* Header */}
       <div className="bl-card-image">
         <span className="bl-card-icon">{icon}</span>
-        {rating !== null && (
+        {rating !== null && rating !== undefined && (
           <span className="bl-card-rating-badge">★ {Number(rating).toFixed(1)}</span>
         )}
       </div>
+
       <div className="bl-card-body">
+        {/* Name */}
         <h3 className="bl-card-name">{business.name}</h3>
-        <p className="bl-card-desc">{business.description || 'Quality services for you'}</p>
-        <div className="bl-card-meta">
-          <span className="bl-card-city">📍 {business.city || business.location || 'N/A'}</span>
-          {business.category && (
-            <span className="bl-card-cat">{business.category}</span>
+
+        {/* Business type pill: icon · Type · Actual name */}
+        {typeInfo && business.businessType && business.businessType !== 'OTHER' && (
+          <span className="bl-card-type-badge">
+            <span>{typeInfo.icon}</span>
+            <span className="bl-card-type-label">Type</span>
+            <span className="bl-card-type-sep">·</span>
+            <span className="bl-card-type-name">{typeInfo.label}</span>
+          </span>
+        )}
+
+        {/* Description — icon · About · text (2-line clamp) */}
+        {business.description && (
+          <div className="bl-card-about-row">
+            <span className="bl-card-about-icon">📋</span>
+            <span className="bl-card-about-label">About&nbsp;</span>
+            <span className="bl-card-about-text">{business.description}</span>
+          </div>
+        )}
+
+        {/* Meta rows */}
+        <div className="bl-card-meta-rows">
+          {business.phone && (
+            <div className="bl-card-meta-row">
+              <span className="bl-card-meta-icon">📞</span>
+              <span className="bl-card-meta-label">Phone&nbsp;</span>
+              <span className="bl-card-meta-value">{business.phone}</span>
+            </div>
           )}
         </div>
-        <button className="btn btn-outline btn-full bl-card-btn">View Details →</button>
+
+        {/* View Details button */}
+        <button className="bl-card-btn">
+          View Details
+          <span className="bl-card-btn-arrow">→</span>
+        </button>
       </div>
     </div>
   );
@@ -57,22 +104,20 @@ export default function BusinessList() {
   const [loading, setLoading]       = useState(true);
   const navigate = useNavigate();
 
-  // ── Filter state ───────────────────────────────────────────────────────────
-  const [search, setSearch]               = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [locationFilter, setLocationFilter] = useState('All');
-  const [sortBy, setSortBy]               = useState('default');
-  const [minRating, setMinRating]         = useState(0);
-  const [sidebarOpen, setSidebarOpen]     = useState(true);
+  // ── Filter state ───────────────────────────────────────────────
+  const [search, setSearch]           = useState('');
+  const [sortBy, setSortBy]           = useState('default');
+  const [minRating, setMinRating]     = useState(0);
+  const [bizType, setBizType]         = useState('ALL');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
+  // ── Fetch ──────────────────────────────────────────────────────
   useEffect(() => {
     getApprovedBusinesses()
       .then(async (res) => {
         const bizList = Array.isArray(res.data) ? res.data : [];
         setBusinesses(bizList);
 
-        // Fetch all ratings in parallel
         const rMap = {};
         await Promise.all(
           bizList.map(async (b) => {
@@ -90,43 +135,31 @@ export default function BusinessList() {
       .finally(() => setLoading(false));
   }, []);
 
-  // ── Derive cities ──────────────────────────────────────────────────────────
-  const cities = useMemo(() => {
-    const set = new Set();
-    businesses.forEach((b) => {
-      const city = b.city || b.location;
-      if (city) set.add(city);
-    });
-    return ['All', ...Array.from(set).sort()];
+  // ── Derive available types ─────────────────────────────────────
+  const availableTypes = useMemo(() => {
+    const seen = new Set(businesses.map(b => b.businessType).filter(Boolean));
+    return BUSINESS_TYPES.filter(t => t.value === 'ALL' || seen.has(t.value));
   }, [businesses]);
 
-  // ── Filter + sort ──────────────────────────────────────────────────────────
+  // ── Filter + sort ──────────────────────────────────────────────
   const filtered = useMemo(() => {
     let list = businesses.filter((b) => {
       const q = search.toLowerCase();
-
       const matchSearch =
         !q ||
         b.name?.toLowerCase().includes(q) ||
-        b.city?.toLowerCase().includes(q) ||
         b.description?.toLowerCase().includes(q) ||
-        b.category?.toLowerCase().includes(q);
-
-      const matchCat =
-        activeCategory === 'All' ||
-        b.category?.toLowerCase() === activeCategory.toLowerCase();
-
-      const matchLoc =
-        locationFilter === 'All' ||
-        b.city === locationFilter ||
-        b.location === locationFilter;
+        b.phone?.toLowerCase().includes(q) ||
+        b.ownerName?.toLowerCase().includes(q);
 
       const bRating = ratings[b.id];
       const matchRating =
         minRating === 0 ||
         (bRating !== null && bRating !== undefined && bRating >= minRating);
 
-      return matchSearch && matchCat && matchLoc && matchRating;
+      const matchType = bizType === 'ALL' || b.businessType === bizType;
+
+      return matchSearch && matchRating && matchType;
     });
 
     switch (sortBy) {
@@ -142,23 +175,26 @@ export default function BusinessList() {
       default:
         break;
     }
-
     return list;
-  }, [businesses, ratings, search, activeCategory, locationFilter, sortBy, minRating]);
+  }, [businesses, ratings, search, sortBy, minRating, bizType]);
 
   const activeFilterCount = [
-    activeCategory !== 'All',
-    locationFilter !== 'All',
     sortBy !== 'default',
     minRating > 0,
+    bizType !== 'ALL',
   ].filter(Boolean).length;
 
   const resetFilters = () => {
-    setActiveCategory('All');
-    setLocationFilter('All');
     setSortBy('default');
     setMinRating(0);
+    setBizType('ALL');
     setSearch('');
+  };
+
+  const handleHeroPill = (type, value) => {
+    resetFilters();
+    if (type === 'sort') setSortBy(value);
+    if (type === 'type') setBizType(value);
   };
 
   if (loading) return <div className="page-container"><Spinner message="Loading businesses..." /></div>;
@@ -166,27 +202,58 @@ export default function BusinessList() {
   return (
     <div className="page-container bl-root">
 
+      {/* ── Hero banner ── */}
+      <div className="bl-hero">
+        <div className="bl-hero-title">✦ Browse &amp; Explore</div>
+        <h1 className="bl-hero-headline">Discover Businesses</h1>
+        <p className="bl-hero-sub">
+          Explore verified businesses on BookEase — each offering a range of bookable services. Browse by name or filter by rating and type to find the right business for your needs.
+        </p>
+        <div className="bl-hero-pills">
+          <button className={`bl-hero-pill${sortBy === 'rating_desc' ? ' active' : ''}`} onClick={() => handleHeroPill('sort', 'rating_desc')}>⭐ Top Rated</button>
+          <button className={`bl-hero-pill${bizType === 'SOLE_PROPRIETOR' ? ' active' : ''}`} onClick={() => handleHeroPill('type', 'SOLE_PROPRIETOR')}>👤 Sole Proprietors</button>
+          <button className={`bl-hero-pill${bizType === 'PRIVATE_LIMITED' ? ' active' : ''}`} onClick={() => handleHeroPill('type', 'PRIVATE_LIMITED')}>🏛️ Private Limited</button>
+          <button className={`bl-hero-pill${bizType === 'PARTNERSHIP' ? ' active' : ''}`} onClick={() => handleHeroPill('type', 'PARTNERSHIP')}>🤝 Partnerships</button>
+        </div>
+      </div>
+
       {/* ── Top bar ── */}
       <div className="bl-topbar">
         <div className="bl-topbar-left">
-          <h1 className="page-title">Discover Businesses</h1>
-          <p className="page-subtitle">
-            {filtered.length} of {businesses.length} businesses available
-            {activeFilterCount > 0 && <span className="bl-filter-badge">{activeFilterCount} filters active</span>}
+          <p className="page-subtitle" style={{ margin: 0 }}>
+            <span className="bl-count">{filtered.length}</span>
+            <span style={{ color: 'var(--text-muted)' }}> of {businesses.length} businesses</span>
+            {activeFilterCount > 0 && (
+              <button className="bl-filter-badge" onClick={resetFilters}>
+                {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} · clear
+              </button>
+            )}
           </p>
         </div>
         <div className="bl-topbar-right">
-          <input
-            className="form-input bl-search"
-            placeholder="🔍 Search businesses..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="bl-search-wrap">
+            <span className="bl-search-icon">🔍</span>
+            <input
+              className="bl-search-input"
+              placeholder="Search businesses, owners…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button className="bl-search-clear" onClick={() => setSearch('')}>✕</button>
+            )}
+          </div>
           <button
             className={`bl-sidebar-toggle${sidebarOpen ? ' active' : ''}`}
             onClick={() => setSidebarOpen((v) => !v)}
           >
-            ⚡ Filters{activeFilterCount > 0 && <span className="bl-toggle-count">{activeFilterCount}</span>}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <line x1="4" y1="6" x2="20" y2="6"/>
+              <line x1="8" y1="12" x2="20" y2="12"/>
+              <line x1="12" y1="18" x2="20" y2="18"/>
+            </svg>
+            {sidebarOpen ? 'Hide filters' : 'Show filters'}
+            {activeFilterCount > 0 && <span className="bl-toggle-count">{activeFilterCount}</span>}
           </button>
         </div>
       </div>
@@ -197,41 +264,15 @@ export default function BusinessList() {
         {sidebarOpen && (
           <aside className="bl-sidebar">
             <div className="bl-sidebar-header">
-              <span>Filters</span>
+              <span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                </svg>
+                Filters
+              </span>
               {activeFilterCount > 0 && (
                 <button className="bl-reset-btn" onClick={resetFilters}>Reset all</button>
               )}
-            </div>
-
-            {/* Category */}
-            <div className="bl-filter-group">
-              <div className="bl-filter-label">Category</div>
-              <div className="bl-pills">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat}
-                    className={`bl-pill${activeCategory === cat ? ' active' : ''}`}
-                    onClick={() => setActiveCategory(cat)}
-                  >
-                    {cat !== 'All' && (CATEGORY_ICONS[cat.toLowerCase()] || '🏪') + ' '}
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Location */}
-            <div className="bl-filter-group">
-              <div className="bl-filter-label">City / Location</div>
-              <select
-                className="form-input bl-select"
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-              >
-                {cities.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
             </div>
 
             {/* Min rating */}
@@ -247,7 +288,7 @@ export default function BusinessList() {
                     className={`bl-sort-btn${minRating === r ? ' active' : ''}`}
                     onClick={() => setMinRating(r)}
                   >
-                    {r === 0 ? 'Any' : `★ ${r}+`}
+                    {r === 0 ? 'Any rating' : `★ ${r}+`}
                   </button>
                 ))}
               </div>
@@ -268,6 +309,26 @@ export default function BusinessList() {
                 ))}
               </div>
             </div>
+
+            {/* Business type filter */}
+            {availableTypes.length > 1 && (
+              <div className="bl-filter-group">
+                <div className="bl-filter-label">Business Type</div>
+                <div className="bl-type-pills">
+                  {availableTypes.map((t) => (
+                    <button
+                      key={t.value}
+                      className={`bl-type-pill${bizType === t.value ? ' active' : ''}`}
+                      onClick={() => setBizType(t.value)}
+                    >
+                      <span className="bl-type-icon">{t.icon}</span>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
           </aside>
         )}
 

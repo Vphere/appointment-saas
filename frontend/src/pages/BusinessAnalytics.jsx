@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import api from "../api/axios";
+import api from "../api/axiosInstance";
 import { getBusinessReviews } from "../api/reviews";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -459,7 +459,7 @@ export default function BusinessAnalytics() {
   },[]);
 
   if(loading) return (
-    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
+    <div className="page-container" style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:400}}>
       <div style={{textAlign:"center"}}>
         <div style={{width:48,height:48,borderRadius:"50%",margin:"0 auto 16px",
           border:`3px solid ${C.border}`,borderTopColor:C.indigo,
@@ -471,7 +471,7 @@ export default function BusinessAnalytics() {
   );
 
   if(error) return (
-    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
+    <div className="page-container" style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:400}}>
       <Card style={{maxWidth:380,textAlign:"center"}}>
         <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
         <p style={{color:C.rose,fontSize:14,marginBottom:16}}>{error}</p>
@@ -502,33 +502,16 @@ export default function BusinessAnalytics() {
   ];
 
   return (
-    <div style={{minHeight:"100vh",background:C.bg,padding:"32px 24px",
-      fontFamily:"'DM Sans', system-ui, sans-serif"}}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
-        *{box-sizing:border-box;}
-        ::-webkit-scrollbar{width:6px;height:6px;}
-        ::-webkit-scrollbar-track{background:transparent;}
-        ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px;}
-      `}</style>
-
-      <div style={{maxWidth:1060,margin:"0 auto"}}>
-
-        {/* Breadcrumb */}
-        <div style={{marginBottom:24,display:"flex",alignItems:"center",gap:8,fontSize:12,color:C.muted}}>
-          <Link to="/dashboard" style={{color:C.muted,textDecoration:"none"}}>Dashboard</Link>
-          <span>›</span>
-          <span style={{color:C.dim}}>Analytics</span>
-        </div>
+    <div className="page-container">
 
         {/* Page header */}
         <div style={{display:"flex",justifyContent:"space-between",
           alignItems:"flex-start",marginBottom:32,flexWrap:"wrap",gap:16}}>
           <div>
-            <h1 style={{margin:"0 0 6px",fontSize:22,fontWeight:800,color:C.bright,letterSpacing:"-0.02em"}}>
+            <h1 className="page-title" style={{marginBottom:6}}>
               Business Analytics
             </h1>
-            <p style={{margin:0,fontSize:13,color:C.dim}}>
+            <p className="page-subtitle">
               Revenue insights · Appointment trends · Customer reviews
             </p>
           </div>
@@ -549,7 +532,7 @@ export default function BusinessAnalytics() {
         </div>
 
         {/* KPI row */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:28}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:14,marginBottom:28}}>
           <KpiCard label="Total Revenue"    value={fmtK(data.totalRevenue)} accent={C.emerald} icon="₹"
             sub={`from ${data.totalCompleted} completed`}/>
           <KpiCard label="All Appointments" value={data.totalAppointments}  accent={C.indigo}  icon="📅"/>
@@ -814,6 +797,5 @@ export default function BusinessAnalytics() {
         )}
 
       </div>
-    </div>
   );
 }

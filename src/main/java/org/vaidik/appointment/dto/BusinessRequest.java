@@ -8,8 +8,12 @@ import lombok.Setter;
 public class BusinessRequest {
     private String name;
     private String description;
-    private String address;
-    private String city;
     private String phone;
-    private String category;
+    private String businessType;
+
+    // Verification
+    private String panNumber;
+    private Long annualTurnover;
+    private String gstNumber;
+    private String udyamNumber;
 }
