@@ -51,7 +51,7 @@ public class UserProfileService {
             throw new IllegalStateException("Password change is not available for OAuth accounts.");
         }
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("Current password is same as old password. So please update password different than previous.");
+            throw new IllegalArgumentException("Incorrect current password.");
         }
         if (request.getNewPassword() == null || request.getNewPassword().length() < 4) {
             throw new IllegalArgumentException("New password must be at least 4 characters.");

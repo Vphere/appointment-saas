@@ -83,10 +83,12 @@ function AppointmentCard({ appt, onAction, actionLoading }) {
     ? formatDateTime(appt.updatedAt)
     : formatDateTime(appt.createdAt);
 
-  return (
-    <div className="oa-card card">
+  const statusKey = (appt.status || '').toLowerCase();
 
-      {/* ── Row 1: customer + status ── */}
+  return (
+    <div className={`oa-card oa-card--${statusKey} card`}>
+
+      {/* Row 1: customer + status */}
       <div className="oa-card-header">
         <div className="oa-customer">
           <div className="oa-customer-avatar">
@@ -100,21 +102,23 @@ function AppointmentCard({ appt, onAction, actionLoading }) {
         <ApptStatusBadge status={appt.status} />
       </div>
 
-      {/* ── Row 2: date · time · price ── */}
+      <div className="oa-card-divider" />
+
+      {/* Row 2: date · time · price */}
       <div className="oa-chips-row">
         <DetailChip icon="📅" label="Appointment Date" value={formatDate(appt.appointmentDate)} />
         <DetailChip icon="🕐" label="Time"             value={formatTime(appt.appointmentTime)} />
         <DetailChip icon="💰" label="Price"            value={appt.price ? `₹${appt.price}` : '—'} accent="price" />
       </div>
 
-      {/* ── Row 3: requested on · service · business ── */}
+      {/* Row 3: requested on · service · business */}
       <div className="oa-chips-row">
         <DetailChip icon={appt.updatedAt ? '✏️' : '📥'} label={requestedLabel} value={requestedValue} />
         <DetailChip icon="⚙️" label="Service"  value={appt.serviceName  || '—'} />
         <DetailChip icon="🏢" label="Business" value={appt.businessName || '—'} />
       </div>
 
-      {/* ── Action buttons ── */}
+      {/* Action buttons */}
       {(appt.status === 'PENDING' || appt.status === 'CONFIRMED') && (
         <div className="oa-actions">
           {appt.status === 'PENDING' && (
@@ -192,29 +196,53 @@ export default function OwnerAppointments() {
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <h1 className="page-title">Appointments Dashboard</h1>
-        <p className="page-subtitle">Manage all bookings across your businesses</p>
+
+      {/* ── Hero — matches MyAppointments ── */}
+      <div className="oa-hero">
+        <div className="oa-hero-inner">
+          <div className="oa-hero-label">📋 Appointments</div>
+          <h1 className="oa-hero-title">Appointments Dashboard</h1>
+          <p className="oa-hero-sub">Manage all bookings across your businesses</p>
+        </div>
+
+        {/* Stats as chips inside the hero */}
+        <div className="oa-stats-row">
+          <div className="oa-stat-card">
+            <div className="oa-stat-value">{counts.total}</div>
+            <div className="oa-stat-label">Total</div>
+          </div>
+          <div className="oa-stat-card oa-stat-card--pending">
+            <div className="oa-stat-value">{counts.pending}</div>
+            <div className="oa-stat-label">Pending</div>
+          </div>
+          <div className="oa-stat-card oa-stat-card--confirmed">
+            <div className="oa-stat-value">{counts.confirmed}</div>
+            <div className="oa-stat-label">Confirmed</div>
+          </div>
+          <div className="oa-stat-card oa-stat-card--completed">
+            <div className="oa-stat-value">{counts.completed}</div>
+            <div className="oa-stat-label">Completed</div>
+          </div>
+          <div className="oa-stat-card oa-stat-card--cancelled">
+            <div className="oa-stat-value">{counts.cancelled}</div>
+            <div className="oa-stat-label">Cancelled</div>
+          </div>
+        </div>
       </div>
 
       {error && <div className="alert alert-error" style={{ marginBottom: 20 }}>{error}</div>}
-
-      {/* Stats row */}
-      <div className="oa-stats-row">
-        <StatCard label="Total"     value={counts.total}     color="var(--primary-light, #6c63ff)" />
-        <StatCard label="Pending"   value={counts.pending}   color="#f59e0b" />
-        <StatCard label="Confirmed" value={counts.confirmed} color="#38bdf8" />
-        <StatCard label="Completed" value={counts.completed} color="#10b981" />
-        <StatCard label="Cancelled" value={counts.cancelled} color="#ef4444" />
-      </div>
 
       {/* Filter bar */}
       <div className="filter-bar" style={{ marginBottom: 20 }}>
         {FILTERS.map(f => (
           <button key={f}
+            data-filter={f}
             className={`filter-btn ${filter === f ? 'active' : ''}`}
             onClick={() => setFilter(f)}>
-            {f} {f !== 'ALL' && `(${counts[f.toLowerCase()] ?? 0})`}
+            <span>{f}</span>
+            {f !== 'ALL' && counts[f.toLowerCase()] > 0 && (
+              <span className="ma-filter-count">{counts[f.toLowerCase()]}</span>
+            )}
           </button>
         ))}
       </div>

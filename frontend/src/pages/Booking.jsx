@@ -1,21 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { getServicesByBusiness } from '../api/services';
+import { getServicesByBusiness, formatServiceLocation, serviceDropdownLabel } from '../api/services';
 import { getAvailableSlots } from '../api/slots';
 import { bookAppointment } from '../api/appointments';
 import Spinner from '../components/Spinner';
 import './Booking.css';
 
-// YYYY-MM-DD → uppercase day name e.g. "MONDAY"
 function dateToDayName(dateStr) {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+  return new Date(y, m - 1, d)
+    .toLocaleDateString('en-US', { weekday: 'long' })
+    .toUpperCase();
 }
 
-// Shimmer skeleton that mimics ~6 slot chips
 function SlotsSkeleton() {
-  // Vary widths slightly so it looks natural
   const widths = [64, 56, 72, 56, 64, 56];
   return (
     <div className="slots-skeleton">
@@ -28,44 +27,42 @@ function SlotsSkeleton() {
 
 export default function Booking() {
   const { businessId } = useParams();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const location       = useLocation();
+  const navigate       = useNavigate();
 
   const initialBusiness      = location.state?.business || null;
   const initialServices      = location.state?.services  || [];
   const preSelectedServiceId = location.state?.preSelectedServiceId;
 
-  const [services, setServices]             = useState(initialServices);
+  const [services, setServices]               = useState(initialServices);
   const [selectedService, setSelectedService] = useState(
     preSelectedServiceId ? String(preSelectedServiceId) : ''
   );
-  const [selectedDate, setSelectedDate]     = useState('');
-  const [computedDay, setComputedDay]       = useState('');
-  const [slots, setSlots]                   = useState([]);
-  const [selectedSlot, setSelectedSlot]     = useState('');
+  const [selectedDate, setSelectedDate]       = useState('');
+  const [computedDay, setComputedDay]         = useState('');
+  const [slots, setSlots]                     = useState([]);
+  const [selectedSlot, setSelectedSlot]       = useState('');
   const [loadingServices, setLoadingServices] = useState(false);
-  const [slotsLoading, setSlotsLoading]     = useState(false);
-  const [loading, setLoading]               = useState(false);
-  const [error, setError]                   = useState('');
-  const [slotsError, setSlotsError]         = useState('');
-  const [success, setSuccess]               = useState(false);
+  const [slotsLoading, setSlotsLoading]       = useState(false);
+  const [loading, setLoading]                 = useState(false);
+  const [error, setError]                     = useState('');
+  const [slotsError, setSlotsError]           = useState('');
+  const [success, setSuccess]                 = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
 
-  // Fetch services if not passed via navigation state
   useEffect(() => {
     if (services.length === 0 && businessId) {
       setLoadingServices(true);
       getServicesByBusiness(businessId)
-        .then((r) => setServices(Array.isArray(r.data) ? r.data : []))
+        .then(r => setServices(Array.isArray(r.data) ? r.data : []))
         .catch(() => {})
         .finally(() => setLoadingServices(false));
     }
   }, [businessId]);
 
-  // Fetch slots whenever date / service changes
   useEffect(() => {
-    if (!selectedDate || !businessId) {
+    if (!selectedDate || !selectedService) {
       setSlots([]);
       setSlotsError('');
       return;
@@ -74,10 +71,8 @@ export default function Booking() {
     const day = dateToDayName(selectedDate);
     setComputedDay(day);
 
-    const currentService = services.find((s) => String(s.id) === String(selectedService));
+    const currentService = services.find(s => String(s.id) === String(selectedService));
     const duration = currentService?.duration || currentService?.durationMinutes || 30;
-
-    console.log('[Booking] Fetching slots:', { businessId, date: selectedDate, duration, day });
 
     setSlotsLoading(true);
     setSlotsError('');
@@ -85,27 +80,27 @@ export default function Booking() {
     setSelectedSlot('');
 
     getAvailableSlots(selectedService, selectedDate, duration)
-      .then((r) => {
+      .then(r => {
         const data = Array.isArray(r.data) ? r.data : [];
-        console.log('[Booking] Slots received:', data);
         setSlots(data);
         if (data.length === 0) {
           setSlotsError(`No slots available on ${day} (${selectedDate})`);
         }
       })
-      .catch((e) => {
+      .catch(e => {
         const msg =
           e.response?.data?.message ||
           (typeof e.response?.data === 'string' ? e.response.data : null) ||
           'Could not fetch time slots. Ensure working hours are set for this day.';
-        console.error('[Booking] Slots error:', e.response?.data || e.message);
         setSlotsError(msg);
         setSlots([]);
       })
       .finally(() => setSlotsLoading(false));
-  }, [selectedDate, businessId, selectedService, services]);
+  }, [selectedDate, selectedService, services]);
 
-  const currentService = services.find((s) => String(s.id) === String(selectedService));
+  const currentService = services.find(
+    s => String(s.id) === String(selectedService)
+  );
 
   const handleBook = async () => {
     if (!selectedDate || !selectedSlot || !selectedService) {
@@ -114,16 +109,14 @@ export default function Booking() {
     setError('');
     setLoading(true);
     try {
-      const payload = {
-        businessId: parseInt(businessId),
-        serviceId: parseInt(selectedService),
+      await bookAppointment({
+        businessId:      parseInt(businessId),
+        serviceId:       parseInt(selectedService),
         appointmentDate: selectedDate,
         appointmentTime: selectedSlot + ':00',
-      };
-      console.log('[Booking] Booking appointment:', payload);
-      await bookAppointment(payload);
+      });
       setSuccess(true);
-      setTimeout(() => navigate('/my-appointments'), 2000);
+      setTimeout(() => navigate('/my-appointments'), 2500);
     } catch (e) {
       const msg =
         e.response?.data?.message ||
@@ -135,12 +128,16 @@ export default function Booking() {
     }
   };
 
-  const getSlotTime = (slot) => {
+  const getSlotTime = slot => {
     if (typeof slot === 'string') return slot;
-    if (slot?.time) return typeof slot.time === 'string' ? slot.time.slice(0, 5) : slot.time;
+    if (slot?.time) return typeof slot.time === 'string'
+      ? slot.time.slice(0, 5)
+      : slot.time;
     return '';
   };
-  const isSlotBooked = (slot) => typeof slot === 'object' && slot?.booked === true;
+
+  const isSlotBooked = slot =>
+    typeof slot === 'object' && slot?.booked === true;
 
   if (success) {
     return (
@@ -154,14 +151,28 @@ export default function Booking() {
 
   return (
     <div className="page-container narrow">
-      <div className="booking-header">
-        <h1 className="page-title">Book Appointment</h1>
-        {initialBusiness?.name && (
-          <p className="page-subtitle">
-            at <strong className="booking-biz-name">{initialBusiness.name}</strong>
-            {initialBusiness.city && <span> · {initialBusiness.city}</span>}
-          </p>
-        )}
+
+      {/* ── Business info banner ── */}
+      <div className="booking-biz-banner">
+        <div className="booking-biz-banner-left">
+          <div className="booking-biz-avatar">
+            {initialBusiness?.name?.[0]?.toUpperCase() || '🏢'}
+          </div>
+          <div>
+            <div className="booking-biz-banner-name">
+              {initialBusiness?.name || 'Book Appointment'}
+            </div>
+            {initialBusiness?.city && (
+              <div className="booking-biz-banner-location">
+                📍 {[initialBusiness.city, initialBusiness.state]
+                      .filter(Boolean).join(', ')}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="booking-biz-banner-right">
+          <div className="booking-biz-banner-label">Appointment Booking</div>
+        </div>
       </div>
 
       <div className="card">
@@ -170,56 +181,88 @@ export default function Booking() {
         {/* ── Service Selection ── */}
         <div className="form-group">
           <label className="form-label">
-            Select Service {loadingServices ? '(loading...)' : ''}
+            Select Service {loadingServices && '(loading...)'}
           </label>
+
+          {/* Helper text explaining why location is shown */}
+          {services.length > 1 && (
+            <div className="booking-service-hint">
+              💡 Location is shown to help you identify the right branch
+            </div>
+          )}
+
           {services.length === 0 && !loadingServices ? (
-            <div className="alert alert-info">No services available for this business.</div>
+            <div className="alert alert-info">
+              No services available for this business.
+            </div>
           ) : (
             <select
               className="form-select"
               value={selectedService}
-              onChange={(e) => { setSelectedService(e.target.value); setSelectedSlot(''); }}
+              onChange={e => {
+                setSelectedService(e.target.value);
+                setSelectedSlot('');
+                setSlots([]);
+                setSlotsError('');
+              }}
             >
               <option value="">Choose a service...</option>
-              {services.map((s) => {
-                const dur = s.duration || s.durationMinutes;
-                return (
-                  <option key={s.id} value={s.id}>
-                    {s.name} — ₹{s.price}{dur ? ` (${dur} min)` : ''}
-                  </option>
-                );
-              })}
+              {services.map(s => (
+                <option key={s.id} value={s.id}>
+                  {serviceDropdownLabel(s)}
+                </option>
+              ))}
             </select>
           )}
-        </div>
 
-        {/* ── Date Selection ── */}
-        <div className="form-group">
-          <label className="form-label">Select Date</label>
-          <input
-            className="form-input"
-            type="date"
-            min={today}
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            style={{ colorScheme: 'dark' }}
-          />
-          {selectedDate && computedDay && (
-            <div className="booking-day-label">
-              📆 {computedDay} · {selectedDate}
+          {/* Show selected service's price + duration as a pill below the dropdown */}
+          {currentService && (
+            <div className="booking-service-meta">
+              <span className="booking-service-meta-chip">
+                ₹{currentService.price}
+              </span>
+              {(currentService.duration || currentService.durationMinutes) && (
+                <span className="booking-service-meta-chip">
+                  ⏱ {currentService.duration || currentService.durationMinutes} min
+                </span>
+              )}
+              {currentService.serviceType && (
+                <span className={`booking-service-meta-chip booking-service-type-${
+                  currentService.serviceType.toLowerCase()
+                }`}>
+                  {currentService.serviceType === 'CONSULTATION'
+                    ? '💬 Consultation'
+                    : '⏱ Fixed'}
+                </span>
+              )}
             </div>
           )}
         </div>
 
-        {/* ── Time Slots ──
-            Always render the wrapper once a date is picked so the card
-            height is reserved and no layout jump occurs.
-        ── */}
+        {/* ── Date Selection ── */}
+        {selectedService && (
+          <div className="form-group">
+            <label className="form-label">Select Date</label>
+            <input
+              className="form-input"
+              type="date"
+              min={today}
+              value={selectedDate}
+              onChange={e => setSelectedDate(e.target.value)}
+              style={{ colorScheme: 'dark' }}
+            />
+            {selectedDate && computedDay && (
+              <div className="booking-day-label">
+                📆 {computedDay} · {selectedDate}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Time Slots ── */}
         {selectedDate && (
           <div className="form-group">
             <label className="form-label">Available Time Slots</label>
-
-            {/* Fixed-height area — prevents card from jumping */}
             <div className="slots-area">
               {slotsLoading ? (
                 <SlotsSkeleton />
@@ -235,7 +278,9 @@ export default function Booking() {
                     return (
                       <button
                         key={time || i}
-                        className={`slot-chip${booked ? ' slot-booked' : ''}${selectedSlot === time ? ' selected' : ''}`}
+                        className={`slot-chip
+                          ${booked ? ' slot-booked' : ''}
+                          ${selectedSlot === time ? ' selected' : ''}`}
                         onClick={() => !booked && time && setSelectedSlot(time)}
                         disabled={booked}
                         type="button"
@@ -251,30 +296,41 @@ export default function Booking() {
         )}
 
         {/* ── Booking Summary ── */}
-        {selectedSlot && (
+        {selectedSlot && currentService && (
           <div className="booking-summary">
-            {currentService && (
-              <div className="booking-summary-row">
-                <span>Service</span>
-                <span>{currentService.name}</span>
-              </div>
-            )}
+            <div className="booking-summary-header">Booking Summary</div>
+
+            <div className="booking-summary-row">
+              <span>Service</span>
+              <span>{currentService.name}</span>
+            </div>
+
+            <div className="booking-summary-row">
+              <span>Branch</span>
+              <span>{formatServiceLocation(currentService)}</span>
+            </div>
+
             <div className="booking-summary-row">
               <span>Date</span>
               <span>{selectedDate} ({computedDay})</span>
             </div>
+
             <div className="booking-summary-row">
               <span>Time</span>
               <span>{selectedSlot}</span>
             </div>
-            {(currentService?.duration || currentService?.durationMinutes) && (
+
+            {(currentService.duration || currentService.durationMinutes) && (
               <div className="booking-summary-row">
                 <span>Duration</span>
-                <span>{currentService.duration || currentService.durationMinutes} min</span>
+                <span>
+                  {currentService.duration || currentService.durationMinutes} min
+                </span>
               </div>
             )}
-            {currentService?.price && (
-              <div className="booking-summary-row">
+
+            {currentService.price && (
+              <div className="booking-summary-row booking-summary-total">
                 <span>Total</span>
                 <span className="booking-price">₹{currentService.price}</span>
               </div>
@@ -286,7 +342,9 @@ export default function Booking() {
           className="btn btn-primary btn-full btn-lg"
           style={{ marginTop: 20 }}
           onClick={handleBook}
-          disabled={loading || !selectedDate || !selectedSlot || !selectedService}
+          disabled={
+            loading || !selectedDate || !selectedSlot || !selectedService
+          }
         >
           {loading ? '⏳ Booking...' : '📅 Confirm Booking'}
         </button>

@@ -21,7 +21,7 @@ public class WorkingHoursController {
 
     /** GET all working hours for a specific service */
     @GetMapping("/service/{serviceId}")
-    public List<WorkingHoursResponse> getByService(@PathVariable Long serviceId) {
+    public List<WorkingHoursResponse> getByService(@PathVariable("serviceId") Long serviceId) {
         return workingHoursService.getWorkingHoursByService(serviceId);
     }
 
@@ -39,7 +39,7 @@ public class WorkingHoursController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('BUSINESS_OWNER')")
     public WorkingHoursResponse update(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             @RequestBody WorkingHoursRequest request,
             Authentication authentication
     ) {

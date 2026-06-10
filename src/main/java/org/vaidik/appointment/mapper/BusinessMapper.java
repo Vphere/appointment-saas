@@ -24,6 +24,8 @@ public class BusinessMapper {
                 .ownerName( business.getOwner().getName() )
                 .ownerEmail( business.getOwner().getEmail())
                 .createdAt(business.getCreatedAt())
+                .rejectionReason(business.getRejectionReason())
+                .requiredActions(business.getRequiredActions())
                 .build();
     }
 }

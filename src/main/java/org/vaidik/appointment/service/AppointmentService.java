@@ -21,14 +21,16 @@ public class AppointmentService {
     private final AppointmentMapper mapper;
     private final EmailService emailService;
 
+    private static final List<AppointmentStatus> FREED_STATUSES = List.of(AppointmentStatus.CANCELLED);
+
     public AppointmentResponse bookAppointment(CreateAppointmentRequest request, String userEmail) {
 
-        boolean exists = appointmentRepository
-                .existsByServiceIdAndAppointmentDateAndAppointmentTime(
-                        request.getServiceId(),
-                        request.getAppointmentDate(),
-                        request.getAppointmentTime()
-                );
+        boolean exists = appointmentRepository.existsActiveByServiceDateAndTime(
+                request.getServiceId(),
+                request.getAppointmentDate(),
+                request.getAppointmentTime(),
+                FREED_STATUSES
+        );
         if (exists) throw new RuntimeException("Slot already booked");
 
         User user = userRepository.findByEmail(userEmail)
@@ -60,7 +62,7 @@ public class AppointmentService {
     public List<AppointmentResponse> getUserAppointments(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return appointmentRepository.findByUserId(user.getId())
+        return appointmentRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
                 .stream()
                 .map(mapper::toResponse)
                 .toList();
@@ -130,14 +132,16 @@ public class AppointmentService {
         if (!appointment.getUser().getEmail().equals(email)) {
             throw new RuntimeException("Unauthorized");
         }
-        if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
-            throw new RuntimeException("Cannot cancel completed appointment");
+        if (appointment.getStatus() == AppointmentStatus.COMPLETED ||
+                appointment.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new RuntimeException("Cannot cancel a " +
+                    appointment.getStatus().name().toLowerCase() + " appointment");
         }
 
         appointment.setStatus(AppointmentStatus.CANCELLED);
         Appointment saved = appointmentRepository.save(appointment);
 
-        // User themselves cancelled so no need to email Owner as he needs to know the slot is now free.
+        // User themselves cancelled so need to email Owner as he needs to know the slot is now free.
         try {
             emailService.sendCancellationByUserEmail(saved);
         } catch (Exception e) {
@@ -159,17 +163,25 @@ public class AppointmentService {
             throw new RuntimeException("Only pending or confirmed appointments can be edited");
         }
 
-        boolean exists = appointmentRepository
-                .existsByServiceIdAndAppointmentDateAndAppointmentTime(
-                        request.getServiceId(),
-                        request.getAppointmentDate(),
-                        request.getAppointmentTime()
-                );
-        if (exists) throw new RuntimeException("Slot already booked");
+        boolean slotTaken = appointmentRepository.existsActiveByServiceDateAndTime(
+                request.getServiceId(),
+                request.getAppointmentDate(),
+                request.getAppointmentTime(),
+                FREED_STATUSES
+        );
+        boolean conflictIsWithSelf =
+                appointment.getService().getId().equals(request.getServiceId()) &&
+                        appointment.getAppointmentDate().equals(request.getAppointmentDate()) &&
+                        appointment.getAppointmentTime().equals(request.getAppointmentTime());
+
+        if (slotTaken && !conflictIsWithSelf) {
+            throw new RuntimeException("That slot is already booked. Please choose another time.");
+        }
 
         appointment.setAppointmentDate(request.getAppointmentDate());
         appointment.setAppointmentTime(request.getAppointmentTime());
         appointment.setStatus(AppointmentStatus.PENDING);
+        appointment.setReminderSent(false);
 
         Appointment saved = appointmentRepository.save(appointment);
 

@@ -181,7 +181,7 @@
   background: var(--bg-card, rgba(255,255,255,0.035));
   border: 1px solid var(--border, rgba(255,255,255,0.08));
   border-radius: 16px;
-  padding: 22px 26px;
+  padding: 26px 28px;
   position: relative;
   overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.22s ease, border-color 0.2s ease;
@@ -241,7 +241,7 @@
 .ma-card-divider {
   height: 1px;
   background: var(--border, rgba(255,255,255,0.07));
-  margin: 16px 0;
+  margin: 18px 0;
 }
 
 /* Detail rows */
@@ -418,21 +418,37 @@
 /* ══════════════════════════════════════
    REVIEW SECTION
    ══════════════════════════════════════ */
-.ma-review-section  { display: flex; flex-direction: column; gap: 10px; width: 100%; }
-
-.ma-review-card {
-  background: rgba(255,255,255,0.025);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 10px;
-  padding: 13px 16px;
+.ma-review-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
 }
 
-.ma-review-stars { display: flex; align-items: center; gap: 2px; margin-bottom: 7px; }
+.ma-review-card {
+  background: rgba(108,99,255,0.05);
+  border: 1px solid rgba(108,99,255,0.18);
+  border-radius: 12px 12px 0 0;      /* rounded only top — merges with actions below */
+  padding: 14px 16px 12px;
+}
+
+.ma-review-stars {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
 .ma-star { font-size: 1rem; line-height: 1; }
 .ma-star.filled { color: #f59e0b; }
 .ma-star.empty  { color: rgba(255,255,255,0.13); }
 
-.ma-review-score { font-size: 0.73rem; color: var(--text-muted); margin-left: 8px; font-weight: 600; }
+.ma-review-score {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: 8px;
+  font-weight: 600;
+}
 
 .ma-review-comment {
   font-size: 0.85rem;
@@ -445,15 +461,26 @@
 }
 
 .ma-review-quote-mark {
-  font-size: 1.4rem;
-  color: rgba(108,99,255,0.45);
+  font-size: 1.3rem;
+  color: rgba(108,99,255,0.5);
   font-style: normal;
-  line-height: 0.95;
+  line-height: 0.9;
   flex-shrink: 0;
   font-weight: 700;
 }
 
-.ma-review-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* Actions bar — flush bottom edge of the review card */
+.ma-review-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  background: rgba(108,99,255,0.03);
+  border: 1px solid rgba(108,99,255,0.18);
+  border-top: 1px solid rgba(108,99,255,0.12);
+  border-radius: 0 0 12px 12px;     /* rounded only bottom — joins with card above */
+}
 
 .ma-reviewed-badge {
   display: inline-flex;
@@ -565,4 +592,274 @@
   .ma-stats       { flex-direction: row; }
   .ma-detail-row  { gap: 18px; }
   .ma-modal       { padding: 28px 22px 24px; }
+}
+
+/* ── Branch location row ─────────────────────────────────────────── */
+.ma-branch-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  margin-top: 3px;
+}
+.ma-branch-icon  { font-size: 0.75rem; opacity: 0.6; }
+.ma-branch-label { color: var(--text-muted); font-weight: 500; }
+.ma-branch-value { color: var(--text-secondary); font-weight: 600; margin-left: 16px;}
+
+/* ── Reschedule panel — replaces .ma-edit-panel ──────────────────── */
+.ma-reschedule-panel {
+  margin-top: 18px;
+  padding: 20px 22px;
+  background: rgba(108, 99, 255, 0.05);
+  border: 1px solid rgba(108, 99, 255, 0.2);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: maFadeIn 0.18s ease;
+}
+
+.ma-reschedule-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ma-reschedule-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--primary-light, #a78bfa);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+/* Current booking info bar */
+.ma-reschedule-current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+.ma-reschedule-current-label {
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.ma-reschedule-current-val {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.ma-reschedule-field-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.ma-reschedule-date-row {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Slot grid — wraps nicely, consistent chip size */
+.ma-slots-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ma-slot-btn {
+  position: relative;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.14s ease;
+  white-space: nowrap;
+}
+.ma-slot-btn:hover {
+  background: rgba(108, 99, 255, 0.1);
+  border-color: rgba(108, 99, 255, 0.3);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+.ma-slot-btn.selected {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.42);
+  color: #4ade80;
+  font-weight: 700;
+}
+/* Current booking indicator */
+.ma-slot-btn.current {
+  border-color: rgba(108, 99, 255, 0.35);
+  background: rgba(108, 99, 255, 0.08);
+  color: var(--primary-light, #a78bfa);
+}
+.ma-slot-current-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary-light, #a78bfa);
+}
+
+.ma-slots-loading {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.ma-slots-error {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+.ma-selected-time-notice {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: #4ade80;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ma-reschedule-actions {
+  display: flex;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ── Card details — 2-col grid ──────────────────────────────────── */
+.ma-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Detail grid — equal auto-sized chips ───────────────────────── */
+.ma-detail-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ma-detail-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  flex: 0 0 auto;        /* don't stretch — only as wide as content */
+  min-width: 160px;      /* consistent minimum so they look uniform */
+  transition: background 0.15s, border-color 0.15s;
+}
+.ma-detail-item:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.13);
+}
+.ma-detail-item:has(.ma-price) {
+  border-color: rgba(16,185,129,0.18);
+  background: rgba(16,185,129,0.05);
+}
+.ma-detail-item:has(.ma-price):hover {
+  background: rgba(16,185,129,0.09);
+  border-color: rgba(16,185,129,0.28);
+}
+
+.ma-detail-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  opacity: 0.7;
+  margin-top: 0; 
+}
+
+.ma-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ma-detail-label {
+  font-size: 0.60rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.ma-detail-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ma-price {
+  color: #4ade80;
+  font-weight: 700;
+}
+
+/* ── Meta row — inline footer, no box ──────────────────────────── */
+.ma-meta-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 20px;
+  padding-top: 12px;
+  margin-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background: transparent;
+  border-radius: 0;
+}
+
+.ma-meta-item {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  opacity: 1;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ma-meta-item--updated {
+  color: #a78bfa;
+  font-weight: 600;
+}
+
+/* ── Responsive — stack to 1 col on mobile ── */
+@media (max-width: 520px) {
+  .ma-detail-grid  { gap: 8px; }
+  .ma-detail-item  { min-width: calc(50% - 5px); max-width: 100%; }
 }

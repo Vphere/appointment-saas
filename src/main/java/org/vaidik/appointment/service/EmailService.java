@@ -16,6 +16,8 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+
     public void sendOtpEmail(String toEmail, String otp) {
         String subject = "Your Password Reset OTP";
 
@@ -145,7 +147,7 @@ public class EmailService {
         String serviceName  = appointment.getService().getName();
         String date = appointment.getAppointmentDate()
                 .format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
-        String time = appointment.getAppointmentTime().toString().substring(0, 5);
+        String time = appointment.getAppointmentTime().format(TIME_FMT);
         String status = appointment.getStatus().name();
 
         String emoji, statusColor, subjectLine, bodyNote;
@@ -206,7 +208,7 @@ public class EmailService {
         String serviceName  = appointment.getService().getName();
         String date = appointment.getAppointmentDate()
                 .format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
-        String time = appointment.getAppointmentTime().toString().substring(0, 5);
+        String time = appointment.getAppointmentTime().format(TIME_FMT);
 
         String subject = "Reminder: Appointment Tomorrow — " + businessName;
         String html = buildEmailHtml(
@@ -241,7 +243,7 @@ public class EmailService {
         String serviceName   = appointment.getService().getName();
         String date = appointment.getAppointmentDate()
                 .format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
-        String time = appointment.getAppointmentTime().toString().substring(0, 5);
+        String time = appointment.getAppointmentTime().format(TIME_FMT);
 
         String subject = "Booking Cancelled by Customer — " + businessName;
         String html = buildEmailHtml(
@@ -279,16 +281,6 @@ public class EmailService {
         }
     }
 
-    /**
-     * Builds a clean, dark-themed HTML email.
-     *
-     * @param heading     Big heading text inside the card
-     * @param greeting    Greeting line e.g. "Hi John,"
-     * @param intro       One-line intro paragraph
-     * @param rows        2D array of {label, value} pairs for the detail table
-     * @param footer      Footer note at the bottom of the card
-     * @param accentColor Hex color used for the top border and status badge
-     */
     private String buildEmailHtml(
             String heading, String greeting, String intro, String[][] rows, String footer, String accentColor
     ) {
@@ -381,5 +373,67 @@ public class EmailService {
     private String capitalize(String s) {
         if (s == null || s.isEmpty()) return s;
         return Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    // Add this method to EmailService
+
+    public void sendBusinessDeletionOtpEmail(String toEmail, String ownerName,
+                                             String businessName, String otp) {
+        String subject = "⚠️ Business Deletion Verification — " + businessName;
+
+        String html = buildEmailHtml(
+                "⚠️ Business Deletion Request",
+                "Hi " + (ownerName != null ? ownerName : toEmail) + ",",
+                "We received a request to permanently delete your business <strong style=\"color:#F9FAFB;\">"
+                        + businessName + "</strong>. "
+                        + "Use the code below to confirm. If you did not request this, "
+                        + "please secure your account immediately.",
+                new String[][]{
+                        {"Business",    businessName},
+                        {"Action",      "Permanent Deletion"},
+                        {"OTP",         otp},
+                        {"Expires in",  "10 minutes"}
+                },
+                "⚠️ This action cannot be undone. "
+                        + "All services and future appointments will be cancelled. "
+                        + "Never share this code with anyone.",
+                "#EF4444"   // red accent — signals danger
+        );
+
+        sendHtmlEmail(toEmail, subject, html);
+    }
+
+    public void sendBusinessClosureAppointmentCancelEmail(Appointment appointment) {
+        String to = appointment.getUser().getEmail();
+        String userName = appointment.getUser().getName() != null
+                ? appointment.getUser().getName()
+                : to;
+        String businessName = appointment.getBusiness().getName();
+        String serviceName  = appointment.getService().getName();
+        String date = appointment.getAppointmentDate()
+                .format(DateTimeFormatter.ofPattern("dd MMM yyyy"));
+        String time = appointment.getAppointmentTime().format(TIME_FMT);
+
+        String subject = "⚠️ Appointment Cancelled — " + businessName + " is no longer available";
+
+        String html = buildEmailHtml(
+                "⚠️ Appointment Cancelled",
+                "Hi " + userName + ",",
+                "We're sorry to inform you that <strong style=\"color:#F9FAFB;\">"
+                        + businessName + "</strong> has closed on our platform. "
+                        + "As a result, your upcoming appointment has been automatically cancelled.",
+                new String[][]{
+                        {"Business",  businessName},
+                        {"Service",   serviceName},
+                        {"Date",      date},
+                        {"Time",      time},
+                        {"Status",    "CANCELLED"}
+                },
+                "We apologize for the inconvenience. "
+                        + "Please browse other available businesses on our platform to rebook.",
+                "#F59E0B"
+        );
+
+        sendHtmlEmail(to, subject, html);
     }
 }

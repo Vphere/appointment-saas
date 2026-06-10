@@ -71,7 +71,7 @@ public class ServiceOfferingController {
 
     @GetMapping("/by-category/{category}")
     public List<ServiceResponse> getByCategory(
-            @PathVariable ServiceCategory category,
+            @PathVariable("category") ServiceCategory category,
             @RequestParam(required = false) String city
     ) {
         return serviceOfferingService.getByCategory(category, city);

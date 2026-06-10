@@ -49,7 +49,7 @@ public class AppointmentController {
 
     @PatchMapping("/{id}/confirm")
     @PreAuthorize("hasRole('BUSINESS_OWNER')")
-    public AppointmentResponse confirm(@PathVariable Long id, Authentication authentication
+    public AppointmentResponse confirm(@PathVariable("id") Long id, Authentication authentication
     ) {
         return appointmentService.updateAppointmentStatus(id, AppointmentStatus.CONFIRMED, authentication.getName());
     }
@@ -57,7 +57,7 @@ public class AppointmentController {
     @PatchMapping("/{id}/reject")
     @PreAuthorize("hasRole('BUSINESS_OWNER')")
     public AppointmentResponse reject(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             Authentication authentication
     ) {
         return appointmentService.updateAppointmentStatus(id, AppointmentStatus.CANCELLED, authentication.getName());
@@ -66,7 +66,7 @@ public class AppointmentController {
     @PatchMapping("/{id}/complete")
     @PreAuthorize("hasRole('BUSINESS_OWNER')")
     public AppointmentResponse complete(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             Authentication authentication
     ) {
         return appointmentService.updateAppointmentStatus(id, AppointmentStatus.COMPLETED, authentication.getName());
@@ -74,14 +74,14 @@ public class AppointmentController {
 
     @PatchMapping("/{id}/cancel")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public AppointmentResponse cancel(@PathVariable Long id, Authentication authentication
+    public AppointmentResponse cancel(@PathVariable("id") Long id, Authentication authentication
     ) {
         return appointmentService.cancelByUser(id, authentication.getName());
     }
 
     @PutMapping("/{id}/reschedule")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public AppointmentResponse reschedule(@PathVariable Long id, @RequestBody CreateAppointmentRequest request,
+    public AppointmentResponse reschedule(@PathVariable("id") Long id, @RequestBody CreateAppointmentRequest request,
                                             Authentication authentication
     ) {
         return appointmentService.rescheduleAppointment(id, request, authentication.getName());

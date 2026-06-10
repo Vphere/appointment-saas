@@ -1,16 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createBusiness } from '../api/business';
+import { createBusiness, resubmitBusiness } from '../api/business';
 import { uploadDocument } from '../api/documents';
 import './CreateBusiness.css';
-
-// ── Constants ────────────────────────────────────────────────────
-const CATEGORIES = [
-  'Salon & Beauty', 'Spa & Wellness', 'Fitness & Gym', 'Healthcare & Clinic',
-  'Dental', 'Legal Services', 'Financial Advisory', 'Education & Tutoring',
-  'Photography', 'Event Management', 'Catering', 'Home Services',
-  'Auto Services', 'Pet Care', 'Yoga & Meditation', 'Other',
-];
 
 const BUSINESS_TYPES = [
   { value: 'SOLE_PROPRIETOR',  label: 'Sole Proprietor',    desc: 'Single owner, no formal registration needed' },
@@ -45,10 +37,6 @@ const DRAFT_KEY = 'createBusiness_draft';
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-/**
- * Format a raw number (string or number) as INR shorthand.
- * Uses parseFloat so decimal inputs work correctly.
- */
 const formatINR = (val) => {
   // Trim trailing dots / incomplete decimals before parsing
   const n = parseFloat(String(val).replace(/[^0-9.]/g, ''));
@@ -59,9 +47,6 @@ const formatINR = (val) => {
   return `₹${n}`;
 };
 
-/**
- * Validate Udyam registration number format: UDYAM-XX-YY-XXXXXXX
- */
 const validateUdyam = (val) => {
   if (!val || !val.trim()) return null; // optional field
   const pattern = /^UDYAM-[A-Z]{2}-\d{2}-\d{7}$/i;
@@ -70,10 +55,6 @@ const validateUdyam = (val) => {
   return null;
 };
 
-/**
- * Validate a file for type and size.
- * Returns an error string or null.
- */
 const validateFile = (file) => {
   if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
     const ext = file.name.split('.').pop().toLowerCase();
@@ -97,41 +78,6 @@ function StepIndicator({ current, total, labels }) {
           {i < total - 1 && <div className="cb-step-line" />}
         </div>
       ))}
-    </div>
-  );
-}
-
-function CategoryInput({ value, onChange }) {
-  const [query, setQuery] = useState(value || '');
-  const [open, setOpen] = useState(false);
-  const matches = CATEGORIES.filter(c => c.toLowerCase().includes(query.toLowerCase()) && c !== query);
-
-  // Sync if parent value changes (e.g. from draft restore)
-  useEffect(() => { setQuery(value || ''); }, [value]);
-
-  const select = (cat) => {
-    setQuery(cat);
-    onChange(cat);
-    setOpen(false);
-  };
-
-  return (
-    <div className="cb-cat-wrap">
-      <input
-        className="form-input"
-        placeholder="e.g. Salon & Beauty"
-        value={query}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
-      />
-      {open && matches.length > 0 && (
-        <div className="cb-cat-dropdown">
-          {matches.map(c => (
-            <div key={c} className="cb-cat-option" onMouseDown={() => select(c)}>{c}</div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -190,14 +136,6 @@ function FieldError({ msg }) {
 }
 
 // ── Lazy draft reader — runs synchronously before first render ────
-// Using useEffect to restore draft causes a flicker: the component
-// renders once with empty fields, then useEffect fires and sets state,
-// causing a second render with the restored values. Users see blank
-// fields for a split second, and on fast navigation the form may
-// appear empty before data loads.
-// useState(() => fn()) runs fn synchronously at construction time,
-// so the correct values are in state from frame 0 — no flicker, no
-// blank flash, works on page refresh AND on back-navigation.
 const readDraft = () => {
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
@@ -207,46 +145,61 @@ const readDraft = () => {
 };
 
 // ── Main component ────────────────────────────────────────────────
-export default function CreateBusiness({ onSuccess, onCancel }) {
+export default function CreateBusiness({ onSuccess, onCancel, existingBusiness }) {
   const navigate = useNavigate();
 
-  // Global error (top of form) and field-level errors map
-  const [error, setError] = useState('');
+  const isResubmit = !!existingBusiness;
+
+  const [error, setError]           = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
 
-  // ── All state lazily initialised from sessionStorage ─────────────
   const [step, setStep] = useState(() => {
+    if (isResubmit) return 0; // always start from step 0 when editing
     const d = readDraft();
     return typeof d?.savedStep === 'number' ? d.savedStep : 0;
   });
 
   const [basic, setBasic] = useState(() => {
+    if (isResubmit) {
+      return {
+        name:         existingBusiness.name         || '',
+        description:  existingBusiness.description  || '',
+        phone:        existingBusiness.phone        || '',
+        businessType: existingBusiness.businessType || '',
+      };
+    }
     const d = readDraft();
-    return d?.savedBasic ?? { name: '', description: '', phone: '', category: '', businessType: '' };
+    return d?.savedBasic ?? { name: '', description: '', phone: '', businessType: '' };
   });
 
   const [verify, setVerify] = useState(() => {
+    if (isResubmit) {
+      return {
+        panNumber:      existingBusiness.panNumber      || '',
+        annualTurnover: existingBusiness.annualTurnover ? String(existingBusiness.annualTurnover) : '',
+        gstNumber:      existingBusiness.gstNumber      || '',
+        udyamNumber:    existingBusiness.udyamNumber    || '',
+      };
+    }
     const d = readDraft();
     return d?.savedVerify ?? { panNumber: '', annualTurnover: '', gstNumber: '', udyamNumber: '' };
   });
 
   const [submitting, setSubmitting] = useState(false);
-
-  // Step 3 — Documents cannot be serialised to sessionStorage (File objects)
-  const [documents, setDocuments] = useState({});
+  const [documents, setDocuments]   = useState({});
 
   const gstRequired = Number(verify.annualTurnover) > GST_THRESHOLD;
 
-  // Save draft whenever basic/verify/step change
   useEffect(() => {
+    if (isResubmit) return;
     try {
       sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
         savedBasic: basic,
         savedVerify: verify,
         savedStep: step,
       }));
-    } catch (_) { /* ignore quota errors */ }
-  }, [basic, verify, step]);
+    } catch (_) {}
+  }, [basic, verify, step, isResubmit]);
 
   const clearDraft = () => {
     try { sessionStorage.removeItem(DRAFT_KEY); } catch (_) {}
@@ -262,7 +215,6 @@ export default function CreateBusiness({ onSuccess, onCancel }) {
     } else if (!/^\+?[\d\s\-]{7,15}$/.test(basic.phone.trim())) {
       errs.phone = 'Enter a valid phone number (7–15 digits)';
     }
-    if (!basic.category.trim())     errs.category = 'Category is required';
     return errs;
   };
 
@@ -287,10 +239,13 @@ export default function CreateBusiness({ onSuccess, onCancel }) {
     return errs;
   };
 
+  // In validateStep2, skip doc validation for resubmit:
   const validateStep2 = () => {
+    if (isResubmit) return {}; // docs from original submission still valid
     const errs = {};
-    if (!documents['PAN_CARD'])        errs.PAN_CARD = 'PAN Card document is required';
-    if (gstRequired && !documents['GST_CERTIFICATE']) errs.GST_CERTIFICATE = 'GST Certificate is required for turnover above ₹20 Lakhs';
+    if (!documents['PAN_CARD']) errs.PAN_CARD = 'PAN Card document is required';
+    if (gstRequired && !documents['GST_CERTIFICATE'])
+      errs.GST_CERTIFICATE = 'GST Certificate is required for turnover above ₹20 Lakhs';
     return errs;
   };
 
@@ -318,11 +273,21 @@ export default function CreateBusiness({ onSuccess, onCancel }) {
     setFieldErrors({});
     setSubmitting(true);
     try {
-      const res = await createBusiness({
+      const res = isResubmit
+        ? await resubmitBusiness(existingBusiness.id, {
+            name:           basic.name.trim(),
+            description:    basic.description.trim() || undefined,
+            phone:          basic.phone.trim(),
+            businessType:   basic.businessType,
+            panNumber:      verify.panNumber.trim().toUpperCase(),
+            annualTurnover: Number(verify.annualTurnover),
+            gstNumber:      verify.gstNumber.trim().toUpperCase() || undefined,
+            udyamNumber:    verify.udyamNumber.trim() || undefined,
+          })
+        : await createBusiness({
         name:            basic.name.trim(),
         description:     basic.description.trim() || undefined,
         phone:           basic.phone.trim(),
-        category:        basic.category.trim(),
         businessType:    basic.businessType,
         panNumber:       verify.panNumber.trim().toUpperCase(),
         annualTurnover:  Number(verify.annualTurnover),
@@ -349,7 +314,7 @@ export default function CreateBusiness({ onSuccess, onCancel }) {
         // Server returned field-level errors like { panNumber: "Already registered" }
         setFieldErrors(apiData.errors);
         // Map field to step so user knows where to go
-        const step0Fields = ['name', 'phone', 'category', 'businessType', 'description'];
+        const step0Fields = ['name', 'phone', 'businessType', 'description'];
         const step1Fields = ['panNumber', 'annualTurnover', 'gstNumber', 'udyamNumber'];
         const errFields = Object.keys(apiData.errors);
         const failStep = errFields.some(f => step0Fields.includes(f)) ? 0
@@ -370,8 +335,14 @@ export default function CreateBusiness({ onSuccess, onCancel }) {
   return (
     <div className="cb-root">
       <div className="cb-header">
-        <h2 className="cb-title">Register New Business</h2>
-        <p className="cb-sub">Submit your business for admin verification. Once approved, you can add branches and services.</p>
+        <h2 className="cb-title">
+          {isResubmit ? '✏️ Edit & Resubmit Business' : 'Register New Business'}
+        </h2>
+        <p className="cb-sub">
+          {isResubmit
+            ? 'Update your details based on the admin feedback and resubmit for approval.'
+            : 'Submit your business for admin verification. Once approved, you can add services.'}
+        </p>
       </div>
 
       <StepIndicator current={step} total={STEPS.length} labels={STEPS} />
@@ -393,14 +364,6 @@ export default function CreateBusiness({ onSuccess, onCancel }) {
                 onChange={e => { setBasic({ ...basic, name: e.target.value }); setFieldErrors(p => ({ ...p, name: '' })); }}
               />
               <FieldError msg={fieldErrors.name} />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Category *</label>
-              <div className={fieldErrors.category ? 'input-error-wrap' : ''}>
-                <CategoryInput value={basic.category} onChange={val => { setBasic({ ...basic, category: val }); setFieldErrors(p => ({ ...p, category: '' })); }} />
-              </div>
-              <FieldError msg={fieldErrors.category} />
             </div>
 
             <div className="form-group">

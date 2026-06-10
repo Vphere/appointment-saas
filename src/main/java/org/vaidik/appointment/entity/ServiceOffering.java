@@ -52,11 +52,8 @@ public class ServiceOffering {
     @Column(length = 10)
     private String pincode;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private boolean deleted = false;
-
-    // Set by ServiceOfferingService.deleteService() — kept null until soft-deleted
+    // NULL  → active service
+    // non-NULL → soft-deleted; value is the deletion timestamp
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 

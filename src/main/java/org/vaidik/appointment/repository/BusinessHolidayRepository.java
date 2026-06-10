@@ -33,4 +33,6 @@ public interface BusinessHolidayRepository extends JpaRepository<BusinessHoliday
 
     @Transactional
     void deleteByServiceId(Long serviceId);
+
+    void deleteByBusinessId(Long businessId);
 }

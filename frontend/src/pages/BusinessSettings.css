@@ -1,5 +1,786 @@
-/* WorkingHours.css */
+/* ═══════════════════════════════════════════════════════════════════
+   BusinessSettings.css
+   All styles for BusinessSettings.jsx, WorkingHoursTab, HolidaysTab,
+   PhotosTab and the shared atoms (Card, Btn, Toggle, TabBar, etc.)
+   ═══════════════════════════════════════════════════════════════════ */
 
+/* ── Design tokens ──────────────────────────────────────────────── */
+:root {
+  --bs-bg:          var(--bg-primary,  #0d0f19);
+  --bs-surface:     var(--bg-secondary, #13151f);
+  --bs-card:        var(--bg-card,      #1a1d2e);
+  --bs-border:      var(--border,       rgba(255,255,255,0.08));
+  --bs-muted:       var(--text-secondary, #64748b);
+  --bs-text:        var(--text-primary,   #e2e8f0);
+  --bs-accent:      #6574f8;
+  --bs-accent-bg:   rgba(101,116,248,0.10);
+  --bs-emerald:     #34d399;
+  --bs-amber:       #fbbf24;
+  --bs-rose:        #fb7185;
+  --bs-radius-sm:   8px;
+  --bs-radius-md:   10px;
+  --bs-radius-lg:   14px;
+}
+
+/* ── Card atom ──────────────────────────────────────────────────── */
+.bs-card {
+  background:    var(--bs-card);
+  border:        1px solid var(--bs-border);
+  border-radius: var(--bs-radius-lg);
+  padding:       22px 26px;
+}
+
+/* ── Section title ──────────────────────────────────────────────── */
+.bs-section-title {
+  margin-bottom: 18px;
+}
+.bs-section-title h3 {
+  margin:      0;
+  font-size:   14px;
+  font-weight: 700;
+  color:       var(--bs-text);
+}
+.bs-section-title p {
+  margin:     3px 0 0;
+  font-size:  12px;
+  color:      var(--bs-muted);
+}
+
+/* ── Toast ──────────────────────────────────────────────────────── */
+.bs-toast {
+  padding:       10px 16px;
+  border-radius: var(--bs-radius-sm);
+  font-size:     13px;
+  font-weight:   500;
+  margin-bottom: 16px;
+}
+.bs-toast--ok {
+  background: rgba(52, 211, 153, 0.10);
+  color:      var(--bs-emerald);
+  border:     1px solid rgba(52, 211, 153, 0.25);
+}
+.bs-toast--err {
+  background: rgba(251, 113, 133, 0.10);
+  color:      var(--bs-rose);
+  border:     1px solid rgba(251, 113, 133, 0.25);
+}
+
+/* ── Label atom ─────────────────────────────────────────────────── */
+.bs-label {
+  margin:          0 0 5px;
+  font-size:       10px;
+  font-weight:     700;
+  color:           var(--bs-muted);
+  text-transform:  uppercase;
+  letter-spacing:  0.08em;
+  display:         block;
+}
+
+/* ── Btn atom ───────────────────────────────────────────────────── */
+.bs-btn {
+  border-radius: var(--bs-radius-sm);
+  font-weight:   600;
+  cursor:        pointer;
+  transition:    opacity 0.15s, transform 0.1s;
+  white-space:   nowrap;
+  display:       inline-flex;
+  align-items:   center;
+  gap:           6px;
+}
+.bs-btn:disabled {
+  opacity: 0.55;
+  cursor:  not-allowed;
+}
+.bs-btn:not(:disabled):hover { opacity: 0.88; }
+.bs-btn:not(:disabled):active { transform: scale(0.97); }
+
+.bs-btn--primary {
+  background: linear-gradient(135deg, #6574f8, #7c6af7);
+  color:      #fff;
+  border:     none;
+}
+.bs-btn--ghost {
+  background: transparent;
+  color:      var(--bs-muted);
+  border:     1px solid var(--bs-border);
+}
+.bs-btn--danger {
+  background: rgba(251,113,133,0.10);
+  color:      var(--bs-rose);
+  border:     1px solid rgba(251,113,133,0.25);
+}
+.bs-btn--md { padding: 9px 20px; font-size: 13px; }
+.bs-btn--sm { padding: 6px 14px; font-size: 12px; }
+
+/* ── ChipBtn ────────────────────────────────────────────────────── */
+.bs-chip {
+  padding:       5px 13px;
+  border-radius: 20px;
+  border:        none;
+  font-size:     12px;
+  font-weight:   600;
+  cursor:        pointer;
+  transition:    all 0.15s;
+}
+.bs-chip--off {
+  background: rgba(255,255,255,0.05);
+  color:      var(--bs-muted);
+}
+.bs-chip--on {
+  background: var(--bs-accent);
+  color:      #fff;
+}
+
+/* ── Toggle ─────────────────────────────────────────────────────── */
+.bs-toggle-wrap {
+  display:     inline-flex;
+  align-items: center;
+  gap:         10px;
+  cursor:      pointer;
+  user-select: none;
+}
+.bs-toggle-track-wrap {
+  position:    relative;
+  display:     inline-flex;
+  align-items: center;
+  width:       38px;
+  height:      22px;
+  flex-shrink: 0;
+}
+.bs-toggle-track-wrap input {
+  opacity:  0;
+  width:    0;
+  height:   0;
+  position: absolute;
+}
+.bs-toggle-track {
+  position:      absolute;
+  inset:         0;
+  border-radius: 11px;
+  transition:    background 0.2s;
+}
+.bs-toggle-track--off { background: rgba(255,255,255,0.12); }
+.bs-toggle-track--on  { background: var(--bs-accent); }
+.bs-toggle-thumb {
+  position:      absolute;
+  top:           2px;
+  width:         18px;
+  height:        18px;
+  border-radius: 50%;
+  background:    #fff;
+  transition:    left 0.2s;
+  box-shadow:    0 1px 4px rgba(0,0,0,0.3);
+}
+.bs-toggle-thumb--off { left: 2px; }
+.bs-toggle-thumb--on  { left: 18px; }
+.bs-toggle-label {
+  font-size:   13px;
+  color:       var(--bs-text);
+  font-weight: 500;
+}
+
+/* ── TabBar ─────────────────────────────────────────────────────── */
+.bs-tabbar {
+  display:       flex;
+  gap:           2px;
+  margin-bottom: 24px;
+  background:    var(--bs-card);
+  border-radius: 12px;
+  padding:       4px;
+  border:        1px solid var(--bs-border);
+  width:         fit-content;
+}
+.bs-tab {
+  padding:       8px 18px;
+  border-radius: 9px;
+  border:        none;
+  cursor:        pointer;
+  font-size:     13px;
+  transition:    all 0.18s;
+  white-space:   nowrap;
+}
+.bs-tab--off {
+  background: transparent;
+  color:      var(--bs-muted);
+  font-weight: 500;
+}
+.bs-tab--on {
+  background:  rgba(101,116,248,0.18);
+  color:       #a5b4fc;
+  font-weight: 600;
+}
+
+/* ── Shared input style ─────────────────────────────────────────── */
+.bs-input {
+  width:         100%;
+  background:    var(--bs-surface);
+  border:        1px solid var(--bs-border);
+  border-radius: var(--bs-radius-sm);
+  padding:       9px 12px;
+  color:         var(--bs-text);
+  font-size:     13px;
+  outline:       none;
+  transition:    border-color 0.15s;
+  box-sizing:    border-box;
+}
+.bs-input:focus {
+  border-color: var(--bs-accent);
+}
+.bs-input--time {
+  width:   auto;
+  padding: 7px 10px;
+}
+
+/* ── Business/Service selector cards ────────────────────────────── */
+.bs-selector-stack {
+  display:        flex;
+  flex-direction: column;
+  gap:            14px;
+}
+
+/* ── Tab content wrapper ────────────────────────────────────────── */
+.bs-tab-content {
+  display:        flex;
+  flex-direction: column;
+  gap:            14px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   WORKING HOURS TAB
+   ═══════════════════════════════════════════════════════════════════ */
+.wh-bulk-chips {
+  display:       flex;
+  gap:           6px;
+  flex-wrap:     wrap;
+  margin-bottom: 14px;
+}
+
+.wh-bulk-times {
+  display:     flex;
+  gap:         10px;
+  align-items: flex-end;
+  flex-wrap:   wrap;
+  margin-bottom: 24px;
+}
+
+/* Time fields only take as much width as they need */
+.wh-bulk-time-field {
+  flex: 0 0 auto;
+}
+
+/* The Apply button immediately follows the two time fields */
+.wh-bulk-times .bs-btn {
+  flex-shrink: 0;
+}
+
+.wh-divider {
+  border-top:    1px solid var(--bs-border);
+  margin-bottom: 20px;
+}
+
+.wh-days-list {
+  display:        flex;
+  flex-direction: column;
+  gap:            10px;
+}
+
+.wh-day-row {
+  display:     flex;
+  align-items: center;
+  gap:         14px;
+  flex-wrap:   wrap;
+  padding:     13px 16px;
+  border-radius: var(--bs-radius-md);
+  transition:  all 0.2s;
+}
+.wh-day-row--open {
+  background: rgba(101,116,248,0.04);
+  border:     1px solid rgba(101,116,248,0.15);
+}
+.wh-day-row--closed {
+  background: rgba(255,255,255,0.02);
+  border:     1px solid var(--bs-border);
+}
+
+.wh-day-name {
+  font-size:   13px;
+  font-weight: 600;
+  color:       var(--bs-text);
+  min-width:   90px;
+}
+
+.wh-time-sep {
+  color:     var(--bs-muted);
+  font-size: 12px;
+}
+
+.wh-closed-msg {
+  font-size:   12px;
+  color:       var(--bs-muted);
+  font-style:  italic;
+}
+
+/* Inline per-row save feedback badge */
+.wh-row-msg {
+  font-size:     11px;
+  font-weight:   700;
+  padding:       3px 9px;
+  border-radius: 5px;
+  white-space:   nowrap;
+  animation:     wh-row-msg-in 0.2s ease;
+}
+.wh-row-msg--ok {
+  background: rgba(52, 211, 153, 0.12);
+  color:      var(--bs-emerald);
+  border:     1px solid rgba(52, 211, 153, 0.25);
+}
+.wh-row-msg--err {
+  background: rgba(251, 113, 133, 0.12);
+  color:      var(--bs-rose);
+  border:     1px solid rgba(251, 113, 133, 0.25);
+}
+@keyframes wh-row-msg-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   HOLIDAYS TAB
+   ═══════════════════════════════════════════════════════════════════ */
+.hol-all-toggle {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         12px 16px;
+  border-radius:   var(--bs-radius-md);
+  margin-bottom:   16px;
+  transition:      background 0.2s, border-color 0.2s;
+}
+.hol-all-toggle--off {
+  background: rgba(255,255,255,0.02);
+  border:     1px solid var(--bs-border);
+}
+.hol-all-toggle--on {
+  background: rgba(101,116,248,0.06);
+  border:     1px solid rgba(101,116,248,0.20);
+}
+.hol-all-toggle-text p:first-child {
+  margin:      0;
+  font-size:   13px;
+  font-weight: 600;
+  color:       var(--bs-text);
+}
+.hol-all-toggle-text p:last-child {
+  margin:    2px 0 0;
+  font-size: 11px;
+  color:     var(--bs-muted);
+}
+
+.hol-service-select { margin-bottom: 16px; }
+
+/* ── Date + Reason row ──────────────────────────────────────────── */
+.hol-form-row {
+  display:     flex;
+  gap:         12px;
+  align-items: flex-end;
+  flex-wrap:   wrap;
+}
+
+.hol-date-field { flex: 0 0 200px; }
+.hol-reason-field { flex: 1; min-width: 160px; }
+
+/* ── Custom Date Picker ─────────────────────────────────────────── */
+.bs-date-wrapper {
+  position: relative;
+  width:    100%;
+}
+
+/* Hide native input — zero size, no pointer events.
+   showPicker() still works because the element is in the DOM. */
+.bs-date-native {
+  position:       absolute;
+  width:          1px;
+  height:         1px;
+  opacity:        0;
+  pointer-events: none;   /* ← key: styled button handles all clicks */
+  overflow:       hidden;
+  top:            0;
+  left:           0;
+}
+
+/* The visible trigger button */
+.bs-date-trigger {
+  display:       flex;
+  align-items:   center;
+  gap:           10px;
+  width:         100%;
+  background:    var(--bs-surface);
+  border:        1px solid var(--bs-border);
+  border-radius: var(--bs-radius-sm);
+  padding:       9px 12px;
+  color:         var(--bs-text);
+  font-size:     13px;
+  cursor:        pointer;
+  transition:    border-color 0.2s, box-shadow 0.2s;
+  box-sizing:    border-box;
+  text-align:    left;
+  user-select:   none;
+  font-family:   inherit;
+}
+.bs-date-trigger:hover,
+.bs-date-wrapper:focus-within .bs-date-trigger {
+  border-color: var(--bs-accent);
+  box-shadow:   0 0 0 3px rgba(101,116,248,0.12);
+}
+
+.bs-date-icon {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  width:           28px;
+  height:          28px;
+  border-radius:   6px;
+  background:      var(--bs-accent-bg);
+  flex-shrink:     0;
+  font-size:       14px;
+}
+
+.bs-date-text {
+  flex: 1;
+}
+
+.bs-date-text--placeholder {
+  color:      var(--bs-muted);
+  font-style: italic;
+}
+
+.bs-date-text--value {
+  color:       var(--bs-text);
+  font-weight: 500;
+}
+
+.bs-date-clear {
+  margin-left:  auto;
+  padding:      2px 7px;
+  border-radius: 4px;
+  font-size:    10px;
+  font-weight:  700;
+  background:   rgba(255,255,255,0.06);
+  color:        var(--bs-muted);
+  border:       none;
+  cursor:       pointer;
+  z-index:      3;
+  position:     relative;
+  flex-shrink:  0;
+  transition:   background 0.15s, color 0.15s;
+}
+.bs-date-clear:hover {
+  background: rgba(251,113,133,0.15);
+  color:      var(--bs-rose);
+}
+
+/* ── Holiday list cards ─────────────────────────────────────────── */
+.hol-list-empty {
+  padding:    28px 0;
+  text-align: center;
+}
+.hol-list-empty .hol-empty-icon {
+  font-size:     28px;
+  margin-bottom: 8px;
+}
+.hol-list-empty p {
+  color:     var(--bs-muted);
+  font-size: 13px;
+}
+
+.hol-list {
+  display:        flex;
+  flex-direction: column;
+  gap:            8px;
+}
+
+.hol-item {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         12px 16px;
+  border-radius:   var(--bs-radius-md);
+  gap:             12px;
+  flex-wrap:       wrap;
+  transition:      background 0.15s;
+}
+.hol-item--upcoming {
+  background: rgba(251,191,36,0.06);
+  border:     1px solid rgba(251,191,36,0.20);
+}
+.hol-item--past {
+  background: rgba(255,255,255,0.02);
+  border:     1px solid var(--bs-border);
+}
+
+.hol-item-left {
+  display:     flex;
+  align-items: center;
+  gap:         12px;
+}
+
+/* Calendar widget inside holiday item */
+.hol-cal {
+  width:       52px;
+  border-radius: var(--bs-radius-sm);
+  overflow:    hidden;
+  flex-shrink: 0;
+}
+.hol-cal--upcoming { border: 1px solid rgba(251,191,36,0.30); }
+.hol-cal--past     { border: 1px solid var(--bs-border); }
+
+.hol-cal-month {
+  padding:    3px 0;
+  text-align: center;
+}
+.hol-cal-month--upcoming { background: var(--bs-amber); }
+.hol-cal-month--past     { background: var(--bs-surface); }
+
+.hol-cal-month p {
+  margin:          0;
+  font-size:       9px;
+  font-weight:     700;
+  letter-spacing:  0.06em;
+}
+.hol-cal-month--upcoming p { color: #0d0f19; }
+.hol-cal-month--past     p { color: var(--bs-muted); }
+
+.hol-cal-day {
+  padding:    4px 0;
+  text-align: center;
+}
+.hol-cal-day--upcoming { background: rgba(251,191,36,0.10); }
+.hol-cal-day--past     { background: rgba(255,255,255,0.02); }
+
+.hol-cal-day .hol-cal-num {
+  margin:      0;
+  font-size:   22px;
+  font-weight: 800;
+  line-height: 1;
+}
+.hol-cal-day--upcoming .hol-cal-num { color: var(--bs-amber); }
+.hol-cal-day--past     .hol-cal-num { color: var(--bs-muted); }
+
+.hol-cal-day .hol-cal-abbr {
+  margin:      0;
+  font-size:   9px;
+  color:       var(--bs-muted);
+  font-weight: 600;
+}
+
+/* Holiday item right-side info */
+.hol-item-info {}
+.hol-item-date {
+  margin:      0;
+  font-size:   13px;
+  font-weight: 600;
+}
+.hol-item-date--upcoming { color: var(--bs-text); }
+.hol-item-date--past     { color: var(--bs-muted); }
+
+.hol-item-tags {
+  display:    flex;
+  gap:        6px;
+  flex-wrap:  wrap;
+  margin-top: 5px;
+}
+
+.hol-tag {
+  font-size:     10px;
+  font-weight:   700;
+  padding:       2px 8px;
+  border-radius: 4px;
+}
+.hol-tag--all {
+  background: rgba(101,116,248,0.12);
+  color:      #a5b4fc;
+}
+.hol-tag--service {
+  background: rgba(52,211,153,0.10);
+  color:      #34d399;
+}
+
+.hol-item-reason {
+  font-size: 11px;
+  color:     var(--bs-muted);
+}
+.hol-item-past-label {
+  font-size:   10px;
+  color:       var(--bs-muted);
+  font-style:  italic;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PHOTOS TAB
+   ═══════════════════════════════════════════════════════════════════ */
+.photos-limit-warn {
+  padding:       10px 14px;
+  border-radius: var(--bs-radius-sm);
+  margin-bottom: 14px;
+  font-size:     12px;
+  background:    rgba(251,191,36,0.08);
+  color:         var(--bs-amber);
+  border:        1px solid rgba(251,191,36,0.20);
+}
+
+.photos-dropzone {
+  border:        2px dashed var(--bs-border);
+  border-radius: 12px;
+  padding:       32px 20px;
+  text-align:    center;
+  cursor:        pointer;
+  background:    transparent;
+  transition:    all 0.2s;
+  margin-bottom: 14px;
+}
+.photos-dropzone:hover,
+.photos-dropzone--active {
+  border-color: var(--bs-accent);
+  background:   rgba(101,116,248,0.04);
+}
+.photos-dropzone-icon  { font-size: 32px; margin-bottom: 8px; }
+.photos-dropzone p     { margin: 0; font-size: 13px; color: var(--bs-muted); }
+.photos-dropzone p + p { margin-top: 4px; font-size: 11px; }
+.photos-dropzone img   { max-height: 200px; max-width: 100%; border-radius: 8px; object-fit: contain; }
+
+.photos-upload-row {
+  display:     flex;
+  gap:         10px;
+  align-items: flex-end;
+  flex-wrap:   wrap;
+}
+.photos-caption-field { flex: 1; min-width: 160px; }
+
+/* Progress bar */
+.photos-progress-wrap  { margin-bottom: 16px; }
+.photos-progress-labels {
+  display:         flex;
+  justify-content: space-between;
+  margin-bottom:   4px;
+}
+.photos-progress-labels span { font-size: 11px; color: var(--bs-muted); }
+.photos-progress-track {
+  height:        3px;
+  border-radius: 2px;
+  background:    rgba(255,255,255,0.06);
+}
+.photos-progress-fill {
+  height:        100%;
+  border-radius: 2px;
+  transition:    width 0.4s ease;
+}
+.photos-progress-fill--ok    { background: var(--bs-accent); }
+.photos-progress-fill--limit { background: var(--bs-amber); }
+
+/* Gallery grid */
+.photos-grid {
+  display:               grid;
+  grid-template-columns: repeat(auto-fill, minmax(155px,1fr));
+  gap:                   12px;
+}
+
+.photos-thumb {
+  position:      relative;
+  border-radius: var(--bs-radius-md);
+  overflow:      hidden;
+  aspect-ratio:  1;
+  cursor:        pointer;
+  background:    var(--bs-surface);
+}
+.photos-thumb img {
+  width:       100%;
+  height:      100%;
+  object-fit:  cover;
+  display:     block;
+}
+.photos-thumb-overlay {
+  position:        absolute;
+  inset:           0;
+  background:      rgba(0,0,0,0.55);
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  gap:             8px;
+  opacity:         0;
+  transition:      opacity 0.2s;
+}
+.photos-thumb:hover .photos-thumb-overlay { opacity: 1; }
+
+.photos-thumb-caption {
+  margin:     0;
+  font-size:  11px;
+  color:      #fff;
+  text-align: center;
+  padding:    0 8px;
+}
+.photos-thumb-delete {
+  background:  rgba(251,113,133,0.90);
+  color:       #fff;
+  border:      none;
+  border-radius: 6px;
+  padding:     5px 12px;
+  font-size:   11px;
+  font-weight: 600;
+  cursor:      pointer;
+  transition:  background 0.15s;
+}
+.photos-thumb-delete:hover { background: var(--bs-rose); }
+
+/* Gallery empty state */
+.photos-empty {
+  padding:    32px 0;
+  text-align: center;
+}
+.photos-empty-icon { font-size: 32px; margin-bottom: 8px; }
+.photos-empty p    { color: var(--bs-muted); font-size: 13px; }
+
+/* Lightbox */
+.photos-lightbox-overlay {
+  position:        fixed;
+  inset:           0;
+  background:      rgba(0,0,0,0.88);
+  z-index:         1000;
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  padding:         24px;
+}
+.photos-lightbox-inner  { max-width: 800px; width: 100%; }
+.photos-lightbox-inner img {
+  width:       100%;
+  border-radius: 12px;
+  max-height:  80vh;
+  object-fit:  contain;
+}
+.photos-lightbox-footer {
+  display:         flex;
+  justify-content: space-between;
+  align-items:     center;
+  margin-top:      12px;
+}
+.photos-lightbox-caption { margin: 0; color: #aaa; font-size: 13px; }
+.photos-lightbox-actions { display: flex; gap: 8px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .bs-card      { padding: 16px 18px; }
+  .bs-tabbar    { width: 100%; overflow-x: auto; }
+  .hol-form-row { flex-direction: column; }
+  .hol-date-field,
+  .hol-reason-field { flex: 1 1 100%; min-width: 0; }
+  .wh-bulk-times    { flex-direction: column; }
+  .wh-day-row       { flex-direction: column; align-items: flex-start; }
+}
+
+/* ── WorkingHours legacy table classes (kept from WorkingHours.css) ── */
 .wh-table-header {
   display: grid;
   grid-template-columns: 110px 80px 140px 140px 1fr 80px;
@@ -8,7 +789,6 @@
   border-bottom: 1px solid var(--border);
   margin-bottom: 4px;
 }
-
 .wh-table-label {
   font-size: 0.72rem;
   font-weight: 600;
@@ -16,46 +796,12 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
-
-.wh-row {
-  display: grid;
-  grid-template-columns: 110px 80px 140px 140px 1fr 80px;
-  gap: 12px;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border);
-  transition: background 0.1s;
-}
-
-.wh-row:last-child {
-  border-bottom: none;
-}
-
-.wh-day-name {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--text-primary);
-}
-
-.wh-open-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-}
-
 .wh-status-msg {
   font-size: 0.8rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 @media (max-width: 768px) {
   .wh-table-header { display: none; }
-  .wh-row {
-    grid-template-columns: 1fr 1fr;
-    row-gap: 10px;
-  }
-  .wh-day-name { grid-column: 1 / -1; font-size: 1rem; }
 }

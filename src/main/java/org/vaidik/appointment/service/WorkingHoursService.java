@@ -74,7 +74,7 @@ public class WorkingHoursService {
         LocalTime start = LocalTime.parse(request.getStartTime());
         LocalTime end   = LocalTime.parse(request.getEndTime());
 
-        List<WorkingHoursResponse> results = new ArrayList<>();
+        List<WorkingHours> toSave = new ArrayList<>();
 
         for (DayOfWeek day : request.getDays()) {
             WorkingHours wh = workingHoursRepository
@@ -87,11 +87,13 @@ public class WorkingHoursService {
             wh.setStartTime(start);
             wh.setEndTime(end);
             wh.setOpen(request.isOpen());
-
-            results.add(toResponse(workingHoursRepository.save(wh)));
+            toSave.add(wh);
         }
 
-        return results;
+        return workingHoursRepository.saveAll(toSave)
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     // ─── Helper: validate ownership ────────────────────────────────────────────

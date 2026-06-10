@@ -20,14 +20,14 @@ public class BusinessPhotoController {
     private final BusinessPhotoService photoService;
 
     @GetMapping("/service/{serviceId}")
-    public List<BusinessPhotoResponse> getPhotos(@PathVariable Long serviceId) {
+    public List<BusinessPhotoResponse> getPhotos(@PathVariable("serviceId") Long serviceId) {
         return photoService.getPhotos(serviceId);
     }
 
     @PostMapping("/service/{serviceId}")
     @PreAuthorize("hasRole('BUSINESS_OWNER')")
     public BusinessPhotoResponse uploadPhoto(
-            @PathVariable Long serviceId,
+            @PathVariable("serviceId") Long serviceId,
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "caption", required = false) String caption,
             Authentication authentication) throws Exception {
@@ -37,7 +37,7 @@ public class BusinessPhotoController {
     @DeleteMapping("/{photoId}")
     @PreAuthorize("hasRole('BUSINESS_OWNER')")
     public ResponseEntity<Map<String, String>> deletePhoto(
-            @PathVariable Long photoId,
+            @PathVariable("photoId") Long photoId,
             Authentication authentication) throws Exception {
         photoService.deletePhoto(photoId, authentication.getName());
         return ResponseEntity.ok(Map.of("message", "Photo deleted"));

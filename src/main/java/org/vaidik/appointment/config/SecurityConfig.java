@@ -2,6 +2,7 @@ package org.vaidik.appointment.config;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +26,12 @@ import java.util.List;
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
+
+    @Value("${app.frontend.url}")
+    private List<String> frontendUrl;
+
+    @Value("${app.cors.allowed-methods}")
+    private List<String> allowedMethods;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -59,10 +66,21 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/services/**").permitAll()
 
                         // BUSINESS
-                        .requestMatchers(HttpMethod.GET, "/api/business").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/business/**").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.POST, "/api/business").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/business/my").hasRole("BUSINESS_OWNER")
                         .requestMatchers(HttpMethod.GET, "/api/business/analytics").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/business/all").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/business/pending").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/business/*/delete-preflight").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/business/approved").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/business").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/business/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/business/*/resubmit").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/api/business/*/approve").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/business/*/reject").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/business/*/request-delete").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.POST, "/api/business/**").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/business/**").hasRole("BUSINESS_OWNER")
 
                         // DOCUMENTS — owners upload, admin + owner view
                         .requestMatchers(HttpMethod.GET, "/api/documents/*/file").authenticated()
@@ -132,8 +150,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        config.setAllowedOrigins(frontendUrl);
+        config.setAllowedMethods(allowedMethods);
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

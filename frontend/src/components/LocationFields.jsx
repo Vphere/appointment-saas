@@ -1,9 +1,6 @@
-// LocationFields.jsx — two entry modes + graceful API fallback
-
-import { useState, useCallback } from 'react';
+import { useState, useImperativeHandle, forwardRef } from 'react';
 import './LocationFields.css';
 
-// ── Pincode lookup (India Post API) ──────────────────────────────
 async function fetchPincodeDetails(pincode) {
   const res  = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
   const data = await res.json();
@@ -17,7 +14,6 @@ async function fetchPincodeDetails(pincode) {
   };
 }
 
-// ── Entry mode toggle ─────────────────────────────────────────────
 function ModeToggle({ mode, onChange }) {
   return (
     <div className="lf-mode-toggle">
@@ -41,37 +37,72 @@ function ModeToggle({ mode, onChange }) {
   );
 }
 
-// ── Main component ────────────────────────────────────────────────
-export default function LocationFields({ values, onChange }) {
-  // 'pincode' = try API first | 'manual' = direct entry
-  const [mode, setMode] = useState('pincode');
+function FieldError({ msg }) {
+  if (!msg) return null;
+  return <div className="lf-field-error">⚠ {msg}</div>;
+}
 
-  // Pincode lookup state
+// ── forwardRef so parent can call locationRef.current.validate() ──
+const LocationFields = forwardRef(function LocationFields({ values, onChange }, ref) {
+  const [mode, setMode]                     = useState('pincode');
   const [pincodeLoading, setPincodeLoading] = useState(false);
   const [pincodeError,   setPincodeError]   = useState('');
-  // After a successful lookup the auto-filled fields are locked
-  // (user can still click "Edit" to unlock them)
-  const [autoFilled,  setAutoFilled]  = useState(false);
-  // After API failure in pincode mode, unlock manual fields
-  const [apiFailed,   setApiFailed]   = useState(false);
+  const [apiFailed,      setApiFailed]      = useState(false);
+  const [fieldErrors,    setFieldErrors]    = useState({});
+  const [touched,        setTouched]        = useState({});
 
-  // ── Switch mode ───────────────────────────────────────────────
+  // ── Validation rules ──────────────────────────────────────────────
+  const runValidation = (currentValues, currentMode) => {
+    const errs = {};
+    if (currentMode === 'pincode') {
+      if (!currentValues.pincode || currentValues.pincode.length < 6)
+        errs.pincode = 'Enter a valid 6-digit pincode';
+    }
+    if (!currentValues.address?.trim()) errs.address = 'Address is required';
+    if (!currentValues.city?.trim())    errs.city    = 'City is required';
+    if (!currentValues.state?.trim())   errs.state   = 'State is required';
+    if (!currentValues.country?.trim()) errs.country = 'Country is required';
+    return errs;
+  };
+
+  // ── Exposed to parent via ref ─────────────────────────────────────
+  // Parent calls locationRef.current.validate() on form submit.
+  // Returns true if valid, false if not (and shows all errors).
+  useImperativeHandle(ref, () => ({
+    validate() {
+      const errs = runValidation(values, mode);
+      setFieldErrors(errs);
+      // Mark all validated fields as touched so errors are visible
+      setTouched({ pincode: true, address: true, city: true, state: true, country: true });
+      return Object.keys(errs).length === 0;
+    },
+  }));
+
+  const handleBlur = (field) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    const errs = runValidation(values, mode);
+    setFieldErrors(prev => ({ ...prev, [field]: errs[field] || '' }));
+  };
+
+  const clearFieldError = (field) =>
+    setFieldErrors(prev => ({ ...prev, [field]: '' }));
+
+  // ── Mode switch ───────────────────────────────────────────────────
   const handleModeChange = (newMode) => {
     setMode(newMode);
     setPincodeError('');
-    setAutoFilled(false);
     setApiFailed(false);
-    // Clear everything so the form starts fresh
+    setTouched({});
+    setFieldErrors({});
     onChange({ address: '', pincode: '', city: '', state: '', country: '' });
   };
 
-  // ── Pincode change handler ────────────────────────────────────
-  const handlePincodeChange = useCallback(async (e) => {
+  // ── Pincode change + API lookup ───────────────────────────────────
+  const handlePincodeChange = async (e) => {
     const val = e.target.value.replace(/\D/g, '').slice(0, 6);
-    // Reset auto-fill state when user edits pincode
-    setAutoFilled(false);
     setApiFailed(false);
     setPincodeError('');
+    clearFieldError('pincode');
     onChange({ ...values, pincode: val, city: '', state: '', country: '' });
 
     if (val.length === 6) {
@@ -79,34 +110,28 @@ export default function LocationFields({ values, onChange }) {
       try {
         const result = await fetchPincodeDetails(val);
         onChange({ ...values, pincode: val, ...result });
-        setAutoFilled(true);
-        setApiFailed(false);
-        setPincodeError('');
+        setFieldErrors(prev => ({
+          ...prev, pincode: '', city: '', state: '', country: ''
+        }));
       } catch {
-        // API failed — tell user and let them type manually
         setApiFailed(true);
-        setAutoFilled(false);
         setPincodeError(
-          'Could not auto-fill location details for this pincode. ' +
+          'Could not auto-fill location for this pincode. ' +
           'Please enter city, state and country manually below.'
         );
       } finally {
         setPincodeLoading(false);
       }
     }
-  }, [values, onChange]);
+  };
 
-  // ── Whether the city/state/country fields are editable ────────
-  // In pincode mode: editable only after auto-fill (user wants to correct)
-  //                  OR after API failure
-  // In manual mode:  always editable
-  const locationEditable = mode === 'manual' || apiFailed || autoFilled;
+  const lookupSucceeded  = mode === 'pincode' && !!values.city && !apiFailed;
+  const showLocationFields = mode === 'manual' || apiFailed || lookupSucceeded;
 
   return (
     <div className="lf-root">
       <div className="lf-section-label">📍 Service Location</div>
 
-      {/* Mode selector */}
       <ModeToggle mode={mode} onChange={handleModeChange} />
 
       {/* ── PINCODE MODE ── */}
@@ -118,48 +143,49 @@ export default function LocationFields({ values, onChange }) {
           </label>
           <div className="lf-pincode-wrap">
             <input
-              className="form-input lf-pincode-input"
+              className={`form-input lf-pincode-input ${
+                touched.pincode && fieldErrors.pincode ? 'lf-input-error' : ''
+              }`}
               placeholder="e.g. 382418"
               maxLength={6}
               value={values.pincode || ''}
               onChange={handlePincodeChange}
+              onBlur={() => handleBlur('pincode')}
             />
-            {autoFilled && !apiFailed && (
+            {lookupSucceeded && (
               <span className="lf-pincode-tag">
                 ✓ {values.city}{values.state ? `, ${values.state}` : ''}
               </span>
             )}
           </div>
 
-          {/* Error — API failed */}
           {pincodeError && (
-            <div className="lf-pincode-error">
-              ⚠ {pincodeError}
-            </div>
+            <div className="lf-pincode-error">⚠ {pincodeError}</div>
           )}
 
-          {/* Hint when no error and not yet filled */}
-          {!pincodeError && !autoFilled && (
-            <span className="form-hint">Enter 6-digit pincode to auto-fill details</span>
+          {touched.pincode && fieldErrors.pincode && !pincodeError && (
+            <FieldError msg={fieldErrors.pincode} />
           )}
 
-          {/* After successful auto-fill, let user override */}
-          {autoFilled && !apiFailed && (
+          {!pincodeError && !fieldErrors.pincode && !lookupSucceeded && (
+            <span className="form-hint">
+              {!values.pincode
+                ? 'Enter 6-digit pincode to auto-fill details'
+                : values.pincode.length < 6
+                  ? 'Enter all 6 digits to look up location…'
+                  : null}
+            </span>
+          )}
+
+          {lookupSucceeded && (
             <div className="lf-autofill-notice">
-              ✓ Location auto-filled from pincode.
-              <button
-                type="button"
-                className="lf-edit-link"
-                onClick={() => setAutoFilled(true)} // already true — just keeps fields unlocked
-              >
-                Edit details
-              </button>
+              ✓ Location auto-filled from pincode. You can edit the fields below if needed.
             </div>
           )}
         </div>
       )}
 
-      {/* ── MANUAL MODE — just the pincode field, no API ── */}
+      {/* ── MANUAL MODE pincode ── */}
       {mode === 'manual' && (
         <div className="form-group lf-pincode-group">
           <label className="form-label">Pincode</label>
@@ -168,75 +194,94 @@ export default function LocationFields({ values, onChange }) {
             placeholder="e.g. 382418"
             maxLength={10}
             value={values.pincode || ''}
-            onChange={e => onChange({ ...values, pincode: e.target.value.replace(/\D/g, '') })}
+            onChange={e => onChange({
+              ...values, pincode: e.target.value.replace(/\D/g, '')
+            })}
           />
         </div>
       )}
 
-      {/* ── Address — always shown ── */}
       <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-        <label className="form-label">Address / Street</label>
+        <label className="form-label">Address / Street *</label>
         <input
-          className="form-input"
+          className={`form-input ${
+            touched.address && fieldErrors.address ? 'lf-input-error' : ''
+          }`}
           placeholder="e.g. 3rd Floor, Infinity Mall, Link Road"
           value={values.address || ''}
-          onChange={e => onChange({ ...values, address: e.target.value })}
+          onChange={e => {
+            onChange({ ...values, address: e.target.value });
+            clearFieldError('address');
+          }}
+          onBlur={() => handleBlur('address')}
         />
+        {touched.address && <FieldError msg={fieldErrors.address} />}
       </div>
 
       {/* ── City / State / Country ── */}
-      {/* In pincode mode, shown only after auto-fill or API failure */}
-      {/* In manual mode, always shown */}
-      {(mode === 'manual' || apiFailed || autoFilled) && (
+      {showLocationFields && (
         <div className="lf-location-fields-grid">
           <div className="form-group">
             <label className="form-label">City *</label>
             <input
-              className={`form-input ${!locationEditable ? 'lf-auto-field' : ''}`}
+              className={`form-input ${
+                touched.city && fieldErrors.city ? 'lf-input-error' : ''
+              }`}
               placeholder="e.g. Ahmedabad"
               value={values.city || ''}
-              readOnly={!locationEditable}
-              onChange={e => onChange({ ...values, city: e.target.value })}
+              onChange={e => {
+                onChange({ ...values, city: e.target.value });
+                clearFieldError('city');
+              }}
+              onBlur={() => handleBlur('city')}
             />
+            {touched.city && <FieldError msg={fieldErrors.city} />}
           </div>
 
           <div className="form-group">
             <label className="form-label">State *</label>
             <input
-              className={`form-input ${!locationEditable ? 'lf-auto-field' : ''}`}
+              className={`form-input ${
+                touched.state && fieldErrors.state ? 'lf-input-error' : ''
+              }`}
               placeholder="e.g. Gujarat"
               value={values.state || ''}
-              readOnly={!locationEditable}
-              onChange={e => onChange({ ...values, state: e.target.value })}
+              onChange={e => {
+                onChange({ ...values, state: e.target.value });
+                clearFieldError('state');
+              }}
+              onBlur={() => handleBlur('state')}
             />
+            {touched.state && <FieldError msg={fieldErrors.state} />}
           </div>
 
           <div className="form-group">
-            <label className="form-label">Country</label>
+            <label className="form-label">Country *</label>
             <input
-              className={`form-input ${!locationEditable ? 'lf-auto-field' : ''}`}
+              className={`form-input ${
+                touched.country && fieldErrors.country ? 'lf-input-error' : ''
+              }`}
               placeholder="e.g. India"
               value={values.country || ''}
-              readOnly={!locationEditable}
-              onChange={e => onChange({ ...values, country: e.target.value })}
+              onChange={e => {
+                onChange({ ...values, country: e.target.value });
+                clearFieldError('country');
+              }}
+              onBlur={() => handleBlur('country')}
             />
+            {touched.country && <FieldError msg={fieldErrors.country} />}
           </div>
         </div>
       )}
 
-      {/* Prompt shown in pincode mode before user types pincode */}
-      {mode === 'pincode' && !autoFilled && !apiFailed && !values.pincode && (
+      {/* Waiting hint */}
+      {mode === 'pincode' && !showLocationFields && !pincodeLoading && (
         <div className="lf-waiting-hint">
           City, state and country will appear here after entering your pincode.
         </div>
       )}
-
-      {/* Prompt shown in pincode mode when pincode is partially entered */}
-      {mode === 'pincode' && !autoFilled && !apiFailed && values.pincode && values.pincode.length < 6 && (
-        <div className="lf-waiting-hint">
-          Enter all 6 digits to look up location…
-        </div>
-      )}
     </div>
   );
-}
+});
+
+export default LocationFields;

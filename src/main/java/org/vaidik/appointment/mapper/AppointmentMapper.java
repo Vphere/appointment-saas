@@ -21,7 +21,7 @@ public class AppointmentMapper {
                 .businessName(appointment.getBusiness().getName())
                 .serviceId(s != null ? s.getId() : null)
                 .serviceName(s != null ? s.getName() : null)
-                .price(s != null ? appointment.getService().getPrice().doubleValue() : null)
+                .price(s != null ? appointment.getService().getPrice() : null)
                 .appointmentDate(appointment.getAppointmentDate())
                 .appointmentTime(appointment.getAppointmentTime())
                 .status(appointment.getStatus())
@@ -29,6 +29,11 @@ public class AppointmentMapper {
                 .createdAt(appointment.getCreatedAt())
                 .updatedAt(appointment.getUpdatedAt())
                 .duration(s != null ? s.getDuration() : null)
+                .serviceAddress(s != null ? s.getAddress() : null)
+                .serviceCity(s != null ? s.getCity() : null)
+                .serviceState(s != null ? s.getState() : null)
+                .serviceCountry(s != null ? s.getCountry() : null)
+                .servicePincode(s != null ? s.getPincode() : null)
                 .build();
     }
 }

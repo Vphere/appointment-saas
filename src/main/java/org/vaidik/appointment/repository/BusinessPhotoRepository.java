@@ -24,4 +24,15 @@ public interface BusinessPhotoRepository extends JpaRepository<BusinessPhoto, Lo
     @Modifying
     @Query("DELETE FROM BusinessPhoto p WHERE p.service.id = :serviceId")
     void deleteByServiceId(@Param("serviceId") Long serviceId);
+
+    // Correct — go through service → business
+    @Query("SELECT p FROM BusinessPhoto p WHERE p.service.business.id = :businessId")
+    List<BusinessPhoto> findByBusinessId(@Param("businessId") Long businessId);
+
+    @Query("SELECT p FROM BusinessPhoto p WHERE p.service.id = :serviceId")
+    List<BusinessPhoto> findByServiceId(@Param("serviceId") Long serviceId);
+
+    @Modifying
+    @Query("DELETE FROM BusinessPhoto p WHERE p.service.business.id = :businessId")
+    void deleteByBusinessId(@Param("businessId") Long businessId);
 }

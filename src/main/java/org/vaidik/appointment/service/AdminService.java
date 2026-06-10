@@ -2,6 +2,7 @@ package org.vaidik.appointment.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.vaidik.appointment.dto.AdminStatsResponse;
 import org.vaidik.appointment.dto.RemoveReviewRequest;
 import org.vaidik.appointment.dto.ReviewResponse;
@@ -25,6 +26,7 @@ public class AdminService {
     private final AppointmentRepository appointmentRepository;
     private final ReviewRepository reviewRepository;
     private final ReviewMapper reviewMapper;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     public AdminStatsResponse getAdminStats() {
         long totalBusinesses = businessRepository.count();
@@ -95,6 +97,7 @@ public class AdminService {
                 .build();
     }
 
+    @Transactional
     public void deleteUser(Long userId) {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -102,6 +105,8 @@ public class AdminService {
         if (user.getRole() == Role.SUPER_ADMIN) {
             throw new RuntimeException("Cannot delete a Super Admin account");
         }
+
+        refreshTokenRepository.deleteByUser(user);
         userRepository.deleteById(userId);
     }
 

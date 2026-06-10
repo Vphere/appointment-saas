@@ -1,6 +1,7 @@
 package org.vaidik.appointment.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.transaction.annotation.Transactional;
 import org.vaidik.appointment.entity.BusinessDocument;
 import org.vaidik.appointment.entity.DocumentType;
 
@@ -11,4 +12,6 @@ public interface BusinessDocumentRepository extends JpaRepository<BusinessDocume
     List<BusinessDocument> findByBusinessId(Long businessId);
     Optional<BusinessDocument> findByBusinessIdAndDocumentType(Long businessId, DocumentType documentType);
     boolean existsByBusinessIdAndDocumentType(Long businessId, DocumentType documentType);
+    @Transactional
+    void deleteByBusinessId(Long businessId);
 }

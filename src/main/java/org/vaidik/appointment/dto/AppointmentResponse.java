@@ -28,4 +28,10 @@ public class AppointmentResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Integer duration;
+
+    private String serviceAddress;
+    private String serviceCity;
+    private String serviceState;
+    private String serviceCountry;
+    private String servicePincode;
 }

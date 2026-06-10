@@ -21,11 +21,11 @@ import org.vaidik.appointment.entity.User;
 import org.vaidik.appointment.repository.OtpRepository;
 import org.vaidik.appointment.repository.UserRepository;
 import org.vaidik.appointment.security.JwtUtil;
+import java.security.SecureRandom;
 
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +38,8 @@ public class AuthService {
     private final OtpRepository otpRepository;
     private final EmailService emailService;
     private final RefreshTokenService refreshTokenService; // ← NEW
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     public record RefreshTokenRotationResult(String accessToken, String newRefreshTokenValue) {}
 
@@ -101,11 +103,26 @@ public class AuthService {
         return new RefreshTokenRotationResult(newAccessToken, newRefreshToken.getToken());
     }
 
-    // ← NEW: logout clears cookie + deletes refresh token from DB
+//    // ← NEW: logout clears cookie + deletes refresh token from DB
+//    @Transactional
+//    public void logout(String refreshTokenValue, HttpServletResponse response) {
+//        if (refreshTokenValue != null) {
+//            refreshTokenRepository_findByToken_andDelete(refreshTokenValue);
+//        }
+//        clearRefreshTokenCookie(response);
+//    }
+
     @Transactional
     public void logout(String refreshTokenValue, HttpServletResponse response) {
         if (refreshTokenValue != null) {
-            refreshTokenRepository_findByToken_andDelete(refreshTokenValue);
+            try {
+                RefreshToken rt = refreshTokenService.findByToken(refreshTokenValue);
+                refreshTokenService.deleteByUser(rt.getUser());
+            } catch (RuntimeException e) {
+                // Token not found or already expired — still clear the cookie
+                // Log it but don't silently swallow without clearing cookie
+                System.err.println("Logout: refresh token not found in DB (may be already expired): " + e.getMessage());
+            }
         }
         clearRefreshTokenCookie(response);
     }
@@ -129,12 +146,12 @@ public class AuthService {
         response.addCookie(cookie);
     }
 
-    private void refreshTokenRepository_findByToken_andDelete(String token) {
-        try {
-            RefreshToken rt = refreshTokenService.findByToken(token);
-            refreshTokenService.deleteByUser(rt.getUser());
-        } catch (Exception ignored) {}
-    }
+//    private void refreshTokenRepository_findByToken_andDelete(String token) {
+//        try {
+//            RefreshToken rt = refreshTokenService.findByToken(token);
+//            refreshTokenService.deleteByUser(rt.getUser());
+//        } catch (Exception ignored) {}
+//    }
 
     // ── Remaining methods unchanged ─────────────────────────────────
     public String sendOtp(String email) {
@@ -145,11 +162,11 @@ public class AuthService {
             return "GOOGLE_ACCOUNT";
         }
 
-        String otp = String.valueOf(100000 + new Random().nextInt(900000));
+        String otp = String.valueOf(100000 + SECURE_RANDOM.nextInt(900000));
         Otp otpEntity = otpRepository.findByEmail(email).orElse(new Otp());
         otpEntity.setEmail(email);
         otpEntity.setOtp(otp);
-        otpEntity.setExpiryTime(LocalDateTime.now().plusMinutes(5));
+        otpEntity.setExpiryTime(LocalDateTime.now().plusMinutes(10));
         otpRepository.save(otpEntity);
         emailService.sendOtpEmail(email, otp);
         return "OTP_SENT";

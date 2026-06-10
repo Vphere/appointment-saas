@@ -474,3 +474,118 @@
   .od-tooltip { width: 240px; }
   .od-tl-node { width: 64px; }
 }
+
+/* Disable mouse-wheel value changes on number inputs */
+input[type=number] {
+  -moz-appearance: textfield;
+}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ── Rejected box (rich feedback) ──────────────────────────────── */
+.od-rejected-box {
+  padding: 16px 18px;
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 10px;
+}
+
+.od-rejected-header {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #ef4444;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+.od-rejected-section {
+  margin-bottom: 10px;
+}
+
+.od-rejected-section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: rgba(239, 68, 68, 0.7);
+  margin-bottom: 4px;
+}
+
+.od-rejected-section-body {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+/* ── Delete confirmation modal ──────────────────────────────────── */
+.od-delete-warning-box {
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+
+.od-delete-warning-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+.od-delete-warning-sub {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.od-delete-consequences {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.od-delete-consequences li {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.od-delete-consequence-critical {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.od-delete-cannot-undo {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ef4444;
+  margin: 0;
+}
+
+.od-delete-otp-info {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  background: rgba(99, 102, 241, 0.07);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  line-height: 1.55;
+}

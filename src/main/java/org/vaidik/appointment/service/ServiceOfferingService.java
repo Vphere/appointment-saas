@@ -57,6 +57,7 @@ public class ServiceOfferingService {
             throw new RuntimeException(
                     "Gap Between Appointments must be at least 1 minute for Consultation services.");
 
+        // deletedAt is intentionally omitted — null by default means active.
         ServiceOffering service = ServiceOffering.builder()
                 .name(request.getName())
                 .description(request.getDescription())
@@ -71,7 +72,6 @@ public class ServiceOfferingService {
                 .state(request.getState())
                 .country(request.getCountry())
                 .pincode(request.getPincode())
-                .deleted(false)
                 .build();
 
         return mapper.toResponse(serviceRepository.save(service));
@@ -154,6 +154,11 @@ public class ServiceOfferingService {
      * keep their service_id FK → price, name, duration stay in history.
      * Revenue reports remain accurate forever.
      *
+     * Deletion state is encoded in a single column:
+     *
+     *   deleted_at IS NULL     → active
+     *   deleted_at IS NOT NULL → soft-deleted (value = deletion timestamp)
+     *
      * What we DO clean up (things that have no value after deletion):
      *
      *   Table               Action          Reason
@@ -196,15 +201,15 @@ public class ServiceOfferingService {
         //    A missing file is logged as a warning — it should NOT roll back the transaction.
         deletePhysicalFiles(photoFileNames);
 
-        // 6. Soft-delete the service — set flag, never remove the row
-        service.setDeleted(true);
+        // 6. Soft-delete: set deletedAt to now — this is the single source of truth.
+        //    NULL = active, non-NULL = deleted. No separate boolean needed.
         service.setDeletedAt(LocalDateTime.now());
         serviceRepository.save(service);
     }
 
     // ── Physical file deletion ────────────────────────────────────────
     /**
-     * Deletes files from uploadDir/subDir/fileName.
+     * Deletes files from uploadDir/fileName.
      * Missing files are silently skipped (they may have been cleaned up already).
      * IOExceptions are logged but never propagated — file cleanup should never
      * roll back a successful DB transaction.

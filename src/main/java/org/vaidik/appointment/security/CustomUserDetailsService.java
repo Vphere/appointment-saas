@@ -14,14 +14,16 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        // Google OAuth users have null role until they complete profile
+        String role = user.getRole() != null ? user.getRole().name() : "INCOMPLETE";
 
         return org.springframework.security.core.userdetails.User
                 .withUsername(user.getEmail())
                 .password(user.getPassword() != null ? user.getPassword() : "{noop}oauth_user")
-                .authorities("ROLE_" + user.getRole().name())
+                .authorities("ROLE_" + role)
                 .build();
     }
 }

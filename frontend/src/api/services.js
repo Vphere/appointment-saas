@@ -9,3 +9,15 @@ export const createService = (data) => api.post('/api/services', data);
 export const createServicesBulk = (data) => api.post('/api/services/bulk', data);
 export const updateService = (id, data) => api.put(`/api/services/${id}`, data);
 export const deleteService = (id) => api.delete(`/api/services/${id}`);
+
+export function formatServiceLocation(service) {
+  const parts = [];
+  if (service.address) parts.push(service.address);
+  if (service.city)    parts.push(service.city);
+  if (service.state && !service.city) parts.push(service.state);
+  return parts.join(', ') || 'Location not set';
+}
+
+export function serviceDropdownLabel(service) {
+  return `${service.name} — ${formatServiceLocation(service)}`;
+}

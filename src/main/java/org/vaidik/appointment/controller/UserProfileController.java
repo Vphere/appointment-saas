@@ -2,9 +2,7 @@ package org.vaidik.appointment.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.vaidik.appointment.dto.ChangePasswordRequest;
 import org.vaidik.appointment.dto.UpdateProfileRequest;
@@ -20,26 +18,22 @@ public class UserProfileController {
 
     private final UserProfileService userProfileService;
 
-    private String getCurrentUserEmail() {
-        return (String) SecurityContextHolder.getContext()
-                .getAuthentication()
-                .getPrincipal();
-    }
-
     @GetMapping("/me")
-    public ResponseEntity<UserProfileDTO> getProfile() {
-        return ResponseEntity.ok(userProfileService.getProfile(getCurrentUserEmail()));
+    public ResponseEntity<UserProfileDTO> getProfile(Authentication authentication) {
+        return ResponseEntity.ok(userProfileService.getProfile(authentication.getName()));
     }
 
     @PutMapping("/profile")
-    public ResponseEntity<UserProfileDTO> updateProfile(@RequestBody UpdateProfileRequest request) {
-        return ResponseEntity.ok(userProfileService.updateProfile(getCurrentUserEmail(), request));
+    public ResponseEntity<UserProfileDTO> updateProfile(@RequestBody UpdateProfileRequest request,
+                                                        Authentication authentication) {
+        return ResponseEntity.ok(userProfileService.updateProfile(authentication.getName(), request));
     }
 
     @PutMapping("/change-password")
-    public ResponseEntity<Map<String, String>> changePassword(@RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<Map<String, String>> changePassword(@RequestBody ChangePasswordRequest request,
+                                                              Authentication authentication) {
         try {
-            userProfileService.changePassword(getCurrentUserEmail(), request);
+            userProfileService.changePassword(authentication.getName(), request);
             return ResponseEntity.ok(Map.of("message", "Password updated successfully."));
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

@@ -3,6 +3,7 @@ package org.vaidik.appointment.config;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -25,6 +26,9 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
 
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
+
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
@@ -35,14 +39,10 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String name  = oAuth2User.getAttribute("name");
 
         Optional<User> existing = userRepository.findByEmail(email);
-        System.out.println("Found user: " + existing.isPresent());
-        if (existing.isPresent()) {
-            System.out.println("Provider: " + existing.get().getProvider());
-        }
 
         // ── Existing LOCAL user tried Google ──
         if (existing.isPresent() && existing.get().getProvider() == AuthProvider.LOCAL) {
-            response.sendRedirect("http://localhost:5173/login?error=use_password");
+            response.sendRedirect(frontendUrl + "/login?error=use_password");
             return;
         }
 
@@ -54,7 +54,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                     user.getRole().name(),
                     user.getName()
             );
-            response.sendRedirect("http://localhost:5173/oauth2/callback?token=" + token);
+            response.sendRedirect(frontendUrl + "/oauth2/callback?token=" + token);
             return;
         }
 
@@ -71,7 +71,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         // Redirect to role selection page with email as param
         response.sendRedirect(
-                "http://localhost:5173/complete-profile?email="
+                frontendUrl + "/complete-profile?email="
                         + URLEncoder.encode(email, StandardCharsets.UTF_8)
                         + "&name=" + URLEncoder.encode(name, StandardCharsets.UTF_8)
         );

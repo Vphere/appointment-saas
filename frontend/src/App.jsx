@@ -34,6 +34,12 @@ function AppLayout({ children }) {
   );
 }
 
+document.addEventListener('wheel', (e) => {
+  if (document.activeElement?.type === 'number') {
+    document.activeElement.blur();
+  }
+}, { passive: false });
+
 export default function App() {
   return (
     <AuthProvider>

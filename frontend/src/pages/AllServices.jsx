@@ -42,7 +42,6 @@ const SORT_OPTIONS = [
   { value: 'rating_desc',label: 'Top Rated' },
 ];
 
-// Large fixed max so all realistic prices fit
 const PRICE_CEILING = 50000;
 
 export default function AllServices() {

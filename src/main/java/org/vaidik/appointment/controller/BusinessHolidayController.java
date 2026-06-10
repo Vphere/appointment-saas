@@ -22,20 +22,20 @@ public class BusinessHolidayController {
     // Owner views all holidays for a business
     @GetMapping("/business/{businessId}")
     @PreAuthorize("hasRole('BUSINESS_OWNER')")
-    public List<BusinessHolidayResponse> getByBusiness(@PathVariable Long businessId) {
+    public List<BusinessHolidayResponse> getByBusiness(@PathVariable("businessId") Long businessId) {
         return holidayService.getHolidays(businessId);
     }
 
     // Owner views holidays for a specific service (+ business-wide ones)
     @GetMapping("/service/{serviceId}")
     @PreAuthorize("hasRole('BUSINESS_OWNER')")
-    public List<BusinessHolidayResponse> getByService(@PathVariable Long serviceId) {
+    public List<BusinessHolidayResponse> getByService(@PathVariable("serviceId") Long serviceId) {
         return holidayService.getHolidaysByService(serviceId);
     }
 
     // SlotService calls this publicly to block slots — no auth needed
     @GetMapping("/public/service/{serviceId}")
-    public List<BusinessHolidayResponse> getByServicePublic(@PathVariable Long serviceId) {
+    public List<BusinessHolidayResponse> getByServicePublic(@PathVariable("serviceId") Long serviceId) {
         return holidayService.getHolidaysByService(serviceId);
     }
 
@@ -48,7 +48,7 @@ public class BusinessHolidayController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('BUSINESS_OWNER')")
-    public ResponseEntity<Map<String, String>> deleteHoliday( @PathVariable Long id,
+    public ResponseEntity<Map<String, String>> deleteHoliday( @PathVariable("id") Long id,
                                                                 Authentication authentication) {
         holidayService.deleteHoliday(id, authentication.getName());
         return ResponseEntity.ok(Map.of("message", "Holiday deleted"));

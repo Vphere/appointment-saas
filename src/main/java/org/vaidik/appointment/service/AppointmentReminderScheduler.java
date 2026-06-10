@@ -37,7 +37,7 @@ public class AppointmentReminderScheduler {
         List<Appointment> due = appointmentRepository.findAppointmentsDueForReminder(
                 now,
                 in24Hours,
-                List.of(AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING)
+                List.of(AppointmentStatus.CONFIRMED.name(), AppointmentStatus.PENDING.name())
         );
 
         log.info("Found {} appointment(s) due for reminder", due.size());

@@ -59,4 +59,18 @@ public class Business {
     public boolean isGstRequired() {
         return annualTurnover != null && annualTurnover > GST_THRESHOLD;
     }
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
+    @Column(name = "required_actions", columnDefinition = "TEXT")
+    private String requiredActions;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Transient
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
 }

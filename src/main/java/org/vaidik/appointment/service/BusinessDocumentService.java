@@ -22,9 +22,6 @@ public class BusinessDocumentService {
     private final BusinessDocumentRepository documentRepo;
     private final BusinessRepository businessRepo;
 
-    @Value("${app.upload.dir:uploads/photos}")
-    private String uploadDir;
-
     @Value("${app.document.dir:uploads/documents}")
     private String documentDir;
 

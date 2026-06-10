@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getAllBusinesses, approveBusiness, rejectBusiness } from '../api/business';
+import { getAllBusinesses, approveBusiness, rejectBusinessWithReason } from '../api/business';
 import { getDocuments } from '../api/documents';
 import api from '../api/axiosInstance';
 import StatusBadge from '../components/StatusBadge';
@@ -94,6 +94,62 @@ function DocumentsSection({ businessId }) {
           </button>
         </div>
       ))}
+    </div>
+  );
+}
+
+
+function RejectModal({ onConfirm, onCancel, loading }) {
+  const [reason, setReason]   = useState('');
+  const [actions, setActions] = useState('');
+
+  return (
+    <div className="aa-preview-overlay" onClick={onCancel}>
+      <div className="aa-preview-modal" style={{ maxWidth: 480 }}
+           onClick={e => e.stopPropagation()}>
+        <div className="aa-preview-header">
+          <span>✕ Reject Business — Provide Reason</span>
+          <button className="owner-modal-close" onClick={onCancel}>×</button>
+        </div>
+        <div style={{ padding: '20px 20px 24px' }}>
+          <div className="form-group" style={{ marginBottom: 16 }}>
+            <label className="form-label">Rejection Reason *</label>
+            <textarea
+              className="form-textarea"
+              rows={3}
+              placeholder="e.g. PAN card scan is blurry and unreadable"
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+            />
+            <span className="form-hint">
+              Explain clearly why this application is being rejected.
+            </span>
+          </div>
+          <div className="form-group" style={{ marginBottom: 20 }}>
+            <label className="form-label">Required Actions *</label>
+            <textarea
+              className="form-textarea"
+              rows={3}
+              placeholder="e.g. Upload a clearer PAN scan. Provide GST certificate since turnover exceeds ₹20L."
+              value={actions}
+              onChange={e => setActions(e.target.value)}
+            />
+            <span className="form-hint">
+              Tell the owner exactly what they need to fix before resubmitting.
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
+            <button
+              className="btn btn-danger"
+              disabled={!reason.trim() || !actions.trim() || loading}
+              onClick={() => onConfirm(reason.trim(), actions.trim())}
+            >
+              {loading ? '⏳ Rejecting...' : '✕ Confirm Rejection'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -244,6 +300,7 @@ export default function AdminApproval() {
   const [filter, setFilter]           = useState('PENDING');
   const [actionLoading, setActionLoading] = useState(null);
   const [message, setMessage]         = useState({ text: '', type: '' });
+  const [rejectModal, setRejectModal] = useState(null); // stores businessId when open
 
   const fetchBusinesses = async () => {
     setLoading(true);
@@ -259,16 +316,42 @@ export default function AdminApproval() {
 
   useEffect(() => { fetchBusinesses(); }, []);
 
+  // Replace the existing handleAction and add rejectModal state
+
+
   const handleAction = async (id, action) => {
-    setActionLoading(`${id}-${action}`);
+    if (action === 'reject') {
+      setRejectModal(id); // open modal instead of acting immediately
+      return;
+    }
+    // approve path unchanged
+    setActionLoading(`${id}-approve`);
     setMessage({ text: '', type: '' });
     try {
-      if (action === 'approve') await approveBusiness(id);
-      if (action === 'reject')  await rejectBusiness(id);
-      setMessage({ text: `✓ Business ${action}d successfully`, type: 'success' });
+      await approveBusiness(id);
+      setMessage({ text: '✓ Business approved successfully', type: 'success' });
       fetchBusinesses();
     } catch (e) {
-      setMessage({ text: `✗ ${e.response?.data?.message || `Failed to ${action}`}`, type: 'error' });
+      setMessage({ text: `✗ ${e.response?.data?.message || 'Failed to approve'}`, type: 'error' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRejectConfirm = async (reason, actions) => {
+    const id = rejectModal;
+    setActionLoading(`${id}-reject`);
+    setMessage({ text: '', type: '' });
+    try {
+      await rejectBusinessWithReason(id, {
+        rejectionReason: reason,
+        requiredActions: actions,
+      });
+      setRejectModal(null);
+      setMessage({ text: '✓ Business rejected with feedback sent', type: 'success' });
+      fetchBusinesses();
+    } catch (e) {
+      setMessage({ text: `✗ ${e.response?.data?.message || 'Failed to reject'}`, type: 'error' });
     } finally {
       setActionLoading(null);
     }
@@ -354,6 +437,14 @@ export default function AdminApproval() {
           ))}
         </div>
       )}
+
+      {rejectModal && (
+      <RejectModal
+        loading={!!actionLoading}
+        onConfirm={handleRejectConfirm}
+        onCancel={() => setRejectModal(null)}
+      />
+    )}
     </div>
   );
 }

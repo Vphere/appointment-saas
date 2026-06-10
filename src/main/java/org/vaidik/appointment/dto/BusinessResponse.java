@@ -26,4 +26,6 @@ public class BusinessResponse {
     private String ownerEmail;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
+    private String rejectionReason;
+    private String requiredActions;
 }

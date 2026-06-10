@@ -26,7 +26,7 @@ public class ReviewController {
 
     // Reviews for a specific service — primary endpoint for the service detail page
     @GetMapping("/service/{serviceId}")
-    public List<ReviewResponse> getServiceReviews(@PathVariable Long serviceId) {
+    public List<ReviewResponse> getServiceReviews(@PathVariable("serviceId") Long serviceId) {
         return reviewService.getServiceReviews(serviceId);
     }
 
@@ -38,29 +38,29 @@ public class ReviewController {
 
     // Average rating for a specific service
     @GetMapping("/avg/service/{serviceId}")
-    public Double getServiceAverage(@PathVariable Long serviceId) {
+    public Double getServiceAverage(@PathVariable("serviceId") Long serviceId) {
         return reviewRepository.getAverageRatingByServiceId(serviceId);
     }
 
     // Average rating across all services of a business
     @GetMapping("/avg/business/{businessId}")
-    public Double getBusinessAverage(@PathVariable Long businessId) {
+    public Double getBusinessAverage(@PathVariable("businessId") Long businessId) {
         return reviewRepository.getAverageRating(businessId);
     }
 
     // Check whether a review already exists for a given appointment
     @GetMapping("/check/{appointmentId}")
-    public boolean hasReviewed(@PathVariable Long appointmentId) {
+    public boolean hasReviewed(@PathVariable("appointmentId") Long appointmentId) {
         return reviewRepository.existsByAppointmentId(appointmentId);
     }
 
     @GetMapping("/appointment/{appointmentId}")
-    public ReviewResponse getReviewByAppointment(@PathVariable Long appointmentId) {
+    public ReviewResponse getReviewByAppointment(@PathVariable("appointmentId") Long appointmentId) {
         return reviewService.getReviewByAppointment(appointmentId);
     }
 
     @PutMapping("/{id}")
-    public ReviewResponse updateReview(@PathVariable Long id,
+    public ReviewResponse updateReview(@PathVariable("id") Long id,
                                        @RequestBody CreateReviewRequest request,
                                        Authentication authentication) {
         return reviewService.updateReview(id, request, authentication.getName());
