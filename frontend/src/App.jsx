@@ -24,6 +24,7 @@ import BusinessSettings from './pages/BusinessSettings';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUserManagement from './pages/Adminusermanagement';
 import AdminReviews from './pages/AdminReviews';
+import ConsentConfirm from './pages/ConsentConfirm';
 
 function AppLayout({ children }) {
   return (
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="/oauth2/callback" element={<OAuth2Callback />} />
           <Route path="/forgot-password" element={<ForgotPassword/>} />
           <Route path="/profile" element={<ProfilePage/>} />
+          <Route path="/consent/:token" element={<ConsentConfirm/>} />
 
           {/* Protected */}
           <Route path="/dashboard" element={

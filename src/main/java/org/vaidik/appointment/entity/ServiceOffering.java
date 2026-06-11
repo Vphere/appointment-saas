@@ -61,4 +61,8 @@ public class ServiceOffering {
     @Column(name = "category", nullable = false)
     @Builder.Default
     private ServiceCategory category = ServiceCategory.OTHER;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payment_account_id")
+    private BusinessPaymentAccount paymentAccount;
 }

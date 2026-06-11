@@ -1,0 +1,16 @@
+package org.vaidik.appointment.entity;
+
+public enum PaymentStatus {
+    PENDING_PAYMENT,
+    DEPOSIT_PAID,
+    CONFIRMED,
+    AWAITING_CONSENT,
+    COMPLETED,
+    CANCELLED_REFUNDED,
+    CANCELLED_PARTIAL,
+    CANCELLED_NO_REFUND,
+    RESCHEDULED,
+    REFUND_INITIATED,
+    DISPUTED,
+    FLAGGED
+}

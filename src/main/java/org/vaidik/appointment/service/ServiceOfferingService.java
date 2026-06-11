@@ -29,6 +29,7 @@ public class ServiceOfferingService {
     private final BusinessHolidayRepository businessHolidayRepository;
     private final WorkingHoursRepository    workingHoursRepository;
     private final BusinessPhotoRepository   businessPhotoRepository;
+    private final BusinessPaymentAccountRepository paymentAccountRepository;
 
     // Configured in application.properties: app.upload.dir=uploads
     @Value("${app.upload.dir:uploads}")
@@ -73,6 +74,13 @@ public class ServiceOfferingService {
                 .country(request.getCountry())
                 .pincode(request.getPincode())
                 .build();
+
+        if (request.getPaymentAccountId() != null) {
+            BusinessPaymentAccount account = paymentAccountRepository
+                    .findById(request.getPaymentAccountId())
+                    .orElseThrow(() -> new RuntimeException("Payment account not found"));
+            service.setPaymentAccount(account);
+        }
 
         return mapper.toResponse(serviceRepository.save(service));
     }
@@ -128,6 +136,13 @@ public class ServiceOfferingService {
         if (request.getCountry()     != null) service.setCountry(request.getCountry());
         if (request.getPincode()     != null) service.setPincode(request.getPincode());
         if (request.getCategory()    != null) service.setCategory(request.getCategory());
+
+        if (request.getPaymentAccountId() != null) {
+            BusinessPaymentAccount account = paymentAccountRepository
+                    .findById(request.getPaymentAccountId())
+                    .orElseThrow(() -> new RuntimeException("Payment account not found"));
+            service.setPaymentAccount(account);
+        }
 
         ServiceType effectiveType = request.getServiceType() != null
                 ? ServiceType.valueOf(request.getServiceType())

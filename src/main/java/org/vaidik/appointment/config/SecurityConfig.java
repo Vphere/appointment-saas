@@ -91,6 +91,21 @@ public class SecurityConfig {
                         // SLOTS
                         .requestMatchers(HttpMethod.GET, "/api/slots/**").permitAll()
 
+                        // PAYMENTS
+                        .requestMatchers(HttpMethod.POST, "/api/payments/create-order").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/payments/verify").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/payments/initiate-completion/**").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.POST, "/api/payments/confirm-otp").hasRole("BUSINESS_OWNER")
+                        // Consent endpoints are PUBLIC — no auth needed (token is the auth)
+                        .requestMatchers(HttpMethod.GET,  "/api/payments/consent/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/payments/consent/**").permitAll()
+
+                        // PAYMENT ACCOUNTS
+                        .requestMatchers(HttpMethod.GET,    "/api/payment-accounts/business/**").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.POST,   "/api/payment-accounts").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.PATCH,  "/api/payment-accounts/**").hasRole("BUSINESS_OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/payment-accounts/**").hasRole("BUSINESS_OWNER")
+
                         // APPOINTMENTS
                         .requestMatchers(HttpMethod.POST, "/api/appointments").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/appointments/my").authenticated()

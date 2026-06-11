@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getMyBusinesses } from '../api/business';
 import { getMyServices, createService, updateService, deleteService } from '../api/services';
+import { getPaymentAccounts, addPaymentAccount } from '../api/paymentAccounts';
 import Spinner from '../components/Spinner';
 import LocationFields from '../components/LocationFields';
 import '../styles/owner.css';
@@ -26,6 +27,7 @@ const emptyForm = {
   name: '', description: '', price: '',
   serviceType: 'FIXED', duration: '', gapMinutes: '',
   category: '',
+  paymentAccountId: '',
   _catOpen: false,
   location:  { ...EMPTY_LOC },
   locations: [{ ...EMPTY_LOC }],
@@ -91,13 +93,181 @@ function ServiceTypeToggle({ value, onChange }) {
   );
 }
 
+function PaymentAccountSelector({ businessId, value, onChange }) {
+    const [accounts,     setAccounts]     = useState([]);
+    const [loading,      setLoading]      = useState(true);
+    const [showAddForm,  setShowAddForm]  = useState(false);
+    const [newAcct,      setNewAcct]      = useState({
+        accountHolderName: '', accountNumber: '',
+        ifscCode: '', bankName: '', nickname: '', isDefault: false,
+    });
+    const [saving, setSaving] = useState(false);
+
+    const fetchAccounts = () => {
+        setLoading(true);
+        getPaymentAccounts(businessId)
+            .then(r => {
+                const list = r.data || [];
+                setAccounts(list);
+                // Auto-select default if nothing selected yet
+                if (!value && list.length > 0) {
+                    const def = list.find(a => a.isDefault) || list[0];
+                    onChange(def.id);
+                }
+            })
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    };
+
+    useEffect(() => { if (businessId) fetchAccounts(); }, [businessId]);
+
+    const handleAddAccount = async () => {
+        if (!newAcct.accountHolderName || !newAcct.accountNumber || !newAcct.ifscCode) {
+            alert('Account holder name, account number, and IFSC are required');
+            return;
+        }
+        setSaving(true);
+        try {
+            const res = await addPaymentAccount({ ...newAcct, businessId: parseInt(businessId) });
+            await fetchAccounts();
+            onChange(res.data.id);
+            setShowAddForm(false);
+            setNewAcct({ accountHolderName: '', accountNumber: '',
+                         ifscCode: '', bankName: '', nickname: '', isDefault: false });
+        } catch (e) {
+            alert(e.response?.data?.message || 'Failed to add account');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) return (
+        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading payment accounts…</p>
+    );
+
+    return (
+        <div className="ms-payment-account-wrap">
+            <label className="form-label">Payment Account *</label>
+
+            {accounts.length === 0 && !showAddForm && (
+                <div className="ms-no-account-notice">
+                    ⚠️ No payment account added yet. Add one below to receive deposits.
+                </div>
+            )}
+
+            {accounts.length > 0 && (
+                <div className="ms-account-list">
+                    {accounts.map(a => (
+                        <div key={a.id}
+                            className={`ms-account-card ${value === a.id ? 'ms-account-selected' : ''}`}
+                            onClick={() => onChange(a.id)}>
+                            <div className="ms-account-radio">
+                                {value === a.id ? '●' : '○'}
+                            </div>
+                            <div className="ms-account-info">
+                                <span className="ms-account-nickname">
+                                    {a.nickname || a.bankName || 'Bank Account'}
+                                    {a.isDefault &&
+                                        <span className="ms-account-default-badge">Default</span>}
+                                </span>
+                                <span className="ms-account-number">
+                                    {a.maskedAccountNumber} · {a.ifscCode}
+                                </span>
+                                <span className="ms-account-holder">{a.accountHolderName}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {!showAddForm && (
+                <button type="button" className="btn btn-outline btn-sm ms-add-account-btn"
+                    onClick={() => setShowAddForm(true)}>
+                    + Add {accounts.length > 0 ? 'Another' : 'Payment'} Account
+                </button>
+            )}
+
+            {showAddForm && (
+                <div className="ms-add-account-form">
+                    <div className="ms-add-account-title">New Payment Account</div>
+                    <div className="grid grid-2" style={{ gap: 12 }}>
+                        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                            <label className="form-label">Account Holder Name *</label>
+                            <input className="form-input"
+                                placeholder="As per bank records"
+                                value={newAcct.accountHolderName}
+                                onChange={e => setNewAcct(p =>
+                                    ({ ...p, accountHolderName: e.target.value }))} />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Account Number *</label>
+                            <input className="form-input"
+                                type="text"
+                                placeholder="Enter account number"
+                                value={newAcct.accountNumber}
+                                onChange={e => setNewAcct(p =>
+                                    ({ ...p, accountNumber: e.target.value.replace(/\D/g, '') }))} />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">IFSC Code *</label>
+                            <input className="form-input"
+                                placeholder="e.g. SBIN0001234"
+                                style={{ textTransform: 'uppercase' }}
+                                value={newAcct.ifscCode}
+                                onChange={e => setNewAcct(p =>
+                                    ({ ...p, ifscCode: e.target.value.toUpperCase() }))} />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Bank Name</label>
+                            <input className="form-input"
+                                placeholder="e.g. State Bank of India"
+                                value={newAcct.bankName}
+                                onChange={e => setNewAcct(p =>
+                                    ({ ...p, bankName: e.target.value }))} />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Nickname (optional)</label>
+                            <input className="form-input"
+                                placeholder="e.g. Main Account"
+                                value={newAcct.nickname}
+                                onChange={e => setNewAcct(p =>
+                                    ({ ...p, nickname: e.target.value }))} />
+                        </div>
+                        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                            <label style={{ display: 'flex', alignItems: 'center',
+                                            gap: 8, cursor: 'pointer', fontSize: 14,
+                                            color: 'var(--text-secondary)' }}>
+                                <input type="checkbox" checked={newAcct.isDefault}
+                                    onChange={e => setNewAcct(p =>
+                                        ({ ...p, isDefault: e.target.checked }))} />
+                                Set as default account for future services
+                            </label>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                        <button type="button" className="btn btn-primary btn-sm"
+                            onClick={handleAddAccount} disabled={saving}>
+                            {saving ? '⏳ Saving…' : '✓ Save Account'}
+                        </button>
+                        <button type="button" className="btn btn-secondary btn-sm"
+                            onClick={() => setShowAddForm(false)}>
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ── Service form (shared by create + edit) ───────────────────────
 function ServiceForm({
   form, setForm, onSubmit, submitting,
   submitLabel, onCancel, showBulk,
   cancelLabel, locationRef,
   fieldErrors = {},       
-  clearFieldError = () => {} 
+  clearFieldError = () => {} ,
+  businessId
 }) {
   return (
     <form onSubmit={onSubmit} noValidate>  
@@ -184,6 +354,17 @@ function ServiceForm({
           </div>
         </div>
       </div>
+
+      {/* Payment Account */}
+      {businessId && (
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <PaymentAccountSelector
+                  businessId={businessId}
+                  value={form.paymentAccountId}
+                  onChange={val => setForm({ ...form, paymentAccountId: val })}
+              />
+          </div>
+      )}
 
       <div className="form-group">
         <label className="form-label">Service Type *</label>
@@ -447,6 +628,7 @@ function EditServiceModal({ service, onClose, onSaved }) {
             locationRef={editLocationRef}
             fieldErrors={fieldErrors}        
             clearFieldError={clearFieldError} 
+            businessId={service.businessId || service.business?.id}
           />
         </div>
       </div>
@@ -690,6 +872,7 @@ export default function ManageServices() {
       duration:    form.serviceType === 'FIXED' ? parseInt(form.duration) : null,
       gapMinutes:  parseInt(form.gapMinutes) || 0,
       category:    form.category || 'OTHER',
+      paymentAccountId: form.paymentAccountId || undefined,
     };
 
     setSubmitting(true);
@@ -820,7 +1003,8 @@ export default function ManageServices() {
                 locationRef={createLocationRef}
                 fieldErrors={formErrors}                           
                 clearFieldError={(f) =>                            
-                  setFormErrors(prev => ({ ...prev, [f]: '' }))} />
+                  setFormErrors(prev => ({ ...prev, [f]: '' }))} 
+                businessId={selectedBusiness} />
             </div>
           )}
 

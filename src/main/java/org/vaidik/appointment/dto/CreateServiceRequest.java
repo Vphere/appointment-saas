@@ -19,4 +19,6 @@ public class CreateServiceRequest {
     private String state;
     private String country;
     private String pincode;
+
+    private Long paymentAccountId;
 }

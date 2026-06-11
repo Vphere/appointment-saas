@@ -296,3 +296,236 @@
 .booking-summary-total span:last-child {
   font-size: 1rem !important;
 }
+
+/* ── Step Indicator ─────────────────────────────────────────────── */
+.bk-steps {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  padding: 0 4px;
+}
+
+.bk-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+
+.bk-step-circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  border: 2px solid rgba(255,255,255,0.12);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  transition: all 0.2s;
+}
+
+.bk-step--active .bk-step-circle {
+  background: var(--primary, #6366f1);
+  border-color: var(--primary, #6366f1);
+  color: #fff;
+}
+
+.bk-step--done .bk-step-circle {
+  background: #10b981;
+  border-color: #10b981;
+  color: #fff;
+}
+
+.bk-step-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 5px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.bk-step--active .bk-step-label { color: var(--primary-light, #a78bfa); }
+.bk-step--done .bk-step-label   { color: #10b981; }
+
+.bk-step-line {
+  position: absolute;
+  top: 15px;
+  left: calc(50% + 15px);
+  right: calc(-50% + 15px);
+  height: 2px;
+  background: rgba(255,255,255,0.08);
+  z-index: 0;
+}
+
+.bk-step--done .bk-step-line { background: #10b981; }
+
+/* ── Deposit preview (on SELECT step) ──────────────────────────── */
+.bk-deposit-preview {
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: rgba(16,185,129,0.05);
+  border: 1px solid rgba(16,185,129,0.18);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bk-deposit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.bk-deposit-row--highlight {
+  padding: 8px 10px;
+  background: rgba(16,185,129,0.08);
+  border-radius: 7px;
+  border: 1px solid rgba(16,185,129,0.2);
+}
+
+.bk-deposit-row--muted {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.bk-deposit-amount {
+  color: #4ade80;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* ── REVIEW step ────────────────────────────────────────────────── */
+.bk-review-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 20px;
+}
+
+.bk-summary-deposit {
+  background: rgba(16,185,129,0.05);
+  border-top: 1px solid rgba(16,185,129,0.15) !important;
+}
+
+.bk-summary-deposit span:last-child {
+  font-size: 1rem !important;
+  color: #4ade80 !important;
+}
+
+.bk-policy-box {
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: rgba(251,191,36,0.04);
+  border: 1px solid rgba(251,191,36,0.15);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bk-policy-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 4px;
+}
+
+.bk-policy-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.bk-policy-row--green strong { color: #4ade80; }
+.bk-policy-row--yellow strong { color: #fbbf24; }
+.bk-policy-row--red strong { color: #f87171; }
+
+.bk-review-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.bk-pay-btn {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* ── PAYING step ────────────────────────────────────────────────── */
+.bk-paying-card {
+  text-align: center;
+  padding: 48px 32px !important;
+}
+
+.bk-paying-spinner {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  animation: bk-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes bk-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.1); opacity: 0.7; }
+}
+
+.bk-paying-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 10px;
+}
+
+.bk-paying-sub {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 10px;
+}
+
+.bk-paying-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ── DONE step ──────────────────────────────────────────────────── */
+.bk-done-card {
+  text-align: center;
+  padding: 40px 32px !important;
+}
+
+.bk-done-icon {
+  font-size: 3.5rem;
+  margin-bottom: 16px;
+  animation: bounceIn 0.5s ease;
+}
+
+.bk-done-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 10px;
+}
+
+.bk-done-sub {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}

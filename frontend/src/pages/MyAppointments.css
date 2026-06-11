@@ -863,3 +863,18 @@
   .ma-detail-grid  { gap: 8px; }
   .ma-detail-item  { min-width: calc(50% - 5px); max-width: 100%; }
 }
+
+.ma-remaining-notice {
+    padding: 12px 16px;
+    background: rgba(16,185,129,0.06);
+    border: 1px solid rgba(16,185,129,0.18);
+    border-radius: 10px;
+    font-size: 13px;
+    color: #34d399;
+    line-height: 1.6;
+}
+
+.ma-remaining-notice strong {
+    color: #4ade80;
+    font-weight: 700;
+}

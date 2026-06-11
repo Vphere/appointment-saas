@@ -86,4 +86,12 @@ public class AppointmentController {
     ) {
         return appointmentService.rescheduleAppointment(id, request, authentication.getName());
     }
+
+    @PatchMapping("/{id}/mark-remaining-paid")
+    @PreAuthorize("hasRole('BUSINESS_OWNER')")
+    public AppointmentResponse markRemainingPaid(
+            @PathVariable Long id,
+            Authentication auth) {
+        return appointmentService.markRemainingPaid(id, auth.getName());
+    }
 }

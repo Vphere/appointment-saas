@@ -255,7 +255,7 @@ export default function MyAppointments() {
     return new Date(dateStr) >= new Date(new Date().toDateString());
   };
 
-  const FILTERS = ['ALL', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'];
+  const FILTERS = ['ALL', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'AWAITING_REMAINING_PAYMENT'];
   const filtered = filter === 'ALL'
     ? appointments
     : appointments.filter(a => a.status === filter);
@@ -437,6 +437,19 @@ export default function MyAppointments() {
                         </button>
                       </>
                     )}
+
+                    {appt.status === 'AWAITING_REMAINING_PAYMENT' && (
+                      <div className="ma-remaining-notice">
+                          ✅ Service confirmed! Please pay the remaining{' '}
+                          <strong>
+                              ₹{appt.price
+                                  ? (appt.price * 0.70).toFixed(2)
+                                  : '—'}
+                          </strong>{' '}
+                          directly to the service provider via cash or UPI.
+                          Your appointment will be marked complete once payment is received.
+                      </div>
+                  )}
 
                     {appt.status === 'COMPLETED' && !appt.reviewed && (
                       <button className="ma-btn ma-btn--review"

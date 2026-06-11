@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -57,4 +58,29 @@ public class Appointment {
     @Builder.Default
     @Column(nullable = false)
     private Boolean reminderSent = false;
+
+    // ── Payment fields ─────────────────────────────────────────────
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status")
+    @Builder.Default
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING_PAYMENT;
+
+    @Column(name = "deposit_amount", precision = 10, scale = 2)
+    private BigDecimal depositAmount;
+
+    @Column(name = "platform_fee", precision = 10, scale = 2)
+    private BigDecimal platformFee;
+
+    @Column(name = "payout_amount", precision = 10, scale = 2)
+    private BigDecimal payoutAmount;
+
+    @Builder.Default
+    @Column(name = "reschedule_count")
+    private Integer rescheduleCount = 0;
+
+    @Column(name = "original_appointment_date")
+    private LocalDate originalAppointmentDate;
+
+    @Column(name = "original_appointment_time")
+    private LocalTime originalAppointmentTime;
 }

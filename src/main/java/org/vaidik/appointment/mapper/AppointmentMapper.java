@@ -34,6 +34,7 @@ public class AppointmentMapper {
                 .serviceState(s != null ? s.getState() : null)
                 .serviceCountry(s != null ? s.getCountry() : null)
                 .servicePincode(s != null ? s.getPincode() : null)
+                .paymentStatus(appointment.getPaymentStatus())
                 .build();
     }
 }

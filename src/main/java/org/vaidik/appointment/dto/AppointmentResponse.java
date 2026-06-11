@@ -3,6 +3,7 @@ package org.vaidik.appointment.dto;
 import lombok.Builder;
 import lombok.Data;
 import org.vaidik.appointment.entity.AppointmentStatus;
+import org.vaidik.appointment.entity.PaymentStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -34,4 +35,6 @@ public class AppointmentResponse {
     private String serviceState;
     private String serviceCountry;
     private String servicePincode;
+
+    private PaymentStatus paymentStatus;
 }

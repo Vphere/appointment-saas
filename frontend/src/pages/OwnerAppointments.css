@@ -337,3 +337,53 @@
 @media (max-width: 480px) {
   .oa-chips-row  { grid-template-columns: 1fr; }
 }
+
+/* ── OTP Section ─────────────────────────────────────────────────── */
+.oa-otp-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(99,102,241,0.06);
+    border: 1px solid rgba(99,102,241,0.2);
+    border-radius: 10px;
+    margin-top: 4px;
+}
+
+.oa-otp-notice {
+    font-size: 13px;
+    color: #a78bfa;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.oa-resend-btn {
+    align-self: flex-start;
+    font-size: 12px;
+}
+
+/* ── Remaining Payment Section ───────────────────────────────────── */
+.oa-remaining-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(16,185,129,0.06);
+    border: 1px solid rgba(16,185,129,0.2);
+    border-radius: 10px;
+    margin-top: 4px;
+}
+
+.oa-remaining-notice {
+    font-size: 13px;
+    color: #34d399;
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+.oa-remaining-notice strong {
+    color: #4ade80;
+    font-size: 15px;
+}

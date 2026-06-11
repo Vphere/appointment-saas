@@ -20,6 +20,8 @@ public class AppointmentService {
     private final ServiceOfferingRepository serviceRepository;
     private final AppointmentMapper mapper;
     private final EmailService emailService;
+    private final PaymentService paymentService;
+    private final PaymentRepository paymentRepository;
 
     private static final List<AppointmentStatus> FREED_STATUSES = List.of(AppointmentStatus.CANCELLED);
 
@@ -106,8 +108,10 @@ public class AppointmentService {
                 (newStatus == AppointmentStatus.CONFIRMED || newStatus == AppointmentStatus.CANCELLED)) {
             appointment.setStatus(newStatus);
         }
-        else if (currentStatus == AppointmentStatus.CONFIRMED && newStatus == AppointmentStatus.COMPLETED) {
+        else if (currentStatus == AppointmentStatus.AWAITING_REMAINING_PAYMENT
+                && newStatus == AppointmentStatus.COMPLETED) {
             appointment.setStatus(newStatus);
+            appointment.setPaymentStatus(PaymentStatus.COMPLETED);
         }
         else {
             throw new RuntimeException("Invalid transition from " + currentStatus + " to " + newStatus);
@@ -141,7 +145,16 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.CANCELLED);
         Appointment saved = appointmentRepository.save(appointment);
 
-        // User themselves cancelled so need to email Owner as he needs to know the slot is now free.
+        // Trigger refund if deposit was paid
+        if (appointment.getPaymentStatus() == PaymentStatus.DEPOSIT_PAID ||
+                appointment.getPaymentStatus() == PaymentStatus.CONFIRMED) {
+            try {
+                paymentService.initiateRefund(saved);
+            } catch (Exception e) {
+                System.err.println("Refund initiation failed: " + e.getMessage());
+            }
+        }
+
         try {
             emailService.sendCancellationByUserEmail(saved);
         } catch (Exception e) {
@@ -160,7 +173,25 @@ public class AppointmentService {
         }
         if (appointment.getStatus() != AppointmentStatus.PENDING &&
                 appointment.getStatus() != AppointmentStatus.CONFIRMED) {
-            throw new RuntimeException("Only pending or confirmed appointments can be edited");
+            throw new RuntimeException("Only pending or confirmed appointments can be rescheduled");
+        }
+
+        // Enforce 2-reschedule cap
+        if (appointment.getRescheduleCount() >= 2) {
+            throw new RuntimeException(
+                    "Maximum reschedule limit (2) reached. Please cancel and rebook if needed.");
+        }
+
+        // Enforce 24-hour gate
+        java.time.LocalDateTime appointmentDateTime = java.time.LocalDateTime.of(
+                appointment.getAppointmentDate(), appointment.getAppointmentTime());
+        long hoursUntil = java.time.Duration.between(
+                java.time.LocalDateTime.now(), appointmentDateTime).toHours();
+
+        if (hoursUntil < 24) {
+            throw new RuntimeException(
+                    "Rescheduling is not allowed within 24 hours of the appointment. " +
+                            "If you cancel now, no refund will be issued.");
         }
 
         boolean slotTaken = appointmentRepository.existsActiveByServiceDateAndTime(
@@ -178,12 +209,43 @@ public class AppointmentService {
             throw new RuntimeException("That slot is already booked. Please choose another time.");
         }
 
+        // Save original date/time on first reschedule
+        if (appointment.getRescheduleCount() == 0) {
+            appointment.setOriginalAppointmentDate(appointment.getAppointmentDate());
+            appointment.setOriginalAppointmentTime(appointment.getAppointmentTime());
+        }
+
         appointment.setAppointmentDate(request.getAppointmentDate());
         appointment.setAppointmentTime(request.getAppointmentTime());
         appointment.setStatus(AppointmentStatus.PENDING);
         appointment.setReminderSent(false);
+        appointment.setRescheduleCount(appointment.getRescheduleCount() + 1);
+        appointment.setPaymentStatus(PaymentStatus.RESCHEDULED);
 
+        return mapper.toResponse(appointmentRepository.save(appointment));
+    }
+
+    public AppointmentResponse markRemainingPaid(Long appointmentId, String ownerEmail) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+
+        if (!appointment.getBusiness().getOwner().getEmail().equals(ownerEmail)) {
+            throw new RuntimeException("Not authorized");
+        }
+
+        if (appointment.getStatus() != AppointmentStatus.AWAITING_REMAINING_PAYMENT) {
+            throw new RuntimeException("Appointment is not awaiting remaining payment");
+        }
+
+        appointment.setStatus(AppointmentStatus.COMPLETED);
+        appointment.setPaymentStatus(PaymentStatus.COMPLETED);
         Appointment saved = appointmentRepository.save(appointment);
+
+        try {
+            emailService.sendServiceCompletedEmail(saved);
+        } catch (Exception e) {
+            System.err.println("Completion email failed: " + e.getMessage());
+        }
 
         return mapper.toResponse(saved);
     }

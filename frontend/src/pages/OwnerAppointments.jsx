@@ -3,8 +3,9 @@ import {
   getBusinessAppointments,
   confirmAppointment,
   rejectAppointment,
-  completeAppointment,
+  markRemainingPaid
 } from '../api/appointments';
+import {initiateCompletion, confirmByOtp} from '../api/payments';
 import Spinner from '../components/Spinner';
 import './OwnerAppointments.css';
 
@@ -73,6 +74,37 @@ function StatCard({ label, value, color }) {
   );
 }
 
+function OtpInputRow({ appt, onAction, actionLoading }) {
+    const [otp, setOtp] = useState('');
+    return (
+        <div style={{
+            display: 'flex', gap: 8, alignItems: 'center',
+            width: '100%', paddingTop: 8,
+            borderTop: '1px dashed rgba(255,255,255,0.08)',
+        }}>
+            <input
+                type="text"
+                maxLength={6}
+                placeholder="Enter 6-digit OTP from customer"
+                value={otp}
+                onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+                style={{
+                    flex: 1, background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 8, padding: '9px 14px',
+                    color: '#e2e8f0', fontSize: 14, outline: 'none',
+                    letterSpacing: '0.2em',
+                }}
+            />
+            <button className="btn btn-success btn-sm"
+                disabled={otp.length !== 6 || !!actionLoading}
+                onClick={() => onAction(appt.id, 'confirm-otp', otp)}>
+                {actionLoading === `${appt.id}-confirm-otp` ? '⏳' : '✓ Verify'}
+            </button>
+        </div>
+    );
+}
+
 // ── Appointment card ──────────────────────────────────────────────
 function AppointmentCard({ appt, onAction, actionLoading }) {
   const customerName = appt.userName || appt.userEmail ||
@@ -118,32 +150,85 @@ function AppointmentCard({ appt, onAction, actionLoading }) {
         <DetailChip icon="🏢" label="Business" value={appt.businessName || '—'} />
       </div>
 
-      {/* Action buttons */}
-      {(appt.status === 'PENDING' || appt.status === 'CONFIRMED') && (
-        <div className="oa-actions">
-          {appt.status === 'PENDING' && (
-            <>
-              <button className="btn btn-success btn-sm"
-                onClick={() => onAction(appt.id, 'confirm')}
-                disabled={!!actionLoading}>
-                {actionLoading === `${appt.id}-confirm` ? '⏳ Confirming…' : '✓ Confirm'}
-              </button>
-              <button className="btn btn-danger btn-sm"
-                onClick={() => onAction(appt.id, 'reject')}
-                disabled={!!actionLoading}>
-                {actionLoading === `${appt.id}-reject` ? '⏳ Rejecting…' : '✕ Reject'}
-              </button>
-            </>
-          )}
-          {appt.status === 'CONFIRMED' && (
-            <button className="btn btn-primary btn-sm"
-              onClick={() => onAction(appt.id, 'complete')}
-              disabled={!!actionLoading}>
-              {actionLoading === `${appt.id}-complete` ? '⏳ Completing…' : '✓ Mark as Completed'}
-            </button>
-          )}
-        </div>
-      )}
+      {(appt.status === 'PENDING' ||
+        appt.status === 'CONFIRMED' ||
+        appt.status === 'AWAITING_REMAINING_PAYMENT') && (
+
+          <div className="oa-actions">
+
+              {/* PENDING actions */}
+              {appt.status === 'PENDING' && (
+                  <>
+                      <button className="btn btn-success btn-sm"
+                          onClick={() => onAction(appt.id, 'confirm')}
+                          disabled={!!actionLoading}>
+                          {actionLoading === `${appt.id}-confirm` ? '⏳ Confirming…' : '✓ Confirm'}
+                      </button>
+                      <button className="btn btn-danger btn-sm"
+                          onClick={() => onAction(appt.id, 'reject')}
+                          disabled={!!actionLoading}>
+                          {actionLoading === `${appt.id}-reject` ? '⏳ Rejecting…' : '✕ Reject'}
+                      </button>
+                  </>
+              )}
+
+              {/* CONFIRMED — send OTP button */}
+              {appt.status === 'CONFIRMED' &&
+              appt.paymentStatus !== 'AWAITING_CONSENT' && (
+                  <button className="btn btn-primary btn-sm"
+                      onClick={() => onAction(appt.id, 'initiate-completion')}
+                      disabled={!!actionLoading}>
+                      {actionLoading === `${appt.id}-initiate-completion`
+                          ? '⏳ Sending OTP…'
+                          : '📤 Mark as Rendered (Send OTP)'}
+                  </button>
+              )}
+
+              {/* CONFIRMED + AWAITING_CONSENT — OTP input */}
+              {appt.status === 'CONFIRMED' &&
+              appt.paymentStatus === 'AWAITING_CONSENT' && (
+                  <div className="oa-otp-section">
+                      <div className="oa-otp-notice">
+                          📧 OTP sent to customer's email. Ask them to share it with you.
+                      </div>
+                      <OtpInputRow
+                          appt={appt}
+                          onAction={onAction}
+                          actionLoading={actionLoading}
+                      />
+                      <button className="btn btn-secondary btn-sm oa-resend-btn"
+                          onClick={() => onAction(appt.id, 'initiate-completion')}
+                          disabled={!!actionLoading}>
+                          {actionLoading === `${appt.id}-initiate-completion`
+                              ? '⏳ Resending…' : '🔄 Resend OTP'}
+                      </button>
+                  </div>
+              )}
+
+              {/* AWAITING_REMAINING_PAYMENT — owner collects cash/UPI then clicks this */}
+              {appt.status === 'AWAITING_REMAINING_PAYMENT' && (
+                  <div className="oa-remaining-section">
+                      <div className="oa-remaining-notice">
+                          💵 Customer confirmed service. Collect remaining{' '}
+                          <strong>
+                              ₹{appt.price
+                                  ? (appt.price * 0.70).toFixed(2)
+                                  : '—'}
+                          </strong>{' '}
+                          via cash or UPI, then mark as paid.
+                      </div>
+                      <button className="btn btn-success btn-sm"
+                          onClick={() => onAction(appt.id, 'mark-remaining-paid')}
+                          disabled={!!actionLoading}>
+                          {actionLoading === `${appt.id}-mark-remaining-paid`
+                              ? '⏳ Completing…'
+                              : '✅ Remaining Payment Received'}
+                      </button>
+                  </div>
+              )}
+
+          </div>
+      )}  
     </div>
   );
 }
@@ -166,17 +251,19 @@ export default function OwnerAppointments() {
 
   useEffect(() => { fetchAppointments(); }, []);
 
-  const handleAction = async (id, action) => {
+  const handleAction = async (id, action, otp = null) => {
     setActionLoading(`${id}-${action}`);
     try {
-      if (action === 'confirm')  await confirmAppointment(id);
-      if (action === 'reject')   await rejectAppointment(id);
-      if (action === 'complete') await completeAppointment(id);
-      fetchAppointments();
+        if (action === 'confirm')               await confirmAppointment(id);
+        if (action === 'reject')                await rejectAppointment(id);
+        if (action === 'initiate-completion')   await initiateCompletion(id);
+        if (action === 'confirm-otp')           await confirmByOtp(id, otp);
+        if (action === 'mark-remaining-paid')   await markRemainingPaid(id);
+        fetchAppointments();
     } catch (e) {
-      alert(e.response?.data?.message || `Failed to ${action}`);
+        alert(e.response?.data?.message || `Failed to ${action}`);
     } finally {
-      setActionLoading(null);
+        setActionLoading(null);
     }
   };
 

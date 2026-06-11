@@ -7,3 +7,5 @@ export const cancelAppointment = (id) => api.patch(`/api/appointments/${id}/canc
 export const confirmAppointment = (id) => api.patch(`/api/appointments/${id}/confirm`);
 export const rejectAppointment = (id) => api.patch(`/api/appointments/${id}/reject`);
 export const completeAppointment = (id) => api.patch(`/api/appointments/${id}/complete`);
+export const markRemainingPaid = (id) =>
+    api.patch(`/api/appointments/${id}/mark-remaining-paid`);
