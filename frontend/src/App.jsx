@@ -22,7 +22,7 @@ import ProfilePage from './pages/ProfilePage';
 import BusinessAnalytics from './pages/BusinessAnalytics';
 import BusinessSettings from './pages/BusinessSettings';
 import AdminDashboard from './pages/AdminDashboard';
-import AdminUserManagement from './pages/Adminusermanagement';
+import AdminUserManagement from './pages/AdminUserManagement';
 import AdminReviews from './pages/AdminReviews';
 import ConsentConfirm from './pages/ConsentConfirm';
 
