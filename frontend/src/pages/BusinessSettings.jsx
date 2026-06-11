@@ -13,7 +13,7 @@ import { getPhotos, uploadPhoto, deletePhoto } from '../api/photos';
 import Spinner from '../components/Spinner';
 import '../pages/BusinessSettings.css';
 
-const BASE_URL  = 'http://localhost:8080';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const MAX_PHOTOS = 5;
 
 const DAYS = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];

@@ -70,8 +70,7 @@ public class BusinessDocumentController {
     // Owner: delete document
     @DeleteMapping("/{documentId}")
     public ResponseEntity<Void> deleteDocument(
-            @PathVariable("documentId") Long documentId,
-            Authentication auth) {
+            @PathVariable("documentId") Long documentId, Authentication auth) throws IOException{
         documentService.deleteDocument(documentId, auth.getName());
         return ResponseEntity.noContent().build();
     }

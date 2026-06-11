@@ -30,4 +30,7 @@ public class BusinessPhoto {
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime uploadedAt;
+
+    @Column(name = "public_id")
+    private String publicId;
 }

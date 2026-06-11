@@ -3,7 +3,7 @@ import { useNavigate, Link} from 'react-router-dom';
 import { login } from '../api/auth';
 import { useAuth } from '../context/useAuth'; 
 
-const GOOGLE_OAUTH_URL = 'http://localhost:8080/oauth2/authorization/google';
+const GOOGLE_OAUTH_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/oauth2/authorization/google`;
 
 export default function Login() {
   const { loginUser, user } = useAuth();

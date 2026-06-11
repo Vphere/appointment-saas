@@ -1,5 +1,7 @@
 package org.vaidik.appointment.service;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -32,12 +34,13 @@ public class BusinessServiceService {
     private final BusinessMapper businessMapper;
     private final OtpRepository otpRepository;
     private final EmailService emailService;
+    private final Cloudinary cloudinary;
 
-    @Value("${app.upload.dir:uploads/photos}")
-    private String photoDir;
+//    @Value("${app.upload.dir:uploads/photos}")
+//    private String photoDir;
 
-    @Value("${app.document.dir:uploads/documents}")
-    private String documentDir;
+//    @Value("${app.document.dir:uploads/documents}")
+//    private String documentDir;
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
@@ -234,28 +237,55 @@ public class BusinessServiceService {
         holidayRepository.deleteByBusinessId(businessId);
 
         // ── 5. Delete business photos + files ────────────────────────
+//        List<BusinessPhoto> photos = photoRepository.findByBusinessId(businessId);
+//        for (BusinessPhoto photo : photos) {
+//            try {
+//                Path filePath = Paths.get(photoDir).resolve(photo.getFileName());
+//                Files.deleteIfExists(filePath);
+//            } catch (IOException ignored) {}
+//        }
+//        photoRepository.deleteByBusinessId(businessId);
+
+        // ── 5. Delete business photos from Cloudinary + DB ───────────────
         List<BusinessPhoto> photos = photoRepository.findByBusinessId(businessId);
         for (BusinessPhoto photo : photos) {
-            try {
-                Path filePath = Paths.get(photoDir).resolve(photo.getFileName());
-                Files.deleteIfExists(filePath);
-            } catch (IOException ignored) {}
+            if (photo.getPublicId() != null) {
+                try {
+                    cloudinary.uploader().destroy(photo.getPublicId(), ObjectUtils.emptyMap());
+                } catch (Exception ignored) {}
+            }
         }
         photoRepository.deleteByBusinessId(businessId);
 
         // ── 6. Delete business documents + files ─────────────────────
+//        List<BusinessDocument> documents = documentRepository.findByBusinessId(businessId);
+//        for (BusinessDocument doc : documents) {
+//            try {
+//                Files.deleteIfExists(Paths.get(doc.getFilePath()));
+//            } catch (IOException ignored) {}
+//        }
+//        documentRepository.deleteByBusinessId(businessId);
+//
+//        try {
+//            Path businessDocDir = Paths.get(documentDir, String.valueOf(businessId));
+//            Files.deleteIfExists(businessDocDir);
+//        } catch (IOException ignored) {}
+
+        // ── 6. Delete business documents from Cloudinary + DB ────────────
         List<BusinessDocument> documents = documentRepository.findByBusinessId(businessId);
         for (BusinessDocument doc : documents) {
-            try {
-                Files.deleteIfExists(Paths.get(doc.getFilePath()));
-            } catch (IOException ignored) {}
+            if (doc.getCloudinaryPublicId() != null) {
+                try {
+                    String resourceType = doc.getOriginalName() != null
+                            && doc.getOriginalName().endsWith(".pdf") ? "raw" : "image";
+                    cloudinary.uploader().destroy(
+                            doc.getCloudinaryPublicId(),
+                            ObjectUtils.asMap("resource_type", resourceType)
+                    );
+                } catch (Exception ignored) {}
+            }
         }
         documentRepository.deleteByBusinessId(businessId);
-
-        try {
-            Path businessDocDir = Paths.get(documentDir, String.valueOf(businessId));
-            Files.deleteIfExists(businessDocDir);
-        } catch (IOException ignored) {}
 
         // ── 7. Soft delete the business itself ────────────────────────
         business.setDeletedAt(now);

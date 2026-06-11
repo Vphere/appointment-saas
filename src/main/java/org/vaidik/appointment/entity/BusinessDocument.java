@@ -36,4 +36,10 @@ public class BusinessDocument {
     @CreationTimestamp
     @Column(name = "uploaded_at", updatable = false)
     private LocalDateTime uploadedAt;
+
+    @Column(name = "cloudinary_public_id")
+    private String cloudinaryPublicId;
+
+    @Column(name = "cloudinary_url")
+    private String cloudinaryUrl;
 }

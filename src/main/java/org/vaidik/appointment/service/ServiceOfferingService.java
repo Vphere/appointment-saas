@@ -1,5 +1,7 @@
 package org.vaidik.appointment.service;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -30,10 +32,11 @@ public class ServiceOfferingService {
     private final WorkingHoursRepository    workingHoursRepository;
     private final BusinessPhotoRepository   businessPhotoRepository;
     private final BusinessPaymentAccountRepository paymentAccountRepository;
+    private final Cloudinary cloudinary;
 
     // Configured in application.properties: app.upload.dir=uploads
-    @Value("${app.upload.dir:uploads}")
-    private String uploadDir;
+//    @Value("${app.upload.dir:uploads}")
+//    private String uploadDir;
 
     // ── CREATE ───────────────────────────────────────────────────────
     @Transactional
@@ -205,16 +208,33 @@ public class ServiceOfferingService {
         // 2. Delete working-hour configs for this service
         workingHoursRepository.deleteByServiceId(id);
 
-        // 3. Load photo file names BEFORE deleting DB rows
-        List<String> photoFileNames = businessPhotoRepository.findFileNamesByServiceId(id);
+        // 3. Load photos BEFORE deleting DB rows
+        List<BusinessPhoto> photos = businessPhotoRepository.findByServiceId(id);
 
-        // 4. Delete business_photos DB rows for this service
+        // 4. Delete Cloudinary files
+        for (BusinessPhoto photo : photos) {
+            if (photo.getPublicId() != null) {
+                try {
+                    cloudinary.uploader().destroy(photo.getPublicId(), ObjectUtils.emptyMap());
+                } catch (Exception e) {
+                    System.err.println("WARN: could not delete Cloudinary photo: " + e.getMessage());
+                }
+            }
+        }
+
+        // 5. Delete business_photos DB rows
         businessPhotoRepository.deleteByServiceId(id);
 
-        // 5. Delete physical photo files from disk
-        //    Done AFTER DB deletion so if file delete fails, DB is already clean.
-        //    A missing file is logged as a warning — it should NOT roll back the transaction.
-        deletePhysicalFiles(photoFileNames);
+//        // 3. Load photo file names BEFORE deleting DB rows
+//        List<String> photoFileNames = businessPhotoRepository.findFileNamesByServiceId(id);
+//
+//        // 4. Delete business_photos DB rows for this service
+//        businessPhotoRepository.deleteByServiceId(id);
+//
+//        // 5. Delete physical photo files from disk
+//        //    Done AFTER DB deletion so if file delete fails, DB is already clean.
+//        //    A missing file is logged as a warning — it should NOT roll back the transaction.
+//        deletePhysicalFiles(photoFileNames);
 
         // 6. Soft-delete: set deletedAt to now — this is the single source of truth.
         //    NULL = active, non-NULL = deleted. No separate boolean needed.
@@ -229,19 +249,19 @@ public class ServiceOfferingService {
      * IOExceptions are logged but never propagated — file cleanup should never
      * roll back a successful DB transaction.
      */
-    private void deletePhysicalFiles(List<String> fileNames) {
-        for (String fileName : fileNames) {
-            if (fileName == null || fileName.isBlank()) continue;
-            try {
-                Path filePath = Paths.get(uploadDir, fileName);
-                boolean deleted = Files.deleteIfExists(filePath);
-                if (!deleted) {
-                    System.err.println("INFO: photo file not found on disk (already removed?): " + filePath);
-                }
-            } catch (IOException e) {
-                // Log but continue — never fail the transaction over a missing file
-                System.err.println("WARN: could not delete photo file [" + fileName + "]: " + e.getMessage());
-            }
-        }
-    }
+//    private void deletePhysicalFiles(List<String> fileNames) {
+//        for (String fileName : fileNames) {
+//            if (fileName == null || fileName.isBlank()) continue;
+//            try {
+//                Path filePath = Paths.get(uploadDir, fileName);
+//                boolean deleted = Files.deleteIfExists(filePath);
+//                if (!deleted) {
+//                    System.err.println("INFO: photo file not found on disk (already removed?): " + filePath);
+//                }
+//            } catch (IOException e) {
+//                // Log but continue — never fail the transaction over a missing file
+//                System.err.println("WARN: could not delete photo file [" + fileName + "]: " + e.getMessage());
+//            }
+//        }
+//    }
 }
