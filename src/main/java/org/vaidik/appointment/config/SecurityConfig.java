@@ -167,8 +167,19 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(frontendUrl);
         config.setAllowedMethods(allowedMethods);
-        config.setAllowedHeaders(List.of("*"));
+        // Explicitly list allowed headers instead of wildcard
+        config.setAllowedHeaders(List.of(
+            "Authorization",
+            "Content-Type",
+            "Accept",
+            "X-Requested-With",
+            "Cache-Control"
+        ));
         config.setAllowCredentials(true);
+        // Important: Allow the refresh token cookie to be sent
+        config.setExposedHeaders(List.of("Set-Cookie"));
+        // Cache preflight responses for 1 hour
+        config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

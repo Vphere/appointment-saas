@@ -129,21 +129,23 @@ public class AuthService {
 
     // ── Cookie helpers ──────────────────────────────────────────────
     public void setRefreshTokenCookie(HttpServletResponse response, String token) {
-        Cookie cookie = new Cookie("refreshToken", token);
-        cookie.setHttpOnly(true);       // JS cannot read this
-        cookie.setSecure(false);        // set true in production (HTTPS)
-        cookie.setPath("/api/auth");    // only sent to auth endpoints
-        cookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
-        response.addCookie(cookie);
+        // For cross-origin cookies (Render backend, Vercel frontend):
+        // Use SameSite=None; Secure to allow cross-origin cookie transmission
+        String cookieValue = String.format(
+            "refreshToken=%s; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=%d",
+            token,
+            7 * 24 * 60 * 60  // 7 days
+        );
+        
+        response.addHeader("Set-Cookie", cookieValue);
     }
 
     private void clearRefreshTokenCookie(HttpServletResponse response) {
-        Cookie cookie = new Cookie("refreshToken", "");
-        cookie.setHttpOnly(true);
-        cookie.setSecure(false);
-        cookie.setPath("/api/auth");
-        cookie.setMaxAge(0); // delete immediately
-        response.addCookie(cookie);
+        // Clear the cookie by setting Max-Age=0
+        // Must match the original cookie's SameSite/Secure settings
+        String cookieValue = "refreshToken=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0";
+        
+        response.addHeader("Set-Cookie", cookieValue);
     }
 
 //    private void refreshTokenRepository_findByToken_andDelete(String token) {

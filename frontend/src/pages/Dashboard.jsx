@@ -12,10 +12,10 @@ import './Dashboard.css';
 
 // ── Constants ─────────────────────────────────────────────────────
 const OWNER_ACTIONS = [
-  { to: '/my-businesses',      icon: '🏢', title: 'My Businesses',                    desc: 'Manage your registered businesses' },
-  { to: '/manage-services',    icon: '⚙️', title: 'Manage Services',                  desc: 'Add and update your services' },
-  { to: '/business-settings',  icon: '🕓', title: 'Working Hours, Holidays & Photos', desc: 'Set availability, block holidays, upload service photos' },
-  { to: '/owner-appointments', icon: '📋', title: 'Appointments',                     desc: 'View and manage customer bookings' },
+  { to: '/my-businesses',      icon: '🏢', title: 'My Businesses',                    desc: 'Manage your registered businesses', accent: 'violet' },
+  { to: '/manage-services',    icon: '⚙️', title: 'Manage Services',                  desc: 'Add and update your services', accent: 'blue' },
+  { to: '/business-settings',  icon: '🕓', title: 'Working Hours & Holidays',         desc: 'Set availability, block holidays, upload photos', accent: 'green' },
+  { to: '/owner-appointments', icon: '📋', title: 'Appointments',                     desc: 'View and manage customer bookings', accent: 'amber' },
 ];
 
 const OWNER_TIPS = [
@@ -204,9 +204,9 @@ function OwnerDashboard() {
       <div className="db-section">
         <div className="db-section-eyebrow">⚡ QUICK ACTIONS</div>
         <h2 className="db-section-title">Manage your business</h2>
-        <div className="db-actions-grid db-actions-grid--2">
+        <div className="db-actions-grid db-actions-grid--4">
           {OWNER_ACTIONS.map(action => (
-            <Link key={action.to} to={action.to} className="db-action-card" style={{ textDecoration: 'none' }}>
+            <Link key={action.to} to={action.to} className={`db-action-card db-action-card--${action.accent}`} style={{ textDecoration: 'none' }}>
               <div className="db-action-icon">{action.icon}</div>
               <h3 className="db-action-title">{action.title}</h3>
               <p className="db-action-desc">{action.desc}</p>

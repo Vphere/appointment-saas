@@ -21,6 +21,16 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     List<Appointment> findByBusinessId(Long businessId);
 
+    @Query("""
+        SELECT DISTINCT a FROM Appointment a
+        JOIN FETCH a.user
+        JOIN FETCH a.business b
+        JOIN FETCH a.service s
+        WHERE b.id = :businessId
+        ORDER BY a.createdAt DESC
+    """)
+    List<Appointment> findByBusinessIdWithJoinFetch(@Param("businessId") Long businessId);
+
     List<Appointment> findByBusinessIdAndStatusIn(Long businessId,
                                                   List<AppointmentStatus> statuses);
 
@@ -52,6 +62,16 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     long countByBusinessIdAndStatus(Long businessId, AppointmentStatus status);
     long countByStatus(AppointmentStatus status);
 
+    @Query("""
+        SELECT DISTINCT a FROM Appointment a
+        JOIN FETCH a.user
+        JOIN FETCH a.business b
+        JOIN FETCH a.service s
+        WHERE b.owner.id = :ownerId
+        ORDER BY a.createdAt DESC
+    """)
+    List<Appointment> findByOwnerIdWithJoinFetch(@Param("ownerId") Long ownerId);
+
     /**
      * Finds all CONFIRMED (or PENDING) appointments scheduled for tomorrow.
      * Used by the reminder scheduler to send 24-hour reminder emails.
@@ -60,21 +80,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
      * CONCAT(date, ' ', time) builds a datetime string for comparison.
      * :now and :in24Hours are LocalDateTime parameters passed by the scheduler.
      */
-
-//    @Query("SELECT a FROM Appointment a " +
-//            "JOIN FETCH a.user " +
-//            "JOIN FETCH a.business b " +
-//            "JOIN FETCH b.owner " +
-//            "JOIN FETCH a.service " +
-//            "WHERE a.reminderSent = false " +
-//            "AND a.status IN :statuses " +
-//            "AND CAST(CONCAT(CAST(a.appointmentDate AS string), ' ', CAST(a.appointmentTime AS string)) AS java.time.LocalDateTime) " +
-//            "    BETWEEN :now AND :in24Hours")
-//    List<Appointment> findAppointmentsDueForReminder(
-//            @Param("now") LocalDateTime now,
-//            @Param("in24Hours") LocalDateTime in24Hours,
-//            @Param("statuses") List<AppointmentStatus> statuses
-//    );
 
     @Query(value = """
         SELECT * FROM appointments a

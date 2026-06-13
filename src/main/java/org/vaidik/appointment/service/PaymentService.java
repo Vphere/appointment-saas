@@ -5,6 +5,7 @@ import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.razorpay.Refund;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -163,6 +164,12 @@ public class PaymentService {
         appointment.setPaymentStatus(PaymentStatus.DEPOSIT_PAID);
         appointmentRepository.save(appointment);
 
+        // Eagerly initialize lazy-loaded relationships before async email
+        // (Async methods run on different thread, so Hibernate session will be closed)
+        Hibernate.initialize(appointment.getUser());
+        Hibernate.initialize(appointment.getBusiness());
+        Hibernate.initialize(appointment.getService());
+
         // Send confirmation email to customer
         try {
             emailService.sendDepositConfirmationEmail(appointment, payment);
@@ -234,6 +241,11 @@ public class PaymentService {
 
         appointment.setPaymentStatus(newPaymentStatus);
         appointmentRepository.save(appointment);
+
+        // Eagerly initialize lazy-loaded relationships before async email
+        Hibernate.initialize(appointment.getUser());
+        Hibernate.initialize(appointment.getBusiness());
+        Hibernate.initialize(appointment.getService());
 
         // Notify customer about refund
         try {
@@ -337,6 +349,11 @@ public class PaymentService {
 
         appointment.setPaymentStatus(PaymentStatus.AWAITING_CONSENT);
         appointmentRepository.save(appointment);
+
+        // Eagerly initialize lazy-loaded relationships before async email
+        Hibernate.initialize(appointment.getUser());
+        Hibernate.initialize(appointment.getBusiness());
+        Hibernate.initialize(appointment.getService());
 
         try {
             emailService.sendCompletionConsentEmail(appointment, otp, token);
@@ -475,6 +492,11 @@ public class PaymentService {
         appointment.setStatus(AppointmentStatus.AWAITING_REMAINING_PAYMENT);
         appointment.setPaymentStatus(PaymentStatus.AWAITING_CONSENT); // keeps payment status
         appointmentRepository.save(appointment);
+
+        // Eagerly initialize lazy-loaded relationships before async email
+        Hibernate.initialize(appointment.getUser());
+        Hibernate.initialize(appointment.getBusiness());
+        Hibernate.initialize(appointment.getService());
 
         try {
             emailService.sendServiceConfirmedEmail(appointment);

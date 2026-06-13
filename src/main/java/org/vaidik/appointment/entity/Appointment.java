@@ -11,7 +11,15 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "appointments")
+@Table(name = "appointments", indexes = {
+    @Index(name = "idx_appointment_user_id", columnList = "user_id"),
+    @Index(name = "idx_appointment_business_id", columnList = "business_id"),
+    @Index(name = "idx_appointment_service_id", columnList = "service_id"),
+    @Index(name = "idx_appointment_date_time", columnList = "appointment_date,appointment_time"),
+    @Index(name = "idx_appointment_service_date", columnList = "service_id,appointment_date"),
+    @Index(name = "idx_appointment_business_date", columnList = "business_id,appointment_date"),
+    @Index(name = "idx_appointment_status", columnList = "status")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -42,6 +50,7 @@ public class Appointment {
     private LocalTime appointmentTime;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 40)
     private AppointmentStatus status;
 
     @CreationTimestamp
@@ -61,7 +70,7 @@ public class Appointment {
 
     // ── Payment fields ─────────────────────────────────────────────
     @Enumerated(EnumType.STRING)
-    @Column(name = "payment_status")
+    @Column(name = "payment_status", length = 40)
     @Builder.Default
     private PaymentStatus paymentStatus = PaymentStatus.PENDING_PAYMENT;
 

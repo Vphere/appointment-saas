@@ -1,6 +1,7 @@
 package org.vaidik.appointment.service;
 
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.vaidik.appointment.dto.CreateAppointmentRequest;
 import org.vaidik.appointment.dto.AppointmentResponse;
@@ -73,9 +74,9 @@ public class AppointmentService {
     public List<AppointmentResponse> getAppointmentsForOwner(String ownerEmail) {
         User owner = userRepository.findByEmail(ownerEmail)
                 .orElseThrow(() -> new RuntimeException("Owner not found"));
-        List<Business> businesses = businessRepository.findByOwnerId(owner.getId());
-        return businesses.stream()
-                .flatMap(b -> appointmentRepository.findByBusinessId(b.getId()).stream())
+        // Optimized: Single query with JOIN FETCH instead of N+1 queries
+        return appointmentRepository.findByOwnerIdWithJoinFetch(owner.getId())
+                .stream()
                 .map(mapper::toResponse)
                 .toList();
     }
@@ -119,6 +120,11 @@ public class AppointmentService {
 
         Appointment saved = appointmentRepository.save(appointment);
 
+        // Eagerly initialize lazy-loaded relationships before async email
+        Hibernate.initialize(saved.getUser());
+        Hibernate.initialize(saved.getBusiness());
+        Hibernate.initialize(saved.getService());
+
         // Email fires on every meaningful owner action to user
         try {
             emailService.sendStatusChangeEmail(saved);
@@ -154,6 +160,11 @@ public class AppointmentService {
                 System.err.println("Refund initiation failed: " + e.getMessage());
             }
         }
+
+        // Eagerly initialize lazy-loaded relationships before async email
+        Hibernate.initialize(saved.getUser());
+        Hibernate.initialize(saved.getBusiness());
+        Hibernate.initialize(saved.getService());
 
         try {
             emailService.sendCancellationByUserEmail(saved);
@@ -240,6 +251,11 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.COMPLETED);
         appointment.setPaymentStatus(PaymentStatus.COMPLETED);
         Appointment saved = appointmentRepository.save(appointment);
+
+        // Eagerly initialize lazy-loaded relationships before async email
+        Hibernate.initialize(saved.getUser());
+        Hibernate.initialize(saved.getBusiness());
+        Hibernate.initialize(saved.getService());
 
         try {
             emailService.sendServiceCompletedEmail(saved);

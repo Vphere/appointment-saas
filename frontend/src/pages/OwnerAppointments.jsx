@@ -42,7 +42,10 @@ const formatDateTime = (d) => {
 // ── Status badge — matches business card style ────────────────────
 function ApptStatusBadge({ status }) {
   const s = (status || '').toUpperCase();
-  const label = s.charAt(0) + s.slice(1).toLowerCase();
+  const label = s
+    .split('_')
+    .map(w => w.charAt(0) + w.slice(1).toLowerCase())
+    .join(' ');
   return (
     <span className={`oa-status-badge oa-status-${s.toLowerCase()}`}>
       <span className="oa-status-dot" />
@@ -77,24 +80,14 @@ function StatCard({ label, value, color }) {
 function OtpInputRow({ appt, onAction, actionLoading }) {
     const [otp, setOtp] = useState('');
     return (
-        <div style={{
-            display: 'flex', gap: 8, alignItems: 'center',
-            width: '100%', paddingTop: 8,
-            borderTop: '1px dashed rgba(255,255,255,0.08)',
-        }}>
+        <div className="oa-otp-input-row">
             <input
                 type="text"
                 maxLength={6}
-                placeholder="Enter 6-digit OTP from customer"
+                placeholder="Enter OTP"
                 value={otp}
                 onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
-                style={{
-                    flex: 1, background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 8, padding: '9px 14px',
-                    color: '#e2e8f0', fontSize: 14, outline: 'none',
-                    letterSpacing: '0.2em',
-                }}
+                className="oa-otp-input"
             />
             <button className="btn btn-success btn-sm"
                 disabled={otp.length !== 6 || !!actionLoading}
@@ -110,10 +103,7 @@ function AppointmentCard({ appt, onAction, actionLoading }) {
   const customerName = appt.userName || appt.userEmail ||
     (appt.userId ? `User #${appt.userId}` : 'Unknown Customer');
 
-  const requestedLabel = appt.updatedAt ? 'Last Modified' : 'Requested On';
-  const requestedValue = appt.updatedAt
-    ? formatDateTime(appt.updatedAt)
-    : formatDateTime(appt.createdAt);
+  const requestedValue = formatDateTime(appt.createdAt);
 
   const statusKey = (appt.status || '').toLowerCase();
 
@@ -145,7 +135,7 @@ function AppointmentCard({ appt, onAction, actionLoading }) {
 
       {/* Row 3: requested on · service · business */}
       <div className="oa-chips-row">
-        <DetailChip icon={appt.updatedAt ? '✏️' : '📥'} label={requestedLabel} value={requestedValue} />
+        <DetailChip icon="📥" label="Requested On" value={requestedValue} />
         <DetailChip icon="⚙️" label="Service"  value={appt.serviceName  || '—'} />
         <DetailChip icon="🏢" label="Business" value={appt.businessName || '—'} />
       </div>

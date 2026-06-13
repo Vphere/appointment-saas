@@ -3,6 +3,7 @@ package org.vaidik.appointment.service;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -216,6 +217,12 @@ public class BusinessServiceService {
         for (Appointment appt : activeAppointments) {
             appt.setStatus(AppointmentStatus.CANCELLED);
             appointmentRepository.save(appt);
+            
+            // Eagerly initialize lazy-loaded relationships before async email
+            Hibernate.initialize(appt.getUser());
+            Hibernate.initialize(appt.getBusiness());
+            Hibernate.initialize(appt.getService());
+            
             try {
                 emailService.sendBusinessClosureAppointmentCancelEmail(appt);
             } catch (Exception ignored) {}

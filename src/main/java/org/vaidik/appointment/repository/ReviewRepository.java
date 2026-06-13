@@ -15,7 +15,12 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     // All reviews for every service belonging to a business
     // Used by the business-owner dashboard to show all their reviews in one place
-    @Query("SELECT r FROM Review r WHERE r.service.business.id = :businessId")
+    @Query("""
+        SELECT DISTINCT r FROM Review r
+        JOIN FETCH r.service s
+        WHERE s.business.id = :businessId
+        ORDER BY r.id DESC
+    """)
     List<Review> findByBusinessId(@Param("businessId") Long businessId);
 
     boolean existsByAppointmentId(Long appointmentId);

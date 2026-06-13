@@ -5,6 +5,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.vaidik.appointment.entity.Appointment;
 
@@ -18,6 +19,7 @@ public class EmailService {
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
 
+    @Async
     public void sendOtpEmail(String toEmail, String otp) {
         String subject = "Your Password Reset OTP";
 
@@ -138,6 +140,7 @@ public class EmailService {
         sendHtmlEmail(toEmail, subject, html);
     }
 
+    @Async
     public void sendStatusChangeEmail(Appointment appointment) {
         String to = appointment.getUser().getEmail();
         String userName = appointment.getUser().getName() != null
@@ -199,6 +202,7 @@ public class EmailService {
         sendHtmlEmail(to, subjectLine, html);
     }
 
+    @Async
     public void sendReminderEmail(Appointment appointment) {
         String to = appointment.getUser().getEmail();
         String userName = appointment.getUser().getName() != null
@@ -267,6 +271,7 @@ public class EmailService {
 
     // ─── Private helpers ────────────────────────────────────────────────────────
 
+    @Async
     private void sendHtmlEmail(String to, String subject, String html) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -377,6 +382,7 @@ public class EmailService {
 
     // Add this method to EmailService
 
+    @Async
     public void sendBusinessDeletionOtpEmail(String toEmail, String ownerName,
                                              String businessName, String otp) {
         String subject = "⚠️ Business Deletion Verification — " + businessName;
@@ -403,6 +409,7 @@ public class EmailService {
         sendHtmlEmail(toEmail, subject, html);
     }
 
+    @Async
     public void sendBusinessClosureAppointmentCancelEmail(Appointment appointment) {
         String to = appointment.getUser().getEmail();
         String userName = appointment.getUser().getName() != null
@@ -437,6 +444,7 @@ public class EmailService {
         sendHtmlEmail(to, subject, html);
     }
 
+    @Async
     public void sendDepositConfirmationEmail(Appointment appointment,
                                              org.vaidik.appointment.entity.Payment payment) {
         String to       = appointment.getUser().getEmail();
@@ -467,6 +475,7 @@ public class EmailService {
         sendHtmlEmail(to, subject, html);
     }
 
+    @Async
     public void sendRefundNotificationEmail(Appointment appointment,
                                             java.math.BigDecimal refundAmount,
                                             org.vaidik.appointment.entity.PaymentStatus status) {
@@ -506,6 +515,7 @@ public class EmailService {
         sendHtmlEmail(to, subject, html);
     }
 
+    @Async
     public void sendCompletionConsentEmail(Appointment appointment,
                                            String otp,
                                            String token) {
@@ -668,6 +678,7 @@ public class EmailService {
         sendHtmlEmail(to, subject, html);
     }
 
+    @Async
     public void sendServiceCompletedEmail(Appointment appointment) {
         String to       = appointment.getUser().getEmail();
         String userName = appointment.getUser().getName() != null
@@ -694,6 +705,7 @@ public class EmailService {
         sendHtmlEmail(to, subject, html);
     }
 
+    @Async
     public void sendServiceConfirmedEmail(Appointment appointment) {
         String to       = appointment.getUser().getEmail();
         String userName = appointment.getUser().getName() != null

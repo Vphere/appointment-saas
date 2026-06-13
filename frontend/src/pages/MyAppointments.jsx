@@ -5,6 +5,7 @@ import StatusBadge from '../components/StatusBadge';
 import ReviewModal from '../components/ReviewModal';
 import Spinner from '../components/Spinner';
 import ReviewRemovedNotice from '../components/ReviewRemovedNotice';
+import { formatDateDisplay, formatFullDateTime, isUpcomingDate } from '../utils/dateUtils';
 import './MyAppointments.css';
 
 // ── Cancel Modal ───────────────────────────────────────────────────
@@ -227,20 +228,8 @@ export default function MyAppointments() {
     }
   };
 
-  const formatDate = dateStr => {
-    if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: 'numeric', month: 'short', year: 'numeric',
-    });
-  };
-
-  const formatDateTime = dtStr => {
-    if (!dtStr) return '—';
-    return new Date(dtStr).toLocaleString('en-IN', {
-      day: 'numeric', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
-  };
+  // Use utility functions from dateUtils for proper timezone handling
+  // (formatDate is now formatDateDisplay from dateUtils)
 
   const formatBranch = appt => {
     const parts = [];
@@ -248,11 +237,6 @@ export default function MyAppointments() {
     if (appt.serviceCity)    parts.push(appt.serviceCity);
     if (appt.serviceState && !appt.serviceCity) parts.push(appt.serviceState);
     return parts.join(', ') || null;
-  };
-
-  const isUpcoming = dateStr => {
-    if (!dateStr) return false;
-    return new Date(dateStr) >= new Date(new Date().toDateString());
   };
 
   const FILTERS = ['ALL', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'AWAITING_REMAINING_PAYMENT'];
@@ -330,7 +314,7 @@ export default function MyAppointments() {
           {filtered.map(appt => {
             const review    = existingReviews[appt.id];
             const isRemoved = review?.removedByAdmin === true;
-            const upcoming  = isUpcoming(appt.appointmentDate);
+            const upcoming  = isUpcomingDate(appt.appointmentDate);
             const branch    = formatBranch(appt);
             const hasUpdated = appt.updatedAt && appt.createdAt &&
               (new Date(appt.updatedAt) - new Date(appt.createdAt)) > 60_000;
@@ -375,7 +359,7 @@ export default function MyAppointments() {
                           {upcoming ? 'Appointment On' : 'Appointment Date'}
                         </span>
                         <span className="ma-detail-value">
-                          {formatDate(appt.appointmentDate)}
+                          {formatDateDisplay(appt.appointmentDate)}
                         </span>
                       </div>
                     </div>
@@ -504,11 +488,11 @@ export default function MyAppointments() {
                 {appt.createdAt && (
                   <div className="ma-meta-row">
                     <span className="ma-meta-item">
-                      🗓️ Booked on {formatDateTime(appt.createdAt)}
+                      🗓️ Booked on {formatFullDateTime(appt.createdAt?.split('T')[0], appt.createdAt?.split('T')[1]?.slice(0, 5))}
                     </span>
                     {hasUpdated && (
                       <span className="ma-meta-item ma-meta-item--updated">
-                        ✏️ Updated on {formatDateTime(appt.updatedAt)}
+                        ✏️ Updated on {formatFullDateTime(appt.updatedAt?.split('T')[0], appt.updatedAt?.split('T')[1]?.slice(0, 5))}
                       </span>
                     )}
                   </div>

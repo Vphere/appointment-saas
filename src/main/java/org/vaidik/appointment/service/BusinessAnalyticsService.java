@@ -31,9 +31,8 @@ public class BusinessAnalyticsService {
                 .map(Business::getId)
                 .orElse(businesses.isEmpty() ? null : businesses.get(0).getId());
 
-        List<Appointment> allAppointments = businesses.stream()
-                .flatMap(b -> appointmentRepository.findByBusinessId(b.getId()).stream())
-                .toList();
+        // Optimized: Load all appointments with related entities in single query
+        List<Appointment> allAppointments = appointmentRepository.findByOwnerIdWithJoinFetch(owner.getId());
 
         List<Appointment> completed = allAppointments.stream()
                 .filter(a -> a.getStatus() == AppointmentStatus.COMPLETED)
