@@ -20,6 +20,7 @@ const PUBLIC_ROUTES = [
   '/api/auth/forgot-password',
   '/api/auth/verify-otp',
   '/api/auth/reset-password',
+  '/api/auth/complete-profile',
 ];
 
 function isPublicRoute(url) {

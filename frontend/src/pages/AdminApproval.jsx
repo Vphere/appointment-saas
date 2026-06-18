@@ -31,21 +31,18 @@ const DOC_LABELS = {
   OTHER:                      '📁 Other Document',
 };
 
-// ── Document Viewer ───────────────────────────────────────────────
-// We must fetch files via axios so the JWT is included in the request.
-// Opening a raw URL in a new tab has no Authorization header → Spring
-// redirects to Google login. Solution: fetch as blob → create object URL.
-
 async function openDocumentWithAuth(fileUrl, originalName) {
+  
+  if (fileUrl && fileUrl.startsWith('https://res.cloudinary.com')) {
+    window.open(fileUrl, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
   try {
     const response = await api.get(fileUrl, { responseType: 'blob' });
     const blob = response.data;
     const objectUrl = URL.createObjectURL(blob);
-
-    // Open in new tab
     const tab = window.open(objectUrl, '_blank');
-
-    // Clean up the object URL after the tab has loaded
     if (tab) {
       tab.addEventListener('load', () => URL.revokeObjectURL(objectUrl), { once: true });
     }

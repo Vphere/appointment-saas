@@ -34,7 +34,9 @@ export default function CompleteProfile() {
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #0f0f1a 100%)',
       display: 'flex',
-      alignItems: 'center',padding: '20px',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px',
       fontFamily: "'Inter', sans-serif",
     }}>
       <div style={{

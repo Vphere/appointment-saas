@@ -54,6 +54,18 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         // ── Existing GOOGLE user → just login ──
         if (existing.isPresent()) {
             User user = existing.get();
+            // Role can be null if user quit before completing the role-selection step.
+            // Send them back to complete-profile so they can pick a role.
+            if (user.getRole() == null) {
+                response.sendRedirect(
+                        frontendUrl + "/complete-profile?email="
+                                + URLEncoder.encode(email, StandardCharsets.UTF_8)
+                                + "&name=" + URLEncoder.encode(
+                                user.getName() != null ? user.getName() : "",
+                                StandardCharsets.UTF_8)
+                );
+                return;
+            }
             String token = jwtUtil.generateToken(
                     user.getEmail(),
                     user.getRole().name(),
