@@ -1,4 +1,3 @@
-// AuthProvider.jsx
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { AuthContext } from './AuthContext';
@@ -10,7 +9,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const didAttemptRefresh = useRef(false); // ← ADD THIS
+  const didAttemptRefresh = useRef(false); 
 
   const buildUser = (token) => {
     const decoded = jwtDecode(token);
@@ -29,8 +28,9 @@ useEffect(() => {
             setInMemoryToken(token);
             try {
               const payload = JSON.parse(atob(token.split('.')[1]));
-              setTokenExpiry(payload.exp * 1000);   // ← ADD THIS
-            } catch {
+              setTokenExpiry(payload.exp * 1000);   
+            } 
+            catch {
               setTokenExpiry(Date.now() + 900_000);
             }
             setUser(buildUser(token));
@@ -52,20 +52,24 @@ useEffect(() => {
     try {
       const decoded = jwtDecode(token);
       setTokenExpiry(decoded.exp * 1000);   // jwtDecode gives exp in seconds
-    } catch {
+    } 
+    catch {
       setTokenExpiry(Date.now() + 900_000);
     }
     setUser(buildUser(token));
   }, []);
 
   const logoutUser = useCallback(async () => {
-    setIsLoggingOut(true);          // ← freeze render
-    try { await api.post('/api/auth/logout'); } catch (_) {}
+    setIsLoggingOut(true);          
+    try { 
+      await api.post('/api/auth/logout'); 
+    } catch (_) {}
     clearInMemoryToken();
     setUser(null);
-    setIsLoggingOut(false);         // ← unfreeze after user is cleared
+    setIsLoggingOut(false);         
   }, []);
-  if (loading || isLoggingOut) return <Spinner message="Please wait..." />;
+  if (loading || isLoggingOut) 
+    return <Spinner message="Please wait..." />;
 
   return (
     <AuthContext.Provider value={{ user, role: user?.role || null, loginUser, logoutUser }}>

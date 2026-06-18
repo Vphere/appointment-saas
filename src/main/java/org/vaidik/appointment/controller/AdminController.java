@@ -39,10 +39,26 @@ public class AdminController {
         return ResponseEntity.ok(adminService.updateUserRole(id, body.get("role")));
     }
 
+    /**
+     * Soft-deletes a user. Preserves appointments, payments, reviews —
+     * but cancels any PENDING/CONFIRMED/AWAITING_REMAINING_PAYMENT
+     * appointments and emails the user + affected business owner(s).
+     * Body: { "reason": "Violated terms of service" } (optional)
+     */
     @DeleteMapping("/users/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable("id") Long id) {
-        adminService.deleteUser(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<UserProfileDTO> deleteUser(
+            @PathVariable("id") Long id,
+            @RequestBody(required = false) Map<String, String> body) {
+        String reason = (body != null) ? body.get("reason") : null;
+        return ResponseEntity.ok(adminService.deleteUser(id, reason));
+    }
+
+    /**
+     * Restores a soft-deleted user — they can log in again immediately.
+     */
+    @PutMapping("/users/{id}/restore")
+    public ResponseEntity<UserProfileDTO> restoreUser(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(adminService.restoreUser(id));
     }
 
     // ── Review Moderation ─────────────────────────────────────────────────────

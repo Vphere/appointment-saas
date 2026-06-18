@@ -131,7 +131,7 @@ function ReviewCard({ review: r }) {
   if (r.removedByAdmin) return null;
 
   const bookedLabel = r.appointmentDate
-    ? `Used on ${new Date(r.appointmentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`
+    ? `Used Service on ${new Date(r.appointmentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`
     : 'Verified booking';
 
   const displayName = r.customerName || r.userEmail || 'Anonymous';

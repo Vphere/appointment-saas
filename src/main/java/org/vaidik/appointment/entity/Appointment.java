@@ -12,13 +12,13 @@ import java.time.LocalTime;
 
 @Entity
 @Table(name = "appointments", indexes = {
-    @Index(name = "idx_appointment_user_id", columnList = "user_id"),
-    @Index(name = "idx_appointment_business_id", columnList = "business_id"),
-    @Index(name = "idx_appointment_service_id", columnList = "service_id"),
-    @Index(name = "idx_appointment_date_time", columnList = "appointment_date,appointment_time"),
-    @Index(name = "idx_appointment_service_date", columnList = "service_id,appointment_date"),
-    @Index(name = "idx_appointment_business_date", columnList = "business_id,appointment_date"),
-    @Index(name = "idx_appointment_status", columnList = "status")
+        @Index(name = "idx_appointment_user_id", columnList = "user_id"),
+        @Index(name = "idx_appointment_business_id", columnList = "business_id"),
+        @Index(name = "idx_appointment_service_id", columnList = "service_id"),
+        @Index(name = "idx_appointment_date_time", columnList = "appointment_date,appointment_time"),
+        @Index(name = "idx_appointment_service_date", columnList = "service_id,appointment_date"),
+        @Index(name = "idx_appointment_business_date", columnList = "business_id,appointment_date"),
+        @Index(name = "idx_appointment_status", columnList = "status")
 })
 @Getter
 @Setter
@@ -67,6 +67,10 @@ public class Appointment {
     @Builder.Default
     @Column(nullable = false)
     private Boolean reminderSent = false;
+
+    @Builder.Default
+    @Column(name = "deposit_nudge_sent", nullable = false)
+    private Boolean depositNudgeSent = false;
 
     // ── Payment fields ─────────────────────────────────────────────
     @Enumerated(EnumType.STRING)

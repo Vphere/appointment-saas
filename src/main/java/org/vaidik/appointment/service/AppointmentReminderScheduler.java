@@ -1,6 +1,6 @@
 package org.vaidik.appointment.service;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -37,7 +37,7 @@ public class AppointmentReminderScheduler {
         List<Appointment> due = appointmentRepository.findAppointmentsDueForReminder(
                 now,
                 in24Hours,
-                List.of(AppointmentStatus.CONFIRMED.name(), AppointmentStatus.PENDING.name())
+                List.of(AppointmentStatus.CONFIRMED.name())
         );
 
         log.info("Found {} appointment(s) due for reminder", due.size());
@@ -53,7 +53,6 @@ public class AppointmentReminderScheduler {
                         appointment.getAppointmentDate(),
                         appointment.getAppointmentTime());
             } catch (Exception e) {
-                // reminderSent stays false → will retry on next scheduler run
                 log.error("Failed to send reminder for appointmentId={}: {}",
                         appointment.getId(), e.getMessage());
             }

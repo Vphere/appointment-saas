@@ -3,6 +3,7 @@ package org.vaidik.appointment.service;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BusinessServiceService {
@@ -199,7 +201,7 @@ public class BusinessServiceService {
                 .orElseThrow(() -> new RuntimeException(
                         "No verification code found. Please request a new one."));
 
-        if (!savedOtp.getOtp().equals(request.getOtp())) {
+        if (!constantTimeEquals(savedOtp.getOtp(), request.getOtp())) {
             throw new RuntimeException("Invalid verification code.");
         }
         if (savedOtp.getExpiryTime().isBefore(LocalDateTime.now())) {
@@ -217,12 +219,12 @@ public class BusinessServiceService {
         for (Appointment appt : activeAppointments) {
             appt.setStatus(AppointmentStatus.CANCELLED);
             appointmentRepository.save(appt);
-            
+
             // Eagerly initialize lazy-loaded relationships before async email
             Hibernate.initialize(appt.getUser());
             Hibernate.initialize(appt.getBusiness());
             Hibernate.initialize(appt.getService());
-            
+
             try {
                 emailService.sendBusinessClosureAppointmentCancelEmail(appt);
             } catch (Exception ignored) {}
@@ -327,5 +329,16 @@ public class BusinessServiceService {
         business.setRequiredActions(null);
 
         return businessMapper.toResponse(businessRepository.save(business));
+    }
+
+    /** Constant-time string comparison — prevents OTP timing-based enumeration. */
+    private boolean constantTimeEquals(String a, String b) {
+        if (a == null || b == null) return false;
+        if (a.length() != b.length()) return false;
+        int result = 0;
+        for (int i = 0; i < a.length(); i++) {
+            result |= a.charAt(i) ^ b.charAt(i);
+        }
+        return result == 0;
     }
 }

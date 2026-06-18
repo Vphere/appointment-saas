@@ -8,10 +8,28 @@ const api = axios.create({
   withCredentials: true,
 });
 
+// ── Public routes that never need an access token ─────────────────
+// The request interceptor skips the refresh-or-redirect logic for these
+// so that unauthenticated users can still call them even when the refresh
+// token cookie is absent or invalid (e.g. a user who forgot their password
+// and navigates to /forgot-password with no active session).
+const PUBLIC_ROUTES = [
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/refresh',
+  '/api/auth/forgot-password',
+  '/api/auth/verify-otp',
+  '/api/auth/reset-password',
+];
+
+function isPublicRoute(url) {
+  return PUBLIC_ROUTES.some((route) => url?.includes(route));
+}
+
 // ── Proactive refresh ─────────────────────────────────────────────
 // Refresh the access token if it expires within the next 60 seconds.
-// Called on every outgoing request so the token is always fresh
-// even after the tab has been in the background for a long time.
+// Called on every outgoing *protected* request so the token is always
+// fresh even after the tab has been in the background for a long time.
 let proactiveRefreshPromise = null;
 
 async function refreshIfNeeded() {
@@ -43,10 +61,11 @@ async function refreshIfNeeded() {
         setTokenExpiry(Date.now() + 900_000);
       }
     } catch {
-      // Refresh failed — clear token, redirect to login
+      // Refresh failed — clear token; redirect only if we're on a protected page.
+      // Never redirect from public auth pages (login, forgot-password, etc.)
       clearInMemoryToken();
       setTokenExpiry(null);
-      if (window.location.pathname !== '/') {
+      if (!isPublicRoute(window.location.pathname) && window.location.pathname !== '/') {
         window.location.href = '/';
       }
     }
@@ -59,8 +78,10 @@ async function refreshIfNeeded() {
 
 // ── Request interceptor ───────────────────────────────────────────
 api.interceptors.request.use(async (config) => {
-  // Don't intercept the refresh call itself
-  if (config.url?.includes('/api/auth/refresh')) return config;
+  // Public routes: skip refresh logic entirely — just send the request as-is.
+  // This is what fixes the forgot-password redirect bug: a user with no session
+  // can call /forgot-password without being kicked back to the login page.
+  if (isPublicRoute(config.url)) return config;
 
   await refreshIfNeeded();
 
@@ -83,7 +104,8 @@ api.interceptors.response.use(
   async (err) => {
     const originalRequest = err.config;
 
-    if (originalRequest.url?.includes('/api/auth/refresh')) {
+    // Never retry public/auth routes
+    if (isPublicRoute(originalRequest.url)) {
       return Promise.reject(err);
     }
 

@@ -74,7 +74,7 @@ public class BusinessAnalyticsService {
 
         List<BusinessAnalyticsResponse.RecentAppointmentDTO> recent = completed.stream()
                 .sorted(Comparator.comparing(Appointment::getAppointmentDate).reversed())
-                .limit(10)
+
                 .map(a -> BusinessAnalyticsResponse.RecentAppointmentDTO.builder()
                         .customerName(a.getUser().getName())
                         .serviceName(a.getService().getName())
@@ -86,7 +86,7 @@ public class BusinessAnalyticsService {
                 .toList();
 
         return BusinessAnalyticsResponse.builder()
-                .businessId(primaryBusinessId)          // ← NEW
+                .businessId(primaryBusinessId)
                 .totalRevenue(totalRevenue)
                 .totalCompleted(totalCompleted)
                 .totalCancelled(totalCancelled)

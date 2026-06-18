@@ -19,6 +19,46 @@ const T = {
   accentHover: "rgba(99,102,241,0.2)",
 };
 
+// ─── Password policy ─────────────────────────────────────────────────────────
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+function getPasswordPolicyErrors(password) {
+  const errors = [];
+  if (!password || password.length < 8)        errors.push("At least 8 characters");
+  if (!/[A-Z]/.test(password))                 errors.push("One uppercase letter (A–Z)");
+  if (!/[a-z]/.test(password))                 errors.push("One lowercase letter (a–z)");
+  if (!/\d/.test(password))                    errors.push("One digit (0–9)");
+  if (!/[^A-Za-z0-9]/.test(password))          errors.push("One special character (!@#$…)");
+  return errors;
+}
+
+function PasswordPolicyHints({ password }) {
+  const checks = [
+    { label: "At least 8 characters",                   ok: password.length >= 8 },
+    { label: "One uppercase letter (A–Z)",               ok: /[A-Z]/.test(password) },
+    { label: "One lowercase letter (a–z)",               ok: /[a-z]/.test(password) },
+    { label: "One digit (0–9)",                          ok: /\d/.test(password) },
+    { label: "One special character (!@#$%^&*…)",        ok: /[^A-Za-z0-9]/.test(password) },
+  ];
+  return (
+    <div style={{
+      marginTop: 10, padding: "10px 14px",
+      background: "rgba(99,102,241,0.07)",
+      borderRadius: 8, border: "1px solid rgba(99,102,241,0.18)",
+    }}>
+      <p style={{ margin: "0 0 6px", fontSize: 11, color: T.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        Password requirements
+      </p>
+      {checks.map(({ label, ok }) => (
+        <div key={label} style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 3 }}>
+          <span style={{ fontSize: 12, color: ok ? "#4ade80" : "#6b7280" }}>{ok ? "✓" : "○"}</span>
+          <span style={{ fontSize: 12, color: ok ? "#d1fae5" : "#9ca3af" }}>{label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── atoms ────────────────────────────────────────────────────────────────────
 function Avatar({ name, size = 72 }) {
   return (
@@ -213,7 +253,7 @@ function ProfileTab({ user, onSaved }) {
     if (!form.email.trim()) return setMsg({ type: "error", text: "Email cannot be empty." });
     setLoading(true);
     try {
-      const { data } = await api.put("/api/users/profile", form); // ✅ api instance
+      const { data } = await api.put("/api/users/profile", form);
       onSaved(data);
       setEditing(false);
       setMsg({ type: "success", text: "Profile updated successfully!" });
@@ -322,7 +362,7 @@ function ProfileTab({ user, onSaved }) {
             <TextInput value={form.name} onChange={set("name")} placeholder="Your full name" autoFocus />
           </div>
 
-          {/* Email — now editable ✅ */}
+          {/* Email */}
           <div>
             <FieldLabel>Email Address</FieldLabel>
             <TextInput value={form.email} onChange={set("email")} type="email" placeholder="you@example.com" />
@@ -334,7 +374,7 @@ function ProfileTab({ user, onSaved }) {
             <TextInput value={form.phone} onChange={set("phone")} type="tel" placeholder="+91 98765 43210" />
           </div>
 
-          {/* Role — select dropdown ✅ */}
+          {/* Role */}
           <div>
             <FieldLabel>Role</FieldLabel>
             <select
@@ -388,13 +428,28 @@ function SecurityTab({ user }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.currentPassword)             return setMsg({ type: "error", text: "Please enter your current password." });
-    if (form.newPassword.length < 4)       return setMsg({ type: "error", text: "New password must be at least 8 characters." });
-    if (form.newPassword !== form.confirm) return setMsg({ type: "error", text: "Passwords do not match." });
+
+    // ── Validation ───────────────────────────────────────────────────────────
+    if (!form.currentPassword) {
+      return setMsg({ type: "error", text: "Please enter your current password." });
+    }
+
+    // BUG FIX: was `length < 4` — now correctly checks >= 8
+    const policyErrors = getPasswordPolicyErrors(form.newPassword);
+    if (policyErrors.length > 0) {
+      return setMsg({
+        type: "error",
+        text: "New password must be at least 8 characters and include an uppercase letter, a lowercase letter, a digit, and a special character.",
+      });
+    }
+
+    if (form.newPassword !== form.confirm) {
+      return setMsg({ type: "error", text: "Passwords do not match." });
+    }
 
     setLoading(true);
     try {
-      await api.put("/api/users/change-password", { // ✅ api instance
+      await api.put("/api/users/change-password", {
         currentPassword: form.currentPassword,
         newPassword:     form.newPassword,
       });
@@ -409,6 +464,7 @@ function SecurityTab({ user }) {
     }
   };
 
+  // Strength meter (4 criteria: length, uppercase, digit, special)
   const strength = (() => {
     const p = form.newPassword;
     if (!p) return 0;
@@ -451,7 +507,6 @@ function SecurityTab({ user }) {
 
             <div>
               <FieldLabel>Current Password</FieldLabel>
-              {/* ✅ PwInput is now a stable module-level component — no cursor loss */}
               <PwInput
                 value={form.currentPassword}
                 onChange={set("currentPassword")}
@@ -466,10 +521,12 @@ function SecurityTab({ user }) {
               <PwInput
                 value={form.newPassword}
                 onChange={set("newPassword")}
-                placeholder="Min. 4 characters"
+                placeholder="Min. 8 characters"
                 show={showNew}
                 onToggle={() => setShowNew((v) => !v)}
               />
+
+              {/* Strength bar */}
               {form.newPassword && (
                 <div style={{ marginTop: 8 }}>
                   <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
@@ -484,6 +541,9 @@ function SecurityTab({ user }) {
                   <p style={{ margin: 0, fontSize: 11, color: strengthColor, fontWeight: 600 }}>{strengthLabel}</p>
                 </div>
               )}
+
+              {/* Policy checklist — always visible so user knows requirements */}
+              <PasswordPolicyHints password={form.newPassword} />
             </div>
 
             <div>
@@ -525,7 +585,7 @@ export default function ProfilePage() {
   const [tab, setTab]               = useState("Profile");
 
   useEffect(() => {
-    api.get("/api/users/me")  // ✅ api instance with auth header
+    api.get("/api/users/me")
       .then(({ data }) => setUser(data))
       .catch(console.error)
       .finally(() => setPageLoading(false));

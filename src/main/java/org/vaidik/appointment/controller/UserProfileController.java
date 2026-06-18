@@ -1,5 +1,6 @@
 package org.vaidik.appointment.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -30,7 +31,7 @@ public class UserProfileController {
     }
 
     @PutMapping("/change-password")
-    public ResponseEntity<Map<String, String>> changePassword(@RequestBody ChangePasswordRequest request,
+    public ResponseEntity<Map<String, String>> changePassword(@Valid @RequestBody ChangePasswordRequest request,
                                                               Authentication authentication) {
         try {
             userProfileService.changePassword(authentication.getName(), request);

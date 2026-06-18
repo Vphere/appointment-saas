@@ -15,6 +15,9 @@ import org.vaidik.appointment.repository.UserRepository;
 @RequiredArgsConstructor
 public class UserProfileService {
 
+    private static final String PASSWORD_POLICY_REGEX =
+            "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,}$";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -37,7 +40,7 @@ public class UserProfileService {
         }
 
         if (request.getRole() != null && !request.getRole().isBlank()) {
-            user.setRole(Role.valueOf(request.getRole())); // import your Role enum
+            user.setRole(Role.valueOf(request.getRole()));
         }
 
         userRepository.save(user);
@@ -53,11 +56,18 @@ public class UserProfileService {
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Incorrect current password.");
         }
-        if (request.getNewPassword() == null || request.getNewPassword().length() < 4) {
-            throw new IllegalArgumentException("New password must be at least 4 characters.");
+
+        String newPwd = request.getNewPassword();
+        if (newPwd == null || newPwd.length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters.");
+        }
+        if (!newPwd.matches(PASSWORD_POLICY_REGEX)) {
+            throw new IllegalArgumentException(
+                    "Password must contain at least one uppercase letter, one lowercase letter, " +
+                            "one digit, and one special character.");
         }
 
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setPassword(passwordEncoder.encode(newPwd));
         userRepository.save(user);
     }
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import api from '../api/axiosInstance';
+import BookEaseLogo from '../components/BookEaseLogo';
 
 export default function CompleteProfile() {
   const [params] = useSearchParams();
@@ -33,9 +34,7 @@ export default function CompleteProfile() {
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #0f0f1a 100%)',
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
+      alignItems: 'center',padding: '20px',
       fontFamily: "'Inter', sans-serif",
     }}>
       <div style={{
@@ -49,20 +48,9 @@ export default function CompleteProfile() {
         backdropFilter: 'blur(12px)',
       }}>
 
-        {/* Icon */}
+        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{
-            width: 64, height: 64,
-            background: 'linear-gradient(135deg, #6c63ff, #8b83ff)',
-            borderRadius: '16px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '28px',
-            boxShadow: '0 8px 24px rgba(108,99,255,0.4)',
-          }}>
-            ✨
-          </div>
+          <BookEaseLogo height={45} />
         </div>
 
         {/* Heading */}
@@ -109,8 +97,7 @@ export default function CompleteProfile() {
               width: 44, height: 44,
               borderRadius: '12px',
               background: role === 'CUSTOMER' ? 'rgba(108,99,255,0.3)' : 'rgba(255,255,255,0.06)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '20px', flexShrink: 0,
+              display: 'flex', alignItems: 'center',fontSize: '20px', flexShrink: 0,
             }}>
               👤
             </div>
@@ -130,8 +117,7 @@ export default function CompleteProfile() {
                 marginLeft: 'auto', width: 20, height: 20,
                 borderRadius: '50%',
                 background: '#6c63ff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '11px', color: '#fff', flexShrink: 0,
+                display: 'flex', alignItems: 'center',fontSize: '11px', color: '#fff', flexShrink: 0,
               }}>✓</div>
             )}
           </div>
@@ -159,8 +145,7 @@ export default function CompleteProfile() {
               width: 44, height: 44,
               borderRadius: '12px',
               background: role === 'BUSINESS_OWNER' ? 'rgba(108,99,255,0.3)' : 'rgba(255,255,255,0.06)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '20px', flexShrink: 0,
+              display: 'flex', alignItems: 'center',fontSize: '20px', flexShrink: 0,
             }}>
               🏢
             </div>
@@ -180,8 +165,7 @@ export default function CompleteProfile() {
                 marginLeft: 'auto', width: 20, height: 20,
                 borderRadius: '50%',
                 background: '#6c63ff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '11px', color: '#fff', flexShrink: 0,
+                display: 'flex', alignItems: 'center',fontSize: '11px', color: '#fff', flexShrink: 0,
               }}>✓</div>
             )}
           </div>

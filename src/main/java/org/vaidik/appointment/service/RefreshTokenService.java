@@ -22,9 +22,9 @@ public class RefreshTokenService {
 
     @Transactional
     public RefreshToken createRefreshToken(User user) {
-        // Delete any existing refresh token for this user (one token per user)
+        // Delete any existing refresh token for this user (one token per user) to avoid theft of Refresh token
         refreshTokenRepository.deleteByUser(user);
-        refreshTokenRepository.flush(); // ← ADD THIS, same as rotateRefreshToken
+        refreshTokenRepository.flush();
 
         RefreshToken refreshToken = RefreshToken.builder()
                 .user(user)

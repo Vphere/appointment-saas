@@ -4,6 +4,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,11 +26,15 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public String register(@RequestBody RegisterRequest request) {
-        return authService.register(request);
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+        try {
+            String result = authService.register(request);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
-    // ← MODIFIED: inject HttpServletResponse
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletResponse response) {
         try {
@@ -48,34 +53,20 @@ public class AuthController {
         }
         try {
             AuthService.RefreshTokenRotationResult result = authService.refreshAccessToken(oldRefreshToken);
-
-            // Write the NEW refresh token cookie — old one is already deleted in DB
             authService.setRefreshTokenCookie(response, result.newRefreshTokenValue());
-
             return ResponseEntity.ok(new RefreshTokenResponse(result.accessToken()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(401).body(Map.of("message", e.getMessage()));
         }
     }
 
-    // ← NEW: logout
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
         String refreshToken = extractRefreshTokenFromCookie(request);
-        authService.logout(refreshToken, response);
-
-        HttpSession session = request.getSession(false); // false = don't create new one
-        if (session != null) {
-            session.invalidate();
+        if (refreshToken != null) {
+            authService.logout(refreshToken, response);
         }
-
-        // ← ADD THIS — explicitly clear JSESSIONID cookie
-        Cookie jsessionCookie = new Cookie("JSESSIONID", "");
-        jsessionCookie.setMaxAge(0);
-        jsessionCookie.setPath("/");
-        jsessionCookie.setHttpOnly(true);
-        response.addCookie(jsessionCookie);
-
+        clearRefreshTokenCookie(response);
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
@@ -88,27 +79,51 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestParam String email) {
         String result = authService.sendOtp(email);
-        if (result.equals("GOOGLE_ACCOUNT")) {
+        if ("GOOGLE_ACCOUNT".equals(result)) {
             return ResponseEntity.badRequest()
-                    .body("This account was created using Google Sign-In. Please continue with Google Sign-In.");
+                    .body(Map.of("message", "This account was created using Google Sign-In. Please continue with Google Sign-In."));
         }
-        return ResponseEntity.ok("OTP sent successfully");
+        return ResponseEntity.ok(Map.of("message", "OTP sent successfully"));
     }
 
     @PostMapping("/verify-otp")
-    public ResponseEntity<?> verifyOtp(@RequestParam String email, @RequestParam String otp) {
-        boolean isValid = authService.verifyOtp(email, otp);
-        if (!isValid) return ResponseEntity.badRequest().body("Invalid or expired OTP");
-        return ResponseEntity.ok("OTP verified");
+    public ResponseEntity<?> verifyOtp(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String otp   = body.get("otp");
+        try {
+            boolean valid = authService.verifyOtp(email, otp);
+            if (!valid) return ResponseEntity.badRequest().body(Map.of("message", "Invalid or expired OTP"));
+            return ResponseEntity.ok(Map.of("message", "OTP verified"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestParam String email, @RequestParam String newPassword) {
-        authService.resetPassword(email, newPassword);
-        return ResponseEntity.ok("Password updated successfully");
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> body) {
+        String email       = body.get("email");
+        String newPassword = body.get("newPassword");
+
+        // Validate password policy server-side even on reset
+        if (newPassword == null || newPassword.length() < 8) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Password must be at least 8 characters"));
+        }
+        if (!newPassword.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,}$")) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character"));
+        }
+
+        try {
+            authService.resetPassword(email, newPassword);
+            return ResponseEntity.ok(Map.of("message", "Password reset successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
-    // ── Helper ──────────────────────────────────────────────────────
+    // ── helpers ─────────────────────────────────────────────────────────────────
+
     private String extractRefreshTokenFromCookie(HttpServletRequest request) {
         if (request.getCookies() == null) return null;
         return Arrays.stream(request.getCookies())
@@ -116,5 +131,13 @@ public class AuthController {
                 .map(Cookie::getValue)
                 .findFirst()
                 .orElse(null);
+    }
+
+    private void clearRefreshTokenCookie(HttpServletResponse response) {
+        Cookie cookie = new Cookie("refreshToken", "");
+        cookie.setMaxAge(0);
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        response.addCookie(cookie);
     }
 }

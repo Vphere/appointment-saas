@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/useAuth';
 import { getAllServices } from '../api/services';
 import { getApprovedBusinesses } from '../api/business';
+import BookEaseLogo from '../components/BookEaseLogo';
 import {
   CalendarDays, Building2, BriefcaseBusiness, Clock3,
   BarChart3, CalendarCheck, Mail, Phone, Zap, Star,
@@ -266,7 +267,7 @@ function CustomerFooter() {
       <div className="db-footer-main">
         {/* Brand */}
         <div className="db-footer-brand">
-          <h2 className="db-footer-brand-name">📆 BookEase</h2>
+          <BookEaseLogo height={45} style={{ marginBottom: 4 }} />
           <p className="db-footer-brand-tag">Smart appointment booking platform</p>
           <p className="db-footer-brand-desc">
             Connecting customers with verified service businesses — making every booking
@@ -285,7 +286,7 @@ function CustomerFooter() {
         {/* Contact */}
         <div className="db-footer-col">
           <h3 className="db-footer-col-title">Contact Us</h3>
-          <div className="db-footer-contact-item"><Mail size={14} /><span>support@bookease.com</span></div>
+          <div className="db-footer-contact-item"><Mail size={14} /><span>devsquad45@gmail.com</span></div>
           <div className="db-footer-contact-item"><Phone size={14} /><span>+91 98765 43210</span></div>
           <p className="db-footer-contact-text">
             We're here to help — Mon to Sat, 9 AM to 6 PM IST.
@@ -296,10 +297,11 @@ function CustomerFooter() {
       <div className="db-footer-bottom">
         <p>© {new Date().getFullYear()} BookEase. All rights reserved.</p>
         <div className="db-footer-bottom-links">
-          <a href="/">Privacy Policy</a>
-          <a href="/">Terms of Service</a>
+          <Link to="/privacy-policy">Privacy Policy</Link>
+          <Link to="/terms-of-service">Terms of Service</Link>
         </div>
       </div>
+      
     </footer>
   );
 }
@@ -331,7 +333,7 @@ function OwnerFooter() {
       <div className="db-footer-main">
         {/* Brand */}
         <div className="db-footer-brand">
-          <h2 className="db-footer-brand-name">📆 BookEase</h2>
+          <BookEaseLogo height={45} style={{ marginBottom: 4 }} />
           <p className="db-footer-brand-tag">Smart appointment booking platform</p>
           <p className="db-footer-brand-desc">
             Helping small businesses grow and large enterprises manage appointments efficiently —
@@ -352,7 +354,7 @@ function OwnerFooter() {
         {/* Contact */}
         <div className="db-footer-col">
           <h3 className="db-footer-col-title">Contact Us</h3>
-          <div className="db-footer-contact-item"><Mail size={14} /><span>support@bookease.com</span></div>
+          <div className="db-footer-contact-item"><Mail size={14} /><span>devsquad45@gmail.com</span></div>
           <div className="db-footer-contact-item"><Phone size={14} /><span>+91 98765 43210</span></div>
           <p className="db-footer-contact-text">
             Need help? Our support team is available Mon to Sat, 9 AM to 6 PM IST.
@@ -363,8 +365,8 @@ function OwnerFooter() {
       <div className="db-footer-bottom">
         <p>© {new Date().getFullYear()} BookEase. All rights reserved.</p>
         <div className="db-footer-bottom-links">
-          <a href="/">Privacy Policy</a>
-          <a href="/">Terms of Service</a>
+          <Link to="/privacy-policy">Privacy Policy</Link>
+          <Link to="/terms-of-service">Terms of Service</Link>
         </div>
       </div>
     </footer>

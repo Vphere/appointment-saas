@@ -1,8 +1,8 @@
 package org.vaidik.appointment.service;
 
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -26,7 +26,9 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -37,13 +39,21 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final OtpRepository otpRepository;
     private final EmailService emailService;
-    private final RefreshTokenService refreshTokenService; // ← NEW
+    private final RefreshTokenService refreshTokenService;
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    private static final Set<Role> ALLOWED_SELF_ASSIGN_ROLES = Set.of(
+            Role.CUSTOMER, Role.BUSINESS_OWNER
+    );
 
     public record RefreshTokenRotationResult(String accessToken, String newRefreshTokenValue) {}
 
     public String register(RegisterRequest request) {
+
+        if (request.getRole() == Role.SUPER_ADMIN) {
+            throw new RuntimeException("Invalid role selection.");
+        }
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
@@ -54,11 +64,14 @@ public class AuthService {
         return "User registered successfully";
     }
 
-    // ← MODIFIED: now accepts HttpServletResponse to set cookie
     public AuthResponse login(LoginRequest request, HttpServletResponse response) {
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.isDeleted()) {
+            throw new RuntimeException("This account has been deactivated. Please contact support.");
+        }
 
         if (user.getProvider() == AuthProvider.GOOGLE) {
             throw new RuntimeException("This account uses Google Sign-In. Please use 'Continue with Google' to login.");
@@ -68,25 +81,32 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
-        // Access token (short-lived, goes in response body)
-        String accessToken = jwtUtil.generateToken(user.getEmail(), user.getRole().name(), user.getName());
+        String accessToken = jwtUtil.generateToken(user.getEmail(), user.getRole().name(), user.getName(), user.getProvider() != null ? user.getProvider().name() : "LOCAL");
 
-        // Refresh token (long-lived, goes in HttpOnly cookie)
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
         setRefreshTokenCookie(response, refreshToken.getToken());
 
         return new AuthResponse(accessToken, user.getName(), user.getEmail(), user.getRole().name());
     }
 
-    // ← MODIFIED: same pattern for completeProfile
     public ResponseEntity<?> completeProfile(CompleteProfileRequest request, HttpServletResponse response) {
+        Role role;
+        try {
+            role = Role.valueOf(request.getRole());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Invalid role."));
+        }
+        if (!ALLOWED_SELF_ASSIGN_ROLES.contains(role)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Invalid role selection."));
+        }
+
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        user.setRole(Role.valueOf(request.getRole()));
+        user.setRole(role);
         userRepository.save(user);
 
-        String accessToken = jwtUtil.generateToken(user.getEmail(), user.getRole().name(), user.getName());
+        String accessToken = jwtUtil.generateToken(user.getEmail(), user.getRole().name(), user.getName(), user.getProvider() != null ? user.getProvider().name() : "LOCAL");
 
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
         setRefreshTokenCookie(response, refreshToken.getToken());
@@ -97,20 +117,17 @@ public class AuthService {
     public RefreshTokenRotationResult refreshAccessToken(String oldRefreshTokenValue) {
         RefreshToken newRefreshToken = refreshTokenService.rotateRefreshToken(oldRefreshTokenValue);
         User user = newRefreshToken.getUser();
+
+        if (user.isDeleted()) {
+            throw new RuntimeException("This account has been deactivated. Please contact support.");
+        }
+
         String newAccessToken = jwtUtil.generateToken(
-                user.getEmail(), user.getRole().name(), user.getName()
+                user.getEmail(), user.getRole().name(), user.getName(),
+                user.getProvider() != null ? user.getProvider().name() : "LOCAL"
         );
         return new RefreshTokenRotationResult(newAccessToken, newRefreshToken.getToken());
     }
-
-//    // ← NEW: logout clears cookie + deletes refresh token from DB
-//    @Transactional
-//    public void logout(String refreshTokenValue, HttpServletResponse response) {
-//        if (refreshTokenValue != null) {
-//            refreshTokenRepository_findByToken_andDelete(refreshTokenValue);
-//        }
-//        clearRefreshTokenCookie(response);
-//    }
 
     @Transactional
     public void logout(String refreshTokenValue, HttpServletResponse response) {
@@ -119,8 +136,6 @@ public class AuthService {
                 RefreshToken rt = refreshTokenService.findByToken(refreshTokenValue);
                 refreshTokenService.deleteByUser(rt.getUser());
             } catch (RuntimeException e) {
-                // Token not found or already expired — still clear the cookie
-                // Log it but don't silently swallow without clearing cookie
                 System.err.println("Logout: refresh token not found in DB (may be already expired): " + e.getMessage());
             }
         }
@@ -129,33 +144,20 @@ public class AuthService {
 
     // ── Cookie helpers ──────────────────────────────────────────────
     public void setRefreshTokenCookie(HttpServletResponse response, String token) {
-        // For cross-origin cookies (Render backend, Vercel frontend):
-        // Use SameSite=None; Secure to allow cross-origin cookie transmission
         String cookieValue = String.format(
-            "refreshToken=%s; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=%d",
-            token,
-            7 * 24 * 60 * 60  // 7 days
+                "refreshToken=%s; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=%d",
+                token,
+                7 * 24 * 60 * 60  // 7 days
         );
-        
         response.addHeader("Set-Cookie", cookieValue);
     }
 
     private void clearRefreshTokenCookie(HttpServletResponse response) {
-        // Clear the cookie by setting Max-Age=0
-        // Must match the original cookie's SameSite/Secure settings
         String cookieValue = "refreshToken=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0";
-        
         response.addHeader("Set-Cookie", cookieValue);
     }
 
-//    private void refreshTokenRepository_findByToken_andDelete(String token) {
-//        try {
-//            RefreshToken rt = refreshTokenService.findByToken(token);
-//            refreshTokenService.deleteByUser(rt.getUser());
-//        } catch (Exception ignored) {}
-//    }
-
-    // ── Remaining methods unchanged ─────────────────────────────────
+    // ── OTP / Password Reset ────────────────────────────────────────
     public String sendOtp(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -169,24 +171,60 @@ public class AuthService {
         otpEntity.setEmail(email);
         otpEntity.setOtp(otp);
         otpEntity.setExpiryTime(LocalDateTime.now().plusMinutes(10));
+        otpEntity.setVerified(false);
         otpRepository.save(otpEntity);
         emailService.sendOtpEmail(email, otp);
         return "OTP_SENT";
     }
 
+    /**
+     * Verifies the OTP and marks it as verified in the DB so that resetPassword
+     * can confirm it was actually validated (prevents skipping the OTP step).
+     */
     public boolean verifyOtp(String email, String otp) {
         Optional<Otp> optionalOtp = otpRepository.findByEmail(email);
         if (optionalOtp.isEmpty()) return false;
         Otp savedOtp = optionalOtp.get();
-        if (!savedOtp.getOtp().equals(otp)) return false;
-        return !savedOtp.getExpiryTime().isBefore(LocalDateTime.now());
+
+        boolean otpMatches = constantTimeEquals(savedOtp.getOtp(), otp);
+        boolean notExpired  = !savedOtp.getExpiryTime().isBefore(LocalDateTime.now());
+        if (otpMatches && notExpired) {
+            savedOtp.setVerified(true);
+            otpRepository.save(savedOtp);
+            return true;
+        }
+        return false;
     }
 
     @Transactional
     public void resetPassword(String email, String newPassword) {
+        // [SECURITY] Ensure OTP was actually verified before allowing password reset.
+        // Without this check anyone who knows a user's email can call /reset-password
+        // directly, bypassing the OTP step entirely.
+        Otp otpRecord = otpRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("OTP verification required before resetting password."));
+
+        if (!otpRecord.isVerified()) {
+            throw new RuntimeException("Please verify your OTP before resetting your password.");
+        }
+        if (otpRecord.getExpiryTime().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("OTP session has expired. Please request a new OTP.");
+        }
+
         User user = userRepository.findByEmail(email).orElseThrow();
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
         otpRepository.deleteByEmail(email);
+    }
+
+    /** Constant-time string comparison to prevent timing-based OTP enumeration. */
+    private boolean constantTimeEquals(String a, String b) {
+        if (a == null || b == null) return false;
+        if (a.length() != b.length()) return false;
+        int result = 0;
+        for (int i = 0; i < a.length(); i++) {
+            result |= a.charAt(i) ^ b.charAt(i);
+        }
+        return result == 0;
     }
 }

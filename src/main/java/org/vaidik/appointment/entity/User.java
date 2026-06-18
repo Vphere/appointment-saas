@@ -3,6 +3,8 @@ package org.vaidik.appointment.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @Setter
@@ -10,8 +12,8 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @Table(name = "users", indexes = {
-    @Index(name = "idx_user_email", columnList = "email"),
-    @Index(name = "idx_user_role", columnList = "role")
+        @Index(name = "idx_user_email", columnList = "email"),
+        @Index(name = "idx_user_role", columnList = "role")
 })
 public class User {
 
@@ -35,4 +37,16 @@ public class User {
     @Column(nullable = false)
     @Builder.Default
     private AuthProvider provider = AuthProvider.LOCAL;
+
+    // ── Soft-delete fields (same pattern as Business entity) ─────────────────
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Column(name = "deletion_reason", length = 500, columnDefinition = "TEXT")
+    private String deletionReason;
+
+    @Transient
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
 }

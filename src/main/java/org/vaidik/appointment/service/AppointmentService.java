@@ -1,8 +1,10 @@
 package org.vaidik.appointment.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.vaidik.appointment.dto.CreateAppointmentRequest;
 import org.vaidik.appointment.dto.AppointmentResponse;
 import org.vaidik.appointment.entity.*;
@@ -11,6 +13,7 @@ import org.vaidik.appointment.repository.*;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AppointmentService {
@@ -19,6 +22,7 @@ public class AppointmentService {
     private final UserRepository userRepository;
     private final BusinessRepository businessRepository;
     private final ServiceOfferingRepository serviceRepository;
+    private final ServiceCompletionConsentRepository consentRepository;
     private final AppointmentMapper mapper;
     private final EmailService emailService;
     private final PaymentService paymentService;
@@ -26,6 +30,7 @@ public class AppointmentService {
 
     private static final List<AppointmentStatus> FREED_STATUSES = List.of(AppointmentStatus.CANCELLED);
 
+    @Transactional
     public AppointmentResponse bookAppointment(CreateAppointmentRequest request, String userEmail) {
 
         boolean exists = appointmentRepository.existsActiveByServiceDateAndTime(
@@ -34,7 +39,7 @@ public class AppointmentService {
                 request.getAppointmentTime(),
                 FREED_STATUSES
         );
-        if (exists) throw new RuntimeException("Slot already booked");
+        if (exists) throw new RuntimeException("This time slot is already taken. Please choose another time.");
 
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -52,12 +57,11 @@ public class AppointmentService {
                 .appointmentDate(request.getAppointmentDate())
                 .appointmentTime(request.getAppointmentTime())
                 .status(AppointmentStatus.PENDING)
+                .paymentStatus(PaymentStatus.PENDING_PAYMENT)
                 .reviewed(false)
                 .build();
 
         Appointment saved = appointmentRepository.save(appointment);
-
-        // No email sent here, User will be notified when owner confirms or rejects.
 
         return mapper.toResponse(saved);
     }
@@ -74,13 +78,13 @@ public class AppointmentService {
     public List<AppointmentResponse> getAppointmentsForOwner(String ownerEmail) {
         User owner = userRepository.findByEmail(ownerEmail)
                 .orElseThrow(() -> new RuntimeException("Owner not found"));
-        // Optimized: Single query with JOIN FETCH instead of N+1 queries
         return appointmentRepository.findByOwnerIdWithJoinFetch(owner.getId())
                 .stream()
                 .map(mapper::toResponse)
                 .toList();
     }
 
+    @Transactional
     public AppointmentResponse updateAppointmentStatus(
             Long appointmentId, AppointmentStatus newStatus, String ownerEmail
     ) {
@@ -99,42 +103,67 @@ public class AppointmentService {
         }
 
         AppointmentStatus currentStatus = appointment.getStatus();
+        PaymentStatus currentPayment   = appointment.getPaymentStatus();
 
         if (currentStatus == AppointmentStatus.CANCELLED ||
                 currentStatus == AppointmentStatus.COMPLETED) {
-            throw new RuntimeException("Cannot change status");
+            throw new RuntimeException("Cannot change status of a " + formatStatus(currentStatus) + " appointment.");
+        }
+
+        // ── GUARD: Owner cannot CONFIRM an appointment where the deposit was never paid ──
+        if (newStatus == AppointmentStatus.CONFIRMED) {
+            if (currentPayment == PaymentStatus.PENDING_PAYMENT) {
+                throw new RuntimeException(
+                        "Cannot confirm this appointment — the customer has not completed the deposit payment. " +
+                                "Ask the customer to complete payment before you confirm.");
+            }
         }
 
         if (currentStatus == AppointmentStatus.PENDING &&
                 (newStatus == AppointmentStatus.CONFIRMED || newStatus == AppointmentStatus.CANCELLED)) {
             appointment.setStatus(newStatus);
-        }
-        else if (currentStatus == AppointmentStatus.AWAITING_REMAINING_PAYMENT
+        } else if (currentStatus == AppointmentStatus.AWAITING_REMAINING_PAYMENT
                 && newStatus == AppointmentStatus.COMPLETED) {
             appointment.setStatus(newStatus);
             appointment.setPaymentStatus(PaymentStatus.COMPLETED);
-        }
-        else {
-            throw new RuntimeException("Invalid transition from " + currentStatus + " to " + newStatus);
+        } else {
+            throw new RuntimeException("Invalid status transition from " + formatStatus(currentStatus) + " to " + formatStatus(newStatus) + ".");
         }
 
         Appointment saved = appointmentRepository.save(appointment);
 
-        // Eagerly initialize lazy-loaded relationships before async email
+        // If the owner cancels and the customer had already paid the deposit, refund them.
+        if (newStatus == AppointmentStatus.CANCELLED) {
+            PaymentStatus ps = saved.getPaymentStatus();
+            if (ps == PaymentStatus.DEPOSIT_PAID || ps == PaymentStatus.CONFIRMED) {
+                try {
+                    paymentService.initiateRefund(saved);
+                } catch (Exception e) {
+                    log.error("Refund initiation failed (owner cancel) for appointmentId={}: {}", appointmentId, e.getMessage());
+                }
+            }
+        }
+
         Hibernate.initialize(saved.getUser());
         Hibernate.initialize(saved.getBusiness());
         Hibernate.initialize(saved.getService());
 
-        // Email fires on every meaningful owner action to user
         try {
-            emailService.sendStatusChangeEmail(saved);
+            if (newStatus == AppointmentStatus.CONFIRMED) {
+                // Use the detailed confirmation email (shows deposit paid + remaining amount)
+                emailService.sendServiceConfirmedEmail(saved);
+            } else {
+                // CANCELLED by owner — use generic status change (which only sends for CANCELLED)
+                emailService.sendStatusChangeEmail(saved);
+            }
         } catch (Exception e) {
-            System.err.println("Status change email failed: " + e.getMessage());
+            log.error("Status change email failed for appointmentId={}: {}", appointmentId, e.getMessage());
         }
 
         return mapper.toResponse(saved);
     }
 
+    @Transactional
     public AppointmentResponse cancelByUser(Long id, String email) {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Appointment not found"));
@@ -145,23 +174,29 @@ public class AppointmentService {
         if (appointment.getStatus() == AppointmentStatus.COMPLETED ||
                 appointment.getStatus() == AppointmentStatus.CANCELLED) {
             throw new RuntimeException("Cannot cancel a " +
-                    appointment.getStatus().name().toLowerCase() + " appointment");
+                    formatStatus(appointment.getStatus()) + " appointment.");
         }
 
         appointment.setStatus(AppointmentStatus.CANCELLED);
         Appointment saved = appointmentRepository.save(appointment);
 
-        // Trigger refund if deposit was paid
-        if (appointment.getPaymentStatus() == PaymentStatus.DEPOSIT_PAID ||
-                appointment.getPaymentStatus() == PaymentStatus.CONFIRMED) {
+        // Refund deposit if it was already captured — covers all post-payment states:
+        // DEPOSIT_PAID   → normal paid-but-not-confirmed path
+        // CONFIRMED      → owner confirmed, customer cancelling before service
+        // RESCHEDULED    → deposit was paid before reschedule, paymentStatus changed to RESCHEDULED
+        // AWAITING_CONSENT → deposit paid, owner initiated completion, customer hasn't consented yet
+        PaymentStatus ps = appointment.getPaymentStatus();
+        if (ps == PaymentStatus.DEPOSIT_PAID ||
+                ps == PaymentStatus.CONFIRMED ||
+                ps == PaymentStatus.RESCHEDULED ||
+                ps == PaymentStatus.AWAITING_CONSENT) {
             try {
                 paymentService.initiateRefund(saved);
             } catch (Exception e) {
-                System.err.println("Refund initiation failed: " + e.getMessage());
+                log.error("Refund initiation failed for appointmentId={}: {}", id, e.getMessage());
             }
         }
 
-        // Eagerly initialize lazy-loaded relationships before async email
         Hibernate.initialize(saved.getUser());
         Hibernate.initialize(saved.getBusiness());
         Hibernate.initialize(saved.getService());
@@ -169,12 +204,13 @@ public class AppointmentService {
         try {
             emailService.sendCancellationByUserEmail(saved);
         } catch (Exception e) {
-            System.err.println("Owner cancellation notification failed: " + e.getMessage());
+            log.error("Cancellation email failed for appointmentId={}: {}", id, e.getMessage());
         }
 
         return mapper.toResponse(saved);
     }
 
+    @Transactional
     public AppointmentResponse rescheduleAppointment(Long id, CreateAppointmentRequest request, String email) {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Appointment not found"));
@@ -184,16 +220,21 @@ public class AppointmentService {
         }
         if (appointment.getStatus() != AppointmentStatus.PENDING &&
                 appointment.getStatus() != AppointmentStatus.CONFIRMED) {
-            throw new RuntimeException("Only pending or confirmed appointments can be rescheduled");
+            throw new RuntimeException("Only pending or confirmed appointments can be rescheduled.");
         }
 
-        // Enforce 2-reschedule cap
+        // Guard: cannot reschedule if deposit is unpaid
+        if (appointment.getPaymentStatus() == PaymentStatus.PENDING_PAYMENT) {
+            throw new RuntimeException(
+                    "Please complete your deposit payment before rescheduling. " +
+                            "Your slot is temporarily reserved but not confirmed.");
+        }
+
         if (appointment.getRescheduleCount() >= 2) {
             throw new RuntimeException(
-                    "Maximum reschedule limit (2) reached. Please cancel and rebook if needed.");
+                    "You have reached the maximum reschedule limit (2). Please cancel and rebook if needed.");
         }
 
-        // Enforce 24-hour gate
         java.time.LocalDateTime appointmentDateTime = java.time.LocalDateTime.of(
                 appointment.getAppointmentDate(), appointment.getAppointmentTime());
         long hoursUntil = java.time.Duration.between(
@@ -220,7 +261,6 @@ public class AppointmentService {
             throw new RuntimeException("That slot is already booked. Please choose another time.");
         }
 
-        // Save original date/time on first reschedule
         if (appointment.getRescheduleCount() == 0) {
             appointment.setOriginalAppointmentDate(appointment.getAppointmentDate());
             appointment.setOriginalAppointmentTime(appointment.getAppointmentTime());
@@ -236,6 +276,7 @@ public class AppointmentService {
         return mapper.toResponse(appointmentRepository.save(appointment));
     }
 
+    @Transactional
     public AppointmentResponse markRemainingPaid(Long appointmentId, String ownerEmail) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Appointment not found"));
@@ -245,14 +286,25 @@ public class AppointmentService {
         }
 
         if (appointment.getStatus() != AppointmentStatus.AWAITING_REMAINING_PAYMENT) {
-            throw new RuntimeException("Appointment is not awaiting remaining payment");
+            throw new RuntimeException("This appointment is not awaiting remaining payment. " +
+                    "The customer must first confirm the service via OTP or email link.");
+        }
+
+        var consent = consentRepository.findByAppointmentId(appointmentId)
+                .orElseThrow(() -> new RuntimeException(
+                        "Cannot complete: no service completion consent record found. " +
+                                "The customer must confirm the service via OTP or the email link first."));
+
+        if (!Boolean.TRUE.equals(consent.getIsUsed())) {
+            throw new RuntimeException(
+                    "Cannot complete: the customer has not yet confirmed the service. " +
+                            "Please ask the customer to confirm using their OTP or the email link.");
         }
 
         appointment.setStatus(AppointmentStatus.COMPLETED);
         appointment.setPaymentStatus(PaymentStatus.COMPLETED);
         Appointment saved = appointmentRepository.save(appointment);
 
-        // Eagerly initialize lazy-loaded relationships before async email
         Hibernate.initialize(saved.getUser());
         Hibernate.initialize(saved.getBusiness());
         Hibernate.initialize(saved.getService());
@@ -260,9 +312,13 @@ public class AppointmentService {
         try {
             emailService.sendServiceCompletedEmail(saved);
         } catch (Exception e) {
-            System.err.println("Completion email failed: " + e.getMessage());
+            log.error("Completion email failed for appointmentId={}: {}", appointmentId, e.getMessage());
         }
 
         return mapper.toResponse(saved);
+    }
+
+    private String formatStatus(AppointmentStatus status) {
+        return status.name().replace('_', ' ').toLowerCase();
     }
 }

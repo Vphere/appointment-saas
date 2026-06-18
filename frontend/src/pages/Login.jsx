@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link} from 'react-router-dom';
 import { login } from '../api/auth';
 import { useAuth } from '../context/useAuth'; 
+import BookEaseLogo from '../components/BookEaseLogo';
 
 const GOOGLE_OAUTH_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}/oauth2/authorization/google`;
 
@@ -11,23 +12,29 @@ export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(() => {
-  const params = new URLSearchParams(window.location.search);
-    return params.get('error') === 'use_password'
-      ? 'This account was registered with email/password. Please sign in normally.'
-      : '';
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'use_password') {
+      return 'This account was registered with email/password. Please sign in normally.';
+    }
+    if (params.get('error') === 'account_deactivated') {
+      return 'This account has been deactivated. Please contact support if you believe this is a mistake.';
+    }
+    return '';
   });
   const [loading, setLoading] = useState(false);
 
-  // Redirect if already logged in
   useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-  const hasError = params.get('error');
-  if (user && !hasError) {
-    navigate('/dashboard', { replace: true });
-  }
-}, [user, navigate]);
+    const params = new URLSearchParams(window.location.search);
+    const hasError = params.get('error');
+    if (user && !hasError) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    setError('');
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,11 +45,13 @@ export default function Login() {
       loginUser(res.data.token || res.data.accessToken || res.data.jwt);
       navigate('/dashboard');
     } catch (err) {
-      // ✅ Show exact backend message first, generic fallback only if nothing comes
-      const message = err.response?.data?.message
-        || err.response?.data
-        || 'Invalid email or password';
-      setError(message);
+      const raw = err.response?.data?.message || err.response?.data;
+      // Map "Bad credentials" (Spring Security default) to a friendly message
+      if (typeof raw === 'string' && raw.toLowerCase().includes('bad credentials')) {
+        setError('Incorrect email or password. Please try again.');
+      } else {
+        setError(raw || 'Incorrect email or password. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -56,7 +65,7 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-logo">
-          <div className="logo-icon">📆</div>
+          <BookEaseLogo height={55} style={{marginBottom: 8 }} />
           <h1>Welcome back</h1>
           <p>Sign in to your BookEase account</p>
         </div>
@@ -100,8 +109,6 @@ export default function Login() {
                 gap: '10px'
               }}
             >
-
-              {/* Show Password */}
               <div
                 style={{
                   display: 'flex',
@@ -115,39 +122,22 @@ export default function Login() {
                   type="checkbox"
                   checked={showPassword}
                   onChange={() => setShowPassword(!showPassword)}
-                  style={{
-                    width: '17px',
-                    height: '17px',
-                    cursor: 'pointer',
-                    accentColor: '#6d5efc'
-                  }}
+                  style={{ width: '17px', height: '17px', cursor: 'pointer', accentColor: '#6d5efc' }}
                 />
-
                 <label
-                  style={{
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    fontWeight: '500'
-                  }}
+                  style={{ cursor: 'pointer', userSelect: 'none', fontWeight: '500' }}
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   Show Password
                 </label>
               </div>
 
-              {/* Forgot Password */}
               <Link
                 to="/forgot-password"
-                style={{
-                  color: '#8b7fff',
-                  textDecoration: 'none',
-                  fontSize: '14px',
-                  fontWeight: '500'
-                }}
+                style={{ color: '#8b7fff', textDecoration: 'none', fontSize: '14px', fontWeight: '500' }}
               >
                 Forgot Password?
               </Link>
-
             </div>
           </div>
 
@@ -161,10 +151,8 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Divider */}
         <div className="auth-divider" style={{ margin: '20px 0' }}>or</div>
 
-        {/* Google Login */}
         <button
           className="btn btn-full"
           type="button"
@@ -174,9 +162,7 @@ export default function Login() {
             color: '#3c4043',
             border: '1px solid #dadce0',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
+            alignItems: 'center',gap: 10,
             fontWeight: 500,
             padding: '11px 20px',
             borderRadius: 8,

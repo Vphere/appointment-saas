@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
+import BookEaseLogo from './BookEaseLogo';
 import './Navbar.css';
 
 const CUSTOMER_NAV = [
@@ -76,8 +77,7 @@ export default function Navbar() {
           to={role === 'SUPER_ADMIN' ? '/admin' : '/dashboard'}
           className="navbar-brand"
         >
-          <div className="brand-icon">📆</div>
-          BookEase
+          <BookEaseLogo height={45} />
           {role === 'SUPER_ADMIN' && (
             <span className="navbar-admin-badge">ADMIN</span>
           )}

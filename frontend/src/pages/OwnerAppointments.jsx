@@ -146,20 +146,47 @@ function AppointmentCard({ appt, onAction, actionLoading }) {
 
           <div className="oa-actions">
 
-              {/* PENDING actions */}
               {appt.status === 'PENDING' && (
-                  <>
-                      <button className="btn btn-success btn-sm"
-                          onClick={() => onAction(appt.id, 'confirm')}
-                          disabled={!!actionLoading}>
-                          {actionLoading === `${appt.id}-confirm` ? '⏳ Confirming…' : '✓ Confirm'}
-                      </button>
-                      <button className="btn btn-danger btn-sm"
-                          onClick={() => onAction(appt.id, 'reject')}
-                          disabled={!!actionLoading}>
-                          {actionLoading === `${appt.id}-reject` ? '⏳ Rejecting…' : '✕ Reject'}
-                      </button>
-                  </>
+                <>
+                  {/* If deposit not paid, show warning and disable Confirm */}
+                  {appt.paymentStatus === 'PENDING_PAYMENT' && (
+                    <div style={{
+                      width: '100%',
+                      background: 'rgba(245,158,11,0.1)',
+                      border: '1px solid rgba(245,158,11,0.3)',
+                      borderRadius: 8,
+                      padding: '10px 14px',
+                      marginBottom: 10,
+                      fontSize: 13,
+                      color: '#fde68a',
+                      display: 'flex',
+                      gap: 8,
+                      alignItems: 'flex-start',
+                    }}>
+                      <span>⚠️</span>
+                      <span>
+                        <strong>Deposit not paid.</strong> The customer has not completed the 30% deposit
+                        payment. You cannot confirm this appointment until they do.
+                        You may still reject it.
+                      </span>
+                    </div>
+                  )}
+              
+                  <button className="btn btn-success btn-sm"
+                    onClick={() => onAction(appt.id, 'confirm')}
+                    disabled={!!actionLoading || appt.paymentStatus === 'PENDING_PAYMENT'}
+                    title={appt.paymentStatus === 'PENDING_PAYMENT' ? 'Cannot confirm — deposit not paid' : ''}
+                  >
+                    {actionLoading === `${appt.id}-confirm` ? '⏳ Confirming…' : '✓ Confirm'}
+                  </button>
+              
+                  <button className="btn btn-danger btn-sm"
+                    onClick={() => onAction(appt.id, 'reject')}
+                    disabled={!!actionLoading}
+                  >
+                    {actionLoading === `${appt.id}-reject` ? '⏳ Rejecting…' : '✕ Reject'}
+                  </button>
+                </>
               )}
 
               {/* CONFIRMED — send OTP button */}

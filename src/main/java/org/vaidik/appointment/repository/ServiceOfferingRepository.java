@@ -14,16 +14,16 @@ public interface ServiceOfferingRepository extends JpaRepository<ServiceOffering
     @Query("SELECT s FROM ServiceOffering s WHERE s.business.id = :businessId AND s.deletedAt IS NULL")
     List<ServiceOffering> findByBusinessIdAndDeletedFalse(@Param("businessId") Long businessId);
 
-    @Query("SELECT s FROM ServiceOffering s WHERE s.deletedAt IS NULL")
+    @Query("SELECT s FROM ServiceOffering s WHERE s.deletedAt IS NULL AND s.business.deletedAt IS NULL AND s.business.status = org.vaidik.appointment.entity.BusinessStatus.APPROVED")
     List<ServiceOffering> findByDeletedFalse();
 
     @Query("SELECT s FROM ServiceOffering s WHERE s.id = :id AND s.deletedAt IS NULL")
     Optional<ServiceOffering> findByIdAndDeletedFalse(@Param("id") Long id);
 
-    @Query("SELECT s FROM ServiceOffering s WHERE s.category = :category AND s.deletedAt IS NULL")
+    @Query("SELECT s FROM ServiceOffering s WHERE s.category = :category AND s.deletedAt IS NULL AND s.business.deletedAt IS NULL AND s.business.status = org.vaidik.appointment.entity.BusinessStatus.APPROVED")
     List<ServiceOffering> findByCategoryAndDeletedFalse(@Param("category") ServiceCategory category);
 
-    @Query("SELECT s FROM ServiceOffering s WHERE s.category = :category AND s.city = :city AND s.deletedAt IS NULL")
+    @Query("SELECT s FROM ServiceOffering s WHERE s.category = :category AND s.city = :city AND s.deletedAt IS NULL AND s.business.deletedAt IS NULL AND s.business.status = org.vaidik.appointment.entity.BusinessStatus.APPROVED")
     List<ServiceOffering> findByCategoryAndCityAndDeletedFalse( @Param("category") ServiceCategory category,
                                                                 @Param("city") String city);
 

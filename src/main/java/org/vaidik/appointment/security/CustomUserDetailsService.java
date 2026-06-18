@@ -24,6 +24,8 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .withUsername(user.getEmail())
                 .password(user.getPassword() != null ? user.getPassword() : "{noop}oauth_user")
                 .authorities("ROLE_" + role)
+                // Deactivated (soft-deleted) accounts cannot authenticate.
+                .disabled(user.isDeleted())
                 .build();
     }
 }

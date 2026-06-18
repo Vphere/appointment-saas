@@ -25,6 +25,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminUserManagement from './pages/AdminUserManagement';
 import AdminReviews from './pages/AdminReviews';
 import ConsentConfirm from './pages/ConsentConfirm';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 
 function AppLayout({ children }) {
   return (
@@ -54,6 +56,20 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPassword/>} />
           <Route path="/profile" element={<ProfilePage/>} />
           <Route path="/consent/:token" element={<ConsentConfirm/>} />
+          <Route path="/privacy-policy"
+            element={
+              <AppLayout>
+                <PrivacyPolicy />
+              </AppLayout>
+            }
+          />
+          <Route path="/terms-of-service"
+            element={
+              <AppLayout>
+                <TermsOfService />
+              </AppLayout>
+            }
+          />
 
           {/* Protected */}
           <Route path="/dashboard" element={

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getAllUsers, updateUserRole, deleteUser } from '../api/admin';
+import { getAllUsers, updateUserRole, deleteUser, restoreUser } from '../api/admin';
 import Spinner from '../components/Spinner';
 import './AdminUserManagement.css';
 
@@ -62,22 +62,57 @@ function RoleModal({ user, onConfirm, onClose, loading }) {
   );
 }
 
-// ── Delete Confirm Modal ─────────────────────────────────────────
-function DeleteModal({ user, onConfirm, onClose, loading }) {
+// ── Deactivate Confirm Modal ─────────────────────────────────────
+function DeactivateModal({ user, reason, onReasonChange, onConfirm, onClose, loading }) {
   return (
     <div className="aum-overlay" onClick={onClose}>
       <div className="aum-modal" onClick={(e) => e.stopPropagation()}>
         <div className="aum-modal-icon">⚠️</div>
-        <h3>Delete User?</h3>
+        <h3>Deactivate User?</h3>
         <p className="aum-modal-desc">
-          Permanently delete <strong>{user.name || user.email}</strong>?
-          All their data including appointments and reviews will be removed.
-          This cannot be undone.
+          Deactivate <strong>{user.name || user.email}</strong>? They will no
+          longer be able to log in. Any of their pending or confirmed
+          appointments will be <strong>cancelled</strong> (with a refund
+          attempted where a deposit was paid), and an email will be sent to
+          them and to the affected business owner(s) listing the cancelled
+          appointment(s). Their account, appointments, and reviews remain in
+          the system and can be restored later.
         </p>
+        <textarea
+          className="aum-reason-input"
+          placeholder="Reason (optional) — shown to the user, e.g. 'Violated terms of service'"
+          value={reason}
+          onChange={(e) => onReasonChange(e.target.value)}
+          rows={3}
+        />
         <div className="aum-modal-actions">
           <button className="btn btn-secondary" onClick={onClose} disabled={loading}>Cancel</button>
           <button className="btn btn-danger" onClick={onConfirm} disabled={loading}>
-            {loading ? '⏳' : '🗑 Delete Permanently'}
+            {loading ? '⏳' : '🚫 Deactivate'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Restore Confirm Modal ────────────────────────────────────────
+function RestoreModal({ user, onConfirm, onClose, loading }) {
+  return (
+    <div className="aum-overlay" onClick={onClose}>
+      <div className="aum-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="aum-modal-icon">♻️</div>
+        <h3>Restore User?</h3>
+        <p className="aum-modal-desc">
+          Restore <strong>{user.name || user.email}</strong>? They will be
+          able to log in again immediately. Appointments that were cancelled
+          when the account was deactivated will <strong>not</strong> be
+          automatically restored.
+        </p>
+        <div className="aum-modal-actions">
+          <button className="btn btn-secondary" onClick={onClose} disabled={loading}>Cancel</button>
+          <button className="btn btn-primary" onClick={onConfirm} disabled={loading}>
+            {loading ? '⏳' : '♻ Restore'}
           </button>
         </div>
       </div>
@@ -94,7 +129,9 @@ export default function AdminUserManagement() {
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage]         = useState({ text: '', type: '' });
   const [roleTarget, setRoleTarget]   = useState(null);   // user to change role
-  const [deleteTarget, setDeleteTarget] = useState(null); // user to delete
+  const [deleteTarget, setDeleteTarget] = useState(null); // user to deactivate
+  const [restoreTarget, setRestoreTarget] = useState(null); // user to restore
+  const [deleteReason, setDeleteReason] = useState('');
 
   const fetchUsers = () => {
     setLoading(true);
@@ -128,12 +165,27 @@ export default function AdminUserManagement() {
   const handleDelete = async () => {
     setActionLoading(true);
     try {
-      await deleteUser(deleteTarget.id);
-      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
-      showMsg('✓ User deleted successfully');
+      const res = await deleteUser(deleteTarget.id, deleteReason);
+      setUsers((prev) => prev.map((u) => (u.id === deleteTarget.id ? res.data : u)));
+      showMsg(`✓ ${deleteTarget.name || deleteTarget.email} has been deactivated`);
       setDeleteTarget(null);
+      setDeleteReason('');
     } catch (e) {
-      showMsg(e.response?.data?.message || '✗ Failed to delete user', 'error');
+      showMsg(e.response?.data?.message || '✗ Failed to deactivate user', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setActionLoading(true);
+    try {
+      const res = await restoreUser(restoreTarget.id);
+      setUsers((prev) => prev.map((u) => (u.id === restoreTarget.id ? res.data : u)));
+      showMsg(`✓ ${restoreTarget.name || restoreTarget.email} has been restored`);
+      setRestoreTarget(null);
+    } catch (e) {
+      showMsg(e.response?.data?.message || '✗ Failed to restore user', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -234,6 +286,11 @@ export default function AdminUserManagement() {
                   <div className="aum-user-name">{user.name || '—'}</div>
                   <div className="aum-user-email">{user.email}</div>
                   {user.phone && <div className="aum-user-phone">📞 {user.phone}</div>}
+                  {user.deleted && (
+                    <div className="aum-user-deactivated" title={user.deletionReason || ''}>
+                      🚫 Deactivated{user.deletionReason ? ` — ${user.deletionReason}` : ''}
+                    </div>
+                  )}
                 </div>
 
                 {/* Role badge */}
@@ -248,8 +305,17 @@ export default function AdminUserManagement() {
                     <div className="aum-locked-badge" title="Super Admin role cannot be changed via UI">
                       🔒 Protected
                     </div>
+                  ) : user.deleted ? (
+                    // Deactivated users — only restore
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => setRestoreTarget(user)}
+                      title="Restore user"
+                    >
+                      ♻ Restore
+                    </button>
                   ) : (
-                    // Regular users — show change role + delete
+                    // Regular users — show change role + deactivate
                     <>
                       <button
                         className="btn btn-outline btn-sm"
@@ -261,9 +327,9 @@ export default function AdminUserManagement() {
                       <button
                         className="btn btn-danger btn-sm"
                         onClick={() => setDeleteTarget(user)}
-                        title="Delete user"
+                        title="Deactivate user"
                       >
-                        🗑
+                        🚫
                       </button>
                     </>
                   )}
@@ -284,12 +350,24 @@ export default function AdminUserManagement() {
         />
       )}
 
-      {/* Delete modal */}
+      {/* Deactivate modal */}
       {deleteTarget && (
-        <DeleteModal
+        <DeactivateModal
           user={deleteTarget}
+          reason={deleteReason}
+          onReasonChange={setDeleteReason}
           onConfirm={handleDelete}
-          onClose={() => setDeleteTarget(null)}
+          onClose={() => { setDeleteTarget(null); setDeleteReason(''); }}
+          loading={actionLoading}
+        />
+      )}
+
+      {/* Restore modal */}
+      {restoreTarget && (
+        <RestoreModal
+          user={restoreTarget}
+          onConfirm={handleRestore}
+          onClose={() => setRestoreTarget(null)}
           loading={actionLoading}
         />
       )}

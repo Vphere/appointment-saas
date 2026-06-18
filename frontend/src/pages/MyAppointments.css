@@ -389,6 +389,7 @@
   font-size: 0.85rem;
   width: fit-content;
   max-width: 210px;
+  color-scheme: dark;
 }
 .ma-date-input:focus { outline: none; border-color: rgba(108,99,255,0.5); }
 

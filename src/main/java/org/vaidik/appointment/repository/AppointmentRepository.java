@@ -1,12 +1,11 @@
 package org.vaidik.appointment.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 import org.vaidik.appointment.entity.Appointment;
 import org.vaidik.appointment.entity.AppointmentStatus;
+import org.vaidik.appointment.entity.PaymentStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -16,6 +15,7 @@ import java.util.List;
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
     List<Appointment> findByUserId(Long userId);
+
     @Query("SELECT a FROM Appointment a WHERE a.user.id = :userId ORDER BY a.createdAt DESC")
     List<Appointment> findByUserIdOrderByCreatedAtDesc(@Param("userId") Long userId);
 
@@ -35,9 +35,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
                                                   List<AppointmentStatus> statuses);
 
     boolean existsByServiceIdAndAppointmentDateAndAppointmentTime(
-            Long serviceId,
-            LocalDate date,
-            LocalTime time
+            Long serviceId, LocalDate date, LocalTime time
     );
 
     @Query("SELECT COUNT(a) > 0 FROM Appointment a " +
@@ -52,13 +50,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("excludedStatuses") List<AppointmentStatus> excludedStatuses
     );
 
-    List<Appointment> findByServiceIdAndAppointmentDate(
-            Long serviceId,
-            LocalDate appointmentDate
-    );
+    List<Appointment> findByServiceIdAndAppointmentDate(Long serviceId, LocalDate appointmentDate);
 
     long countByBusinessId(Long businessId);
-
     long countByBusinessIdAndStatus(Long businessId, AppointmentStatus status);
     long countByStatus(AppointmentStatus status);
 
@@ -72,14 +66,19 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     """)
     List<Appointment> findByOwnerIdWithJoinFetch(@Param("ownerId") Long ownerId);
 
-    /**
-     * Finds all CONFIRMED (or PENDING) appointments scheduled for tomorrow.
-     * Used by the reminder scheduler to send 24-hour reminder emails.
-     * Finds appointments whose datetime falls within the next 24 hours,
-     * haven't had a reminder sent yet, and are in an active status.
-     * CONCAT(date, ' ', time) builds a datetime string for comparison.
-     * :now and :in24Hours are LocalDateTime parameters passed by the scheduler.
-     */
+    @Query("""
+        SELECT DISTINCT a FROM Appointment a
+        JOIN FETCH a.user
+        JOIN FETCH a.business b
+        JOIN FETCH b.owner
+        JOIN FETCH a.service
+        WHERE a.user.id = :userId AND a.status IN :statuses
+        ORDER BY a.appointmentDate, a.appointmentTime
+    """)
+    List<Appointment> findByUserIdAndStatusInWithJoinFetch(
+            @Param("userId") Long userId,
+            @Param("statuses") List<AppointmentStatus> statuses
+    );
 
     @Query(value = """
         SELECT * FROM appointments a
@@ -92,4 +91,46 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("in24Hours") LocalDateTime in24Hours,
             @Param("statuses") List<String> statuses
     );
+
+    @Query("""
+        SELECT DISTINCT a FROM Appointment a
+        JOIN FETCH a.user
+        JOIN FETCH a.business
+        JOIN FETCH a.service
+        WHERE a.paymentStatus = :paymentStatus
+        AND a.status = :appointmentStatus
+        AND a.createdAt < :cutoff
+    """)
+    List<Appointment> findExpiredPendingPayments(
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("appointmentStatus") AppointmentStatus appointmentStatus,
+            @Param("cutoff") LocalDateTime cutoff
+    );
+
+
+    /**
+     * Finds appointments still in PENDING_PAYMENT state whose createdAt falls
+     * within the nudge window [nudgeFrom, nudgeTo].
+     *
+     * Used by PaymentTimeoutScheduler to send a "your slot expires soon" email
+     * when ~half the reservation window has elapsed and the deposit is still unpaid.
+     * JOIN FETCHes included so the scheduler can read lazy fields off-thread.
+     */
+    @Query("""
+        SELECT DISTINCT a FROM Appointment a
+        JOIN FETCH a.user
+        JOIN FETCH a.business
+        JOIN FETCH a.service
+        WHERE a.paymentStatus = :paymentStatus
+        AND a.status = :appointmentStatus
+        AND a.depositNudgeSent = false
+        AND a.createdAt BETWEEN :nudgeFrom AND :nudgeTo
+    """)
+    List<Appointment> findAppointmentsNeedingDepositNudge(
+            @Param("paymentStatus") PaymentStatus paymentStatus,
+            @Param("appointmentStatus") AppointmentStatus appointmentStatus,
+            @Param("nudgeFrom") LocalDateTime nudgeFrom,
+            @Param("nudgeTo") LocalDateTime nudgeTo
+    );
+
 }

@@ -5,6 +5,7 @@ import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.razorpay.Refund;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
@@ -47,6 +49,21 @@ public class PaymentService {
     @Value("${razorpay.currency:INR}")
     private String currency;
 
+    /** Cached Razorpay client — created lazily on first use, reused after that. */
+    private volatile RazorpayClient razorpayClient;
+
+    private RazorpayClient getRazorpayClient() throws RazorpayException {
+        if (razorpayClient == null) {
+            synchronized (this) {
+                if (razorpayClient == null) {
+                    razorpayClient = new RazorpayClient(keyId, keySecret);
+                }
+            }
+        }
+        return razorpayClient;
+    }
+
+
     // Platform fee percentage
     private static final double PLATFORM_FEE_PERCENT = 2.0;
 
@@ -57,36 +74,37 @@ public class PaymentService {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Appointment not found"));
 
-        // Verify this appointment belongs to this user
         if (!appointment.getUser().getEmail().equals(userEmail)) {
             throw new RuntimeException("Unauthorized");
         }
 
-        // Don't allow creating order if already paid
-        if (appointment.getPaymentStatus() != PaymentStatus.PENDING_PAYMENT) {
-            throw new RuntimeException("Payment already initiated for this appointment");
+        // Block retry if deposit is already captured — no need to create another order
+        PaymentStatus ps = appointment.getPaymentStatus();
+        if (ps == PaymentStatus.DEPOSIT_PAID ||
+                ps == PaymentStatus.CONFIRMED    ||
+                ps == PaymentStatus.COMPLETED) {
+            throw new RuntimeException("Deposit payment has already been completed for this appointment.");
         }
+
+        paymentRepository.deleteByAppointmentIdDirect(appointmentId);
 
         ServiceOffering service = appointment.getService();
         BigDecimal totalPrice   = BigDecimal.valueOf(service.getPrice());
 
-        // Calculate deposit (30% of total)
         BigDecimal depositAmount = totalPrice
                 .multiply(BigDecimal.valueOf(depositPercent))
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
-        // Calculate platform fee (2% of deposit)
         BigDecimal platformFee = depositAmount
                 .multiply(BigDecimal.valueOf(PLATFORM_FEE_PERCENT))
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
         BigDecimal payoutAmount = depositAmount.subtract(platformFee);
 
-        // Razorpay expects amount in paise (1 rupee = 100 paise)
         int amountInPaise = depositAmount.multiply(BigDecimal.valueOf(100)).intValue();
 
         try {
-            RazorpayClient client = new RazorpayClient(keyId, keySecret);
+            RazorpayClient client = getRazorpayClient();
 
             JSONObject orderRequest = new JSONObject();
             orderRequest.put("amount",   amountInPaise);
@@ -96,7 +114,6 @@ public class PaymentService {
             Order order = client.orders.create(orderRequest);
             String razorpayOrderId = order.get("id");
 
-            // Save payment record
             Payment payment = Payment.builder()
                     .appointment(appointment)
                     .razorpayOrderId(razorpayOrderId)
@@ -107,7 +124,6 @@ public class PaymentService {
                     .build();
             paymentRepository.save(payment);
 
-            // Save amounts on appointment
             appointment.setDepositAmount(depositAmount);
             appointment.setPlatformFee(platformFee);
             appointment.setPayoutAmount(payoutAmount);
@@ -174,7 +190,7 @@ public class PaymentService {
         try {
             emailService.sendDepositConfirmationEmail(appointment, payment);
         } catch (Exception e) {
-            System.err.println("Deposit confirmation email failed: " + e.getMessage());
+            log.error("Deposit confirmation email failed: {}", e.getMessage());
         }
 
         return toAppointmentResponse(appointment);
@@ -221,7 +237,7 @@ public class PaymentService {
         // Call Razorpay refund API (only if refund amount > 0)
         if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
             try {
-                RazorpayClient client = new RazorpayClient(keyId, keySecret);
+                RazorpayClient client = getRazorpayClient();
                 JSONObject refundRequest = new JSONObject();
                 refundRequest.put("amount",
                         refundAmount.multiply(BigDecimal.valueOf(100)).intValue());
@@ -230,7 +246,7 @@ public class PaymentService {
                 payment.setRefundId(refund.get("id"));
                 payment.setRefundStatus("INITIATED");
             } catch (RazorpayException e) {
-                System.err.println("Razorpay refund failed: " + e.getMessage());
+                log.error("Razorpay refund failed: {}", e.getMessage());
                 payment.setRefundStatus("FAILED");
             }
         }
@@ -251,63 +267,9 @@ public class PaymentService {
         try {
             emailService.sendRefundNotificationEmail(appointment, refundAmount, newPaymentStatus);
         } catch (Exception e) {
-            System.err.println("Refund notification email failed: " + e.getMessage());
+            log.error("Refund notification email failed: {}", e.getMessage());
         }
     }
-
-    // ── 4. Initiate Service Completion Consent (OTP + Link) ──────────────────
-
-//    @Transactional
-//    public void initiateCompletion(Long appointmentId, String ownerEmail) {
-//        Appointment appointment = appointmentRepository.findById(appointmentId)
-//                .orElseThrow(() -> new RuntimeException("Appointment not found"));
-//
-//        // Verify owner
-//        if (!appointment.getBusiness().getOwner().getEmail().equals(ownerEmail)) {
-//            throw new RuntimeException("Not authorized");
-//        }
-//
-//        if (appointment.getStatus() != AppointmentStatus.CONFIRMED) {
-//            throw new RuntimeException("Only CONFIRMED appointments can be marked for completion");
-//        }
-//
-//        // Check if consent already exists
-//        consentRepository.findByAppointmentId(appointmentId).ifPresent(existing -> {
-//            if (!existing.getIsUsed() && existing.getResendCount() >= 3) {
-//                throw new RuntimeException("Max OTP resend attempts reached");
-//            }
-//            consentRepository.delete(existing); // Delete old one, create fresh
-//        });
-//
-//        // Generate 6-digit OTP
-//        String otp        = String.valueOf((int)(Math.random() * 900000) + 100000);
-//        String otpHash    = hashOtp(otp);
-//        String token      = UUID.randomUUID().toString();
-//        LocalDateTime exp = LocalDateTime.now().plusMinutes(30);
-//
-//        ServiceCompletionConsent consent = ServiceCompletionConsent.builder()
-//                .appointment(appointment)
-//                .otpHash(otpHash)
-//                .consentToken(token)
-//                .expiresAt(exp)
-//                .isUsed(false)
-//                .resendCount(0)
-//                .createdAt(LocalDateTime.now())
-//                .build();
-//        consentRepository.save(consent);
-//
-//        // Update appointment status
-//        appointment.setStatus(AppointmentStatus.CONFIRMED); // stays CONFIRMED until consent
-//        appointment.setPaymentStatus(PaymentStatus.AWAITING_CONSENT);
-//        appointmentRepository.save(appointment);
-//
-//        // Send OTP + link to customer
-//        try {
-//            emailService.sendCompletionConsentEmail(appointment, otp, token);
-//        } catch (Exception e) {
-//            System.err.println("Consent email failed: " + e.getMessage());
-//        }
-//    }
 
     @Transactional
     public void initiateCompletion(Long appointmentId, String ownerEmail) {
@@ -358,7 +320,7 @@ public class PaymentService {
         try {
             emailService.sendCompletionConsentEmail(appointment, otp, token);
         } catch (Exception e) {
-            System.err.println("Consent email failed: " + e.getMessage());
+            log.error("Consent email failed: {}", e.getMessage());
         }
     }
 
@@ -435,40 +397,8 @@ public class PaymentService {
         consentRepository.save(consent);
 
         // TODO: Create PaymentDispute record here when you add that entity
-        System.out.println("DISPUTE raised for appointment " + appointment.getId() + ": " + reason);
+        log.warn("DISPUTE raised for appointmentId={}: {}", appointment.getId(), reason);
     }
-
-    // ── Private helpers ───────────────────────────────────────────────────────
-
-//    private void validateAndMarkConsent(ServiceCompletionConsent consent,
-//                                        String otp,
-//                                        Appointment appointment,
-//                                        String resolvedBy) {
-//        if ("OTP".equals(resolvedBy)) {
-//            if (!verifyOtp(otp, consent.getOtpHash())) {
-//                throw new RuntimeException("Invalid OTP");
-//            }
-//            if (LocalDateTime.now().isAfter(consent.getExpiresAt())) {
-//                throw new RuntimeException("OTP has expired");
-//            }
-//        }
-//
-//        consent.setIsUsed(true);
-//        consent.setResolvedBy(resolvedBy);
-//        consentRepository.save(consent);
-//
-//        // Mark appointment as COMPLETED
-//        appointment.setStatus(AppointmentStatus.COMPLETED);
-//        appointment.setPaymentStatus(PaymentStatus.COMPLETED);
-//        appointmentRepository.save(appointment);
-//
-//        // Send completion emails
-//        try {
-//            emailService.sendServiceCompletedEmail(appointment);
-//        } catch (Exception e) {
-//            System.err.println("Completion email failed: " + e.getMessage());
-//        }
-//    }
 
     private void validateAndMarkConsent(ServiceCompletionConsent consent,
                                         String otp,
@@ -501,7 +431,7 @@ public class PaymentService {
         try {
             emailService.sendServiceConfirmedEmail(appointment);
         } catch (Exception e) {
-            System.err.println("Service confirmed email failed: " + e.getMessage());
+            log.error("Service confirmed email failed: {}", e.getMessage());
         }
     }
 

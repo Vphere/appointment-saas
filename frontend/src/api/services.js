@@ -12,12 +12,18 @@ export const deleteService = (id) => api.delete(`/api/services/${id}`);
 
 export function formatServiceLocation(service) {
   const parts = [];
+
   if (service.address) parts.push(service.address);
-  if (service.city)    parts.push(service.city);
+  if (service.city) parts.push(service.city);
   if (service.state && !service.city) parts.push(service.state);
-  return parts.join(', ') || 'Location not set';
+
+  return parts.join(', ');
 }
 
 export function serviceDropdownLabel(service) {
-  return `${service.name} — ${formatServiceLocation(service)}`;
+  const location = formatServiceLocation(service);
+
+  return location
+    ? `${service.name} — ${location}`
+    : service.name;
 }

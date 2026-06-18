@@ -1,0 +1,396 @@
+/* ===================================
+   BOOKEASE LEGAL PAGES
+=================================== */
+
+.legal-page {
+  min-height: calc(100vh - 80px);
+
+  padding: 24px;
+
+  background:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px),
+    #05071a;
+
+  background-size: 48px 48px;
+}
+
+.legal-card {
+  max-width: 1400px;
+  margin: 0 auto;
+
+  background: rgba(17, 21, 58, 0.82);
+
+  border: 1px solid rgba(122, 98, 255, 0.18);
+
+  border-radius: 24px;
+
+  padding: 40px;
+
+  position: relative;
+  overflow: hidden;
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+/* Subtle purple glow */
+
+.legal-card::before {
+  content: "";
+
+  position: absolute;
+
+  width: 450px;
+  height: 450px;
+
+  top: -220px;
+  right: -120px;
+
+  border-radius: 50%;
+
+  background: radial-gradient(
+    circle,
+    rgba(123, 97, 255, 0.12),
+    transparent 70%
+  );
+
+  pointer-events: none;
+}
+
+/* =========================
+   Badge
+========================= */
+
+.legal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 12px 22px;
+
+  border-radius: 999px;
+
+  background: rgba(123, 97, 255, 0.12);
+
+  border: 1px solid rgba(123, 97, 255, 0.35);
+
+  color: #9b8cff;
+
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+
+  margin-bottom: 24px;
+}
+
+/* =========================
+   Main Heading
+========================= */
+
+.legal-card h1 {
+  color: #ffffff;
+
+  font-size: 3rem;
+  font-weight: 800;
+
+  line-height: 1.1;
+
+  margin-bottom: 12px;
+}
+
+/* Subtitle */
+
+.legal-subtitle {
+  color: #a5acc7;
+
+  font-size: 1rem;
+  line-height: 1.7;
+
+
+  margin-bottom: 16px;
+}
+
+/* Last Updated */
+
+.legal-updated {
+  color: #8f97b5;
+
+  font-size: 0.95rem;
+
+  margin-bottom: 36px;
+}
+
+/* =========================
+   Sections
+========================= */
+
+.legal-card section {
+  margin-bottom: 28px;
+}
+
+.legal-card h2 {
+  color: #ffffff;
+
+  font-size: 1.45rem;
+  font-weight: 700;
+
+  margin-bottom: 12px;
+}
+
+.legal-card p {
+  color: #c4c8e1;
+
+  font-size: 1rem;
+
+  line-height: 1.9;
+}
+
+.legal-card ul {
+  padding-left: 24px;
+  margin-top: 10px;
+}
+
+.legal-card li {
+  color: #c4c8e1;
+
+  font-size: 1rem;
+
+  line-height: 1.9;
+
+  margin-bottom: 6px;
+}
+
+/* =========================
+   Contact Box
+========================= */
+
+.legal-contact {
+  margin-top: 12px;
+
+  padding: 18px;
+
+  border-radius: 16px;
+
+  background: rgba(255,255,255,0.03);
+
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* =========================
+   Links
+========================= */
+
+.legal-card a {
+  color: #8f7cff;
+  text-decoration: none;
+}
+
+.legal-card a:hover {
+  text-decoration: underline;
+}
+
+/* =========================
+   Responsive
+========================= */
+
+@media (max-width: 992px) {
+  .legal-card {
+    padding: 32px;
+  }
+
+  .legal-card h1 {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .legal-page {
+    padding: 16px;
+  }
+
+  .legal-card {
+    padding: 24px;
+    border-radius: 20px;
+  }
+
+  .legal-card h1 {
+    font-size: 2rem;
+  }
+
+  .legal-card h2 {
+    font-size: 1.25rem;
+  }
+
+  .legal-card p,
+  .legal-card li,
+  .legal-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .legal-badge {
+    font-size: 0.85rem;
+    padding: 10px 18px;
+  }
+}
+/* =========================
+   Table of Contents
+========================= */
+
+.legal-toc {
+  background: rgba(99,102,241,0.06);
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 36px;
+}
+
+.legal-toc-title {
+  font-size: 0.72rem !important;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6366f1 !important;
+  margin: 0 0 12px !important;
+}
+
+.legal-toc ol {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 4px 24px;
+}
+
+.legal-toc li {
+  font-size: 0.84rem !important;
+  margin-bottom: 2px !important;
+  line-height: 1.6 !important;
+}
+
+.legal-toc a {
+  color: #a5b4fc !important;
+}
+
+.legal-toc a:hover {
+  color: #818cf8 !important;
+}
+
+/* =========================
+   Sub-headings (h3)
+========================= */
+
+.legal-card h3 {
+  color: #e2e8f0;
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 18px 0 8px;
+}
+
+/* =========================
+   Ordered lists (numbered)
+========================= */
+
+.legal-card ol {
+  padding-left: 24px;
+  margin-top: 10px;
+}
+
+.legal-card ol li {
+  color: #c4c8e1;
+  font-size: 1rem;
+  line-height: 1.9;
+  margin-bottom: 8px;
+}
+
+/* =========================
+   Table
+========================= */
+
+.legal-table-wrap {
+  overflow-x: auto;
+  margin: 16px 0;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.legal-table thead tr {
+  background: rgba(99,102,241,0.12);
+}
+
+.legal-table th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a5b4fc;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.legal-table td {
+  padding: 10px 16px;
+  color: #c4c8e1;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  line-height: 1.5;
+}
+
+.legal-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.legal-table tbody tr:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+/* =========================
+   Contact Block
+========================= */
+
+.legal-contact-block {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.legal-contact-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+  color: #c4c8e1;
+}
+
+.legal-contact-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+}
+
+/* =========================
+   Section anchors (smooth scroll target offset)
+========================= */
+
+.legal-card section {
+  scroll-margin-top: 80px;
+}
+
+@media (max-width: 600px) {
+  .legal-toc ol {
+    grid-template-columns: 1fr;
+  }
+}

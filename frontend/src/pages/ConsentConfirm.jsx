@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getConsentDetails, confirmByLink, disputeByLink } from '../api/payments';
+import BookEaseLogo from '../components/BookEaseLogo';
 
 export default function ConsentConfirm() {
     const { token } = useParams();
@@ -50,7 +51,7 @@ export default function ConsentConfirm() {
     return (
         <div style={s.page}>
             <div style={s.card}>
-                <div style={s.logo}>📅 BookEase</div>
+                <BookEaseLogo height={45} style={{marginBottom: 24 }} />
 
                 {step === 'LOADING' && (
                     <p style={s.muted}>Verifying your link…</p>
@@ -151,8 +152,7 @@ function Row({ label, value }) {
 const s = {
     page: {
         minHeight: '100vh', background: '#0d0f19',
-        display: 'flex', alignItems: 'center',
-        justifyContent: 'center', padding: '40px 20px',
+        display: 'flex', alignItems: 'center',padding: '40px 20px',
     },
     card: {
         background: '#1a1d2e', border: '1px solid rgba(255,255,255,0.08)',

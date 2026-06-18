@@ -9,7 +9,6 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import org.vaidik.appointment.entity.AuthProvider;
-import org.vaidik.appointment.entity.Role;
 import org.vaidik.appointment.entity.User;
 import org.vaidik.appointment.repository.UserRepository;
 import org.vaidik.appointment.security.JwtUtil;
@@ -40,6 +39,12 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         Optional<User> existing = userRepository.findByEmail(email);
 
+        // ── Deactivated (soft-deleted) account → block login entirely ──
+        if (existing.isPresent() && existing.get().isDeleted()) {
+            response.sendRedirect(frontendUrl + "/login?error=account_deactivated");
+            return;
+        }
+
         // ── Existing LOCAL user tried Google ──
         if (existing.isPresent() && existing.get().getProvider() == AuthProvider.LOCAL) {
             response.sendRedirect(frontendUrl + "/login?error=use_password");
@@ -52,7 +57,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             String token = jwtUtil.generateToken(
                     user.getEmail(),
                     user.getRole().name(),
-                    user.getName()
+                    user.getName(),
+                    "GOOGLE"
             );
             response.sendRedirect(frontendUrl + "/oauth2/callback?token=" + token);
             return;

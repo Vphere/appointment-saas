@@ -202,16 +202,89 @@ function TabBtn({id,label,active,onClick,badge}) {
 }
 
 function downloadCSV(data) {
-  if(!data?.recentCompletedAppointments?.length) return;
-  const headers=["Date","Customer","Service","Business","Revenue (INR)","Status"];
-  const rows=data.recentCompletedAppointments.map(r=>
-    [r.date,`"${r.customerName}"`,`"${r.serviceName}"`,`"${r.businessName}"`,r.revenue,r.status].join(",")
-  );
-  const csv=[headers.join(","),...rows].join("\n");
-  const blob=new Blob([csv],{type:"text/csv"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url;a.download=`revenue_report_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+  if (!data) return;
+
+  const lines = [];
+
+  // ── Section 1: Summary ────────────────────────────────────────
+  lines.push('BOOKEASE ANALYTICS REPORT');
+  lines.push(`Generated,${new Date().toLocaleString('en-IN')}`);
+  lines.push('');
+  lines.push('SUMMARY');
+  lines.push(`Total Revenue (INR),${data.totalRevenue ?? 0}`);
+  lines.push(`Total Appointments,${data.totalAppointments ?? 0}`);
+  lines.push(`Completed,${data.totalCompleted ?? 0}`);
+  lines.push(`Cancelled,${data.totalCancelled ?? 0}`);
+  lines.push(`Pending,${data.totalPending ?? 0}`);
+  lines.push(`Confirmed,${data.totalConfirmed ?? 0}`);
+  lines.push('');
+
+  // ── Section 2: Revenue by Month ──────────────────────────────
+  lines.push('REVENUE BY MONTH');
+  lines.push('Month,Revenue (INR)');
+  if (data.revenueByMonth) {
+    Object.entries(data.revenueByMonth)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .forEach(([month, rev]) => lines.push(`${month},${rev}`));
+  }
+  lines.push('');
+
+  // ── Section 3: Appointments by Month ─────────────────────────
+  lines.push('APPOINTMENTS BY MONTH');
+  lines.push('Month,Count');
+  if (data.appointmentsByMonth) {
+    Object.entries(data.appointmentsByMonth)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .forEach(([month, count]) => lines.push(`${month},${count}`));
+  }
+  lines.push('');
+
+  // ── Section 4: Revenue by Business ───────────────────────────
+  lines.push('REVENUE BY BUSINESS');
+  lines.push('Business,Revenue (INR)');
+  if (data.revenueByBusiness) {
+    Object.entries(data.revenueByBusiness)
+      .sort(([, a], [, b]) => b - a)
+      .forEach(([name, rev]) => lines.push(`"${name}",${rev}`));
+  }
+  lines.push('');
+
+  // ── Section 5: Revenue by Service ────────────────────────────
+  lines.push('REVENUE BY SERVICE');
+  lines.push('Service,Revenue (INR)');
+  if (data.revenueByService) {
+    Object.entries(data.revenueByService)
+      .sort(([, a], [, b]) => b - a)
+      .forEach(([name, rev]) => lines.push(`"${name}",${rev}`));
+  }
+  lines.push('');
+
+  // ── Section 6: All Completed Appointments ────────────────────
+  lines.push('ALL COMPLETED APPOINTMENTS');
+  lines.push('Date,Customer,Service,Business,Revenue (INR),Status');
+  if (data.recentCompletedAppointments?.length) {
+    data.recentCompletedAppointments
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+      .forEach(r => {
+        lines.push([
+          r.date,
+          `"${r.customerName || ''}"`,
+          `"${r.serviceName || ''}"`,
+          `"${r.businessName || ''}"`,
+          r.revenue,
+          r.status
+        ].join(','));
+      });
+  }
+
+  const csv = lines.join('\n');
+  const bom  = '\uFEFF'; // UTF-8 BOM so Excel renders dates and ₹ correctly
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `bookease_analytics_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
   URL.revokeObjectURL(url);
 }
 

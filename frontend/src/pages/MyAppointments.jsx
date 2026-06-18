@@ -7,6 +7,7 @@ import Spinner from '../components/Spinner';
 import ReviewRemovedNotice from '../components/ReviewRemovedNotice';
 import { formatDateDisplay, formatFullDateTime, isUpcomingDate } from '../utils/dateUtils';
 import './MyAppointments.css';
+import { useNavigate } from 'react-router-dom';
 
 // ── Cancel Modal ───────────────────────────────────────────────────
 function CancelModal({ appointment, onConfirm, onClose, loading }) {
@@ -170,6 +171,7 @@ export default function MyAppointments() {
   const [actionLoading, setActionLoading] = useState(null);
   const [editingId, setEditingId]         = useState(null);
   const [existingReviews, setExistingReviews] = useState({});
+  const navigate = useNavigate();
 
   useEffect(() => { fetchAppointments(); }, []);
 
@@ -198,11 +200,12 @@ export default function MyAppointments() {
 
   const handleCancelConfirm = async () => {
     if (!cancelTarget) return;
-    setActionLoading(cancelTarget.id);
+    const targetId = cancelTarget.id;          
+    setActionLoading(targetId);
     try {
-      await cancelAppointment(cancelTarget.id);
-      setCancelTarget(null);
-      fetchAppointments();
+      await cancelAppointment(targetId);
+      await fetchAppointments();                
+      setCancelTarget(null);                   
     } catch (e) {
       alert(e.response?.data?.message || 'Failed to cancel');
     } finally {
@@ -240,6 +243,15 @@ export default function MyAppointments() {
   };
 
   const FILTERS = ['ALL', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'AWAITING_REMAINING_PAYMENT'];
+ 
+  const FILTER_LABELS = {
+    ALL:                       'All',
+    PENDING:                   'Pending',
+    CONFIRMED:                 'Confirmed',
+    COMPLETED:                 'Completed',
+    CANCELLED:                 'Cancelled',
+    AWAITING_REMAINING_PAYMENT:'Awaiting Remaining Payment',
+  };
   const filtered = filter === 'ALL'
     ? appointments
     : appointments.filter(a => a.status === filter);
@@ -290,7 +302,7 @@ export default function MyAppointments() {
           <button key={f} data-filter={f}
             className={`ma-filter-btn ${filter === f ? 'active' : ''}`}
             onClick={() => setFilter(f)}>
-            <span>{f}</span>
+            <span>{FILTER_LABELS[f] || f}</span>
             {f !== 'ALL' && statusCounts[f] > 0 && (
               <span className="ma-filter-count">{statusCounts[f]}</span>
             )}
@@ -406,8 +418,82 @@ export default function MyAppointments() {
                   />
                 ) : (
                   <div className="ma-card-actions">
-
-                    {(appt.status === 'PENDING' || appt.status === 'CONFIRMED') && (
+                     
+                    {appt.paymentStatus === 'PENDING_PAYMENT' && appt.status === 'PENDING' && (
+                      <div style={{
+                        width: '100%',
+                        background: 'rgba(245,158,11,0.08)',
+                        border: '1px solid rgba(245,158,11,0.30)',
+                        borderRadius: 10,
+                        padding: '14px 16px',
+                        marginBottom: 12,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                          <span style={{ fontSize: 18 }}>⚠️</span>
+                          <strong style={{ color: '#fbbf24', fontSize: 14 }}>Deposit Payment Incomplete</strong>
+                        </div>
+                        <p style={{ margin: '0 0 14px', fontSize: 13, color: '#d1d5db', lineHeight: 1.5 }}>
+                          Your slot is temporarily reserved but your{' '}
+                          <strong style={{ color: '#e5e7eb' }}>30% deposit has not been paid</strong>.
+                          The business owner cannot confirm this appointment until payment is received.
+                          Complete payment now to secure your booking.
+                        </p>
+                        <button
+                          className="ma-btn ma-btn--save"
+                          style={{
+                            background: 'linear-gradient(135deg, #6366f1, #7c3aed)',
+                            border: 'none',
+                            color: '#ffffff',
+                            fontWeight: 700,
+                            fontSize: 13,
+                            padding: '9px 18px',
+                            borderRadius: 8,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                          onClick={() => navigate(`/book/${appt.businessId}`, {
+                            state: {
+                              // Flag that tells Booking.jsx to skip SELECT step
+                              pendingAppointmentId: appt.id,
+                    
+                              // Pre-fill all booking details from the existing appointment card
+                              business: {
+                                id:   appt.businessId,
+                                name: appt.businessName,
+                                city: appt.serviceCity  || '',
+                                state: appt.serviceState || '',
+                              },
+                    
+                              // Pre-selected service so the service dropdown is auto-set
+                              preSelectedServiceId: appt.serviceId,
+                    
+                              // Full appointment snapshot — Booking.jsx uses this to jump to REVIEW
+                              pendingAppointment: {
+                                id:              appt.id,
+                                serviceId:       appt.serviceId,
+                                serviceName:     appt.serviceName,
+                                price:           appt.price,
+                                duration:        appt.duration,
+                                appointmentDate: appt.appointmentDate,   // "2026-06-25"
+                                appointmentTime: appt.appointmentTime,   // "13:50:00"
+                                businessId:      appt.businessId,
+                                businessName:    appt.businessName,
+                                serviceAddress:  appt.serviceAddress || '',
+                                serviceCity:     appt.serviceCity    || '',
+                                serviceState:    appt.serviceState   || '',
+                              },
+                            }
+                          })}
+                        >
+                          💳 Complete Deposit Payment
+                        </button>
+                      </div>
+                    )}
+                  
+                    {(appt.status === 'PENDING' || appt.status === 'CONFIRMED') &&
+                      appt.paymentStatus !== 'PENDING_PAYMENT' && (
                       <>
                         <button className="ma-btn ma-btn--ghost"
                           onClick={() => setEditingId(appt.id)}
@@ -421,20 +507,18 @@ export default function MyAppointments() {
                         </button>
                       </>
                     )}
-
+                  
                     {appt.status === 'AWAITING_REMAINING_PAYMENT' && (
                       <div className="ma-remaining-notice">
-                          ✅ Service confirmed! Please pay the remaining{' '}
-                          <strong>
-                              ₹{appt.price
-                                  ? (appt.price * 0.70).toFixed(2)
-                                  : '—'}
-                          </strong>{' '}
-                          directly to the service provider via cash or UPI.
-                          Your appointment will be marked complete once payment is received.
+                        ✅ Service confirmed! Please pay the remaining{' '}
+                        <strong>
+                          ₹{appt.price ? (appt.price * 0.70).toFixed(2) : '—'}
+                        </strong>{' '}
+                        directly to the service provider via cash or UPI.
+                        Your appointment will be marked complete once payment is received.
                       </div>
-                  )}
-
+                    )}
+                  
                     {appt.status === 'COMPLETED' && !appt.reviewed && (
                       <button className="ma-btn ma-btn--review"
                         onClick={() => setReviewTarget({ appt, existingReview: null })}>

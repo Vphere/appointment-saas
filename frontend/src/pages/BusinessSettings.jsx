@@ -16,6 +16,16 @@ import '../pages/BusinessSettings.css';
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const MAX_PHOTOS = 5;
 
+// Photo URLs returned by the backend are now full Cloudinary URLs
+// (https://res.cloudinary.com/...). Older records may still contain
+// a relative path (e.g. /uploads/photos/xyz.jpg) — handle both.
+function resolvePhotoUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
+
 const DAYS = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
 const DAY_LABELS = {
   MONDAY:'Monday', TUESDAY:'Tuesday', WEDNESDAY:'Wednesday',
@@ -818,7 +828,7 @@ function PhotosTab({ businesses }) {
             onClick={e => e.stopPropagation()}
           >
             <img
-              src={`${BASE_URL}${lightbox.url}`}
+              src={resolvePhotoUrl(lightbox.url)}
               alt={lightbox.caption || ''}
             />
             <div className="photos-lightbox-footer">
@@ -959,7 +969,7 @@ function PhotosTab({ businesses }) {
                       onClick={() => setLightbox(photo)}
                     >
                       <img
-                        src={`${BASE_URL}${photo.url}`}
+                        src={resolvePhotoUrl(photo.url)}
                         alt={photo.caption || ''}
                       />
                       <div className="photos-thumb-overlay">
