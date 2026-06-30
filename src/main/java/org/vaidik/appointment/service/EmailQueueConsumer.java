@@ -22,7 +22,7 @@ public class EmailQueueConsumer {
     private final EmailDeliveryService emailDeliveryService;
     private final EmailQueuePublisher emailQueuePublisher;
 
-    @RabbitListener(queues = RabbitMQConfig.EMAIL_QUEUE)
+    @RabbitListener(queues = RabbitMQConfig.EMAIL_QUEUE, messageConverter = "jsonMessageConverter")
     public void handle(Map<String, Object> message) {
         Long outboxId = extractOutboxId(message);
         if (outboxId == null) return;

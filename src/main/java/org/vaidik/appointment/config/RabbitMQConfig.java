@@ -7,16 +7,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-///**
-// * Optional RabbitMQ-backed retry layer for outbound email.
-// *
-// * This is OFF by default (gated by {@code app.email.queue.enabled=true}) so the
-// * application starts and runs normally even when no RabbitMQ broker has been
-// * provisioned. The {@link EmailDeliveryService} + DB-backed
-// * {@code email_outbox} table (see {@link org.vaidik.appointment.service.EmailRetryScheduler})
-// * already guarantee eventual delivery via polling; RabbitMQ simply makes
-// * retries near-instant instead of waiting for the next scheduler tick.
-// */
 @Configuration
 @ConditionalOnProperty(name = "app.email.queue.enabled", havingValue = "true")
 public class RabbitMQConfig {
@@ -106,14 +96,5 @@ public class RabbitMQConfig {
     @Bean
     public MessageConverter jsonMessageConverter() {
         return new Jackson2JsonMessageConverter();
-    }
-
-    @Bean
-    public AmqpTemplate rabbitTemplate(org.springframework.amqp.rabbit.connection.ConnectionFactory connectionFactory,
-                                       MessageConverter converter) {
-        org.springframework.amqp.rabbit.core.RabbitTemplate template =
-                new org.springframework.amqp.rabbit.core.RabbitTemplate(connectionFactory);
-        template.setMessageConverter(converter);
-        return template;
     }
 }
