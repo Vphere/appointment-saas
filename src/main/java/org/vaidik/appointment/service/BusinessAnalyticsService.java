@@ -2,6 +2,7 @@ package org.vaidik.appointment.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.vaidik.appointment.dto.BusinessAnalyticsResponse;
 import org.vaidik.appointment.entity.*;
 import org.vaidik.appointment.repository.*;
@@ -11,6 +12,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class BusinessAnalyticsService {
 
     private final BusinessRepository    businessRepository;

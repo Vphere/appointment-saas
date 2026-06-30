@@ -10,7 +10,17 @@ import org.vaidik.appointment.entity.ServiceCompletionConsent;
 import java.util.Optional;
 
 public interface ServiceCompletionConsentRepository extends JpaRepository<ServiceCompletionConsent, Long> {
-    Optional<ServiceCompletionConsent> findByConsentToken(String token);
+
+    @Query("""
+        SELECT c FROM ServiceCompletionConsent c
+        JOIN FETCH c.appointment a
+        JOIN FETCH a.user
+        JOIN FETCH a.business b
+        JOIN FETCH a.service
+        WHERE c.consentToken = :token
+    """)
+    Optional<ServiceCompletionConsent> findByConsentToken(@Param("token") String token);
+
     Optional<ServiceCompletionConsent> findByAppointmentId(Long appointmentId);
 
     @Modifying

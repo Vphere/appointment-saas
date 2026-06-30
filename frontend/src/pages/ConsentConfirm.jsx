@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { getConsentDetails, confirmByLink, disputeByLink } from '../api/payments';
 import BookEaseLogo from '../components/BookEaseLogo';
 
 export default function ConsentConfirm() {
     const { token } = useParams();
+    const [searchParams] = useSearchParams();
 
     const [details,   setDetails]   = useState(null);
     const [step,      setStep]      = useState('LOADING'); // LOADING | CONFIRM | DISPUTE | DONE | ERROR
@@ -15,12 +16,20 @@ export default function ConsentConfirm() {
 
     useEffect(() => {
         getConsentDetails(token)
-            .then(r => { setDetails(r.data); setStep('CONFIRM'); })
+            .then(r => {
+                setDetails(r.data);
+                // If opened via the "Raise a dispute" link, go directly to dispute step
+                if (searchParams.get('dispute') === 'true') {
+                    setStep('DISPUTE');
+                } else {
+                    setStep('CONFIRM');
+                }
+            })
             .catch(e => {
                 setErrorMsg(e.response?.data?.message || 'Invalid or expired link');
                 setStep('ERROR');
             });
-    }, [token]);
+    }, [token, searchParams]);
 
     const handleConfirm = async () => {
         setLoading(true);
@@ -152,12 +161,13 @@ function Row({ label, value }) {
 const s = {
     page: {
         minHeight: '100vh', background: '#0d0f19',
-        display: 'flex', alignItems: 'center',padding: '40px 20px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px',
     },
     card: {
         background: '#1a1d2e', border: '1px solid rgba(255,255,255,0.08)',
         borderRadius: 16, padding: '36px 40px',
         width: '100%', maxWidth: 480, textAlign: 'center',
+        margin: '0 auto',
     },
     logo: { fontSize: 20, fontWeight: 800, color: '#a5b4fc', marginBottom: 24 },
     iconBig: { fontSize: '3rem', marginBottom: 16 },

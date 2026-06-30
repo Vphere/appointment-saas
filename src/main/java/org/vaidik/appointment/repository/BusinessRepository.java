@@ -11,25 +11,35 @@ import java.util.Optional;
 
 public interface BusinessRepository extends JpaRepository<Business, Long> {
 
-    List<Business> findByOwnerId(Long ownerId);
-    List<Business> findByOwnerEmail(String email);
-    List<Business> findByStatus(Enum status);
+    @Query("SELECT b FROM Business b JOIN FETCH b.owner WHERE b.owner.id = :ownerId")
+    List<Business> findByOwnerId(@Param("ownerId") Long ownerId);
+
+    @Query("SELECT b FROM Business b JOIN FETCH b.owner WHERE b.owner.email = :email")
+    List<Business> findByOwnerEmail(@Param("email") String email);
+
+    @Query("SELECT b FROM Business b JOIN FETCH b.owner WHERE b.status = :status")
+    List<Business> findByStatus(@Param("status") Enum status);
+
     long countByStatus(BusinessStatus status);
 
-    List<Business> findByOwnerEmailAndDeletedAtIsNull(String email);
-    List<Business> findByStatusAndDeletedAtIsNull(BusinessStatus status);
+    @Query("SELECT b FROM Business b JOIN FETCH b.owner WHERE b.owner.email = :email AND b.deletedAt IS NULL")
+    List<Business> findByOwnerEmailAndDeletedAtIsNull(@Param("email") String email);
+
+    @Query("SELECT b FROM Business b JOIN FETCH b.owner WHERE b.status = :status AND b.deletedAt IS NULL")
+    List<Business> findByStatusAndDeletedAtIsNull(@Param("status") BusinessStatus status);
 
     // Admin: active only
-    @Query("SELECT b FROM Business b WHERE b.deletedAt IS NULL ORDER BY b.createdAt DESC")
+    @Query("SELECT b FROM Business b JOIN FETCH b.owner WHERE b.deletedAt IS NULL ORDER BY b.createdAt DESC")
     List<Business> findAllActive();
 
     // Admin: including deleted (for audit/analytics dashboard)
-    @Query("SELECT b FROM Business b ORDER BY b.createdAt DESC")
+    @Query("SELECT b FROM Business b JOIN FETCH b.owner ORDER BY b.createdAt DESC")
     List<Business> findAllIncludingDeleted();
 
     // Active business by id (customers/owners should never see deleted)
-    @Query("SELECT b FROM Business b WHERE b.id = :id AND b.deletedAt IS NULL")
+    @Query("SELECT b FROM Business b JOIN FETCH b.owner WHERE b.id = :id AND b.deletedAt IS NULL")
     Optional<Business> findActiveById(@Param("id") Long id);
 
-
+    @Query("SELECT b FROM Business b JOIN FETCH b.owner WHERE b.id = :id")
+    Optional<Business> findById(@Param("id") Long id);
 }

@@ -1,0 +1,611 @@
+/* ── ProfilePage.css ────────────────────────────────────────────────────────
+   All styles for ProfilePage.jsx.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* ── Token overrides (scoped to this page) ─────────────────────────────── */
+.pp-root {
+  --pp-bg:           #0d0f19;
+  --pp-surface:      #13151f;
+  --pp-card:         #1a1d2e;
+  --pp-border:       rgba(255,255,255,0.08);
+  --pp-muted:        #64748b;
+  --pp-text:         #e2e8f0;
+  --pp-accent:       #6366f1;
+  --pp-accent-bg:    rgba(99,102,241,0.12);
+  --pp-accent-hov:   rgba(99,102,241,0.2);
+  --pp-error:        #f87171;
+  --pp-error-bg:     rgba(248,113,113,0.08);
+  --pp-error-border: rgba(248,113,113,0.35);
+}
+
+/* ── Page shell ─────────────────────────────────────────────────────────── */
+.pp-page {
+  min-height: 100vh;
+  background: var(--pp-bg);
+  padding: 32px 20px;
+}
+
+.pp-inner {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+/* ── Loading ────────────────────────────────────────────────────────────── */
+.pp-loading {
+  min-height: 100vh;
+  background: var(--pp-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pp-loading p {
+  color: var(--pp-muted);
+  font-size: 14px;
+}
+
+/* ── Breadcrumb ─────────────────────────────────────────────────────────── */
+.pp-breadcrumb {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--pp-muted);
+}
+
+.pp-breadcrumb a {
+  color: var(--pp-muted);
+  text-decoration: none;
+}
+
+.pp-breadcrumb-current {
+  color: var(--pp-text);
+}
+
+/* ── Header card ────────────────────────────────────────────────────────── */
+.pp-header-card {
+  background: var(--pp-card);
+  border: 1px solid var(--pp-border);
+  border-radius: 16px;
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.pp-header-glow {
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.pp-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.pp-header-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.pp-header-name {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--pp-text);
+  letter-spacing: -0.02em;
+}
+
+.pp-header-email {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--pp-muted);
+}
+
+.pp-header-meta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.pp-header-meta-item {
+  font-size: 12px;
+  color: var(--pp-muted);
+}
+
+.pp-header-since {
+  text-align: center;
+  padding: 12px 22px;
+  flex-shrink: 0;
+  background: var(--pp-accent-bg);
+  border-radius: 12px;
+  border: 1px solid rgba(99,102,241,0.2);
+}
+
+.pp-header-since-label {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--pp-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pp-header-since-year {
+  margin: 4px 0 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #818cf8;
+}
+
+/* ── Avatar ─────────────────────────────────────────────────────────────── */
+.pp-avatar {
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: #fff;
+  border: 3px solid rgba(99,102,241,0.35);
+}
+
+/* ── Role badge ─────────────────────────────────────────────────────────── */
+.pp-role-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--pp-accent-bg);
+  color: #a5b4fc;
+  letter-spacing: 0.05em;
+}
+
+/* ── Tab bar ────────────────────────────────────────────────────────────── */
+.pp-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 16px;
+  background: var(--pp-card);
+  border-radius: 12px;
+  padding: 4px;
+  border: 1px solid var(--pp-border);
+}
+
+.pp-tab-btn {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 9px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--pp-muted);
+  transition: background 0.18s, color 0.18s;
+}
+
+.pp-tab-btn--active {
+  font-weight: 600;
+  background: linear-gradient(135deg, rgba(99,102,241,0.28), rgba(124,58,237,0.28));
+  color: #c7d2fe;
+}
+
+/* ── Content card ───────────────────────────────────────────────────────── */
+.pp-content-card {
+  background: var(--pp-card);
+  border: 1px solid var(--pp-border);
+  border-radius: 16px;
+  padding: 28px 32px;
+}
+
+/* ── Profile tab — view mode ────────────────────────────────────────────── */
+.pp-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px;
+}
+
+.pp-view-title {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--pp-text);
+}
+
+.pp-view-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--pp-muted);
+}
+
+.pp-edit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--pp-accent-bg);
+  border: 1px solid rgba(99,102,241,0.3);
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: #a5b4fc;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pp-edit-btn:hover {
+  background: var(--pp-accent-hov);
+}
+
+.pp-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px 32px;
+}
+
+.pp-field-box {
+  padding: 14px 16px;
+  background: var(--pp-surface);
+  border-radius: 10px;
+  border: 1px solid var(--pp-border);
+}
+
+.pp-field-box--full {
+  grid-column: 1 / -1;
+}
+
+/* ── Field label / value ────────────────────────────────────────────────── */
+.pp-field-label {
+  margin: 0 0 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pp-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pp-field-value {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pp-text);
+}
+
+.pp-field-value--empty {
+  color: var(--pp-muted);
+  font-style: italic;
+}
+
+/* ── Profile tab — edit mode ────────────────────────────────────────────── */
+.pp-edit-header {
+  margin-bottom: 28px;
+}
+
+.pp-edit-title {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--pp-text);
+}
+
+.pp-edit-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--pp-muted);
+}
+
+.pp-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 24px;
+}
+
+.pp-edit-grid-full {
+  grid-column: 1 / -1;
+}
+
+.pp-form-actions {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ── Text input ─────────────────────────────────────────────────────────── */
+.pp-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--pp-surface);
+  border: 1px solid var(--pp-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--pp-text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.pp-input:focus {
+  border-color: var(--pp-accent);
+}
+
+.pp-input--error {
+  background: var(--pp-error-bg);
+  border-color: var(--pp-error-border);
+}
+
+/* ── Select ─────────────────────────────────────────────────────────────── */
+.pp-select {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--pp-surface);
+  border: 1px solid var(--pp-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--pp-text);
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+}
+
+/* ── Field error ────────────────────────────────────────────────────────── */
+.pp-field-error {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: var(--pp-error);
+  font-weight: 500;
+}
+
+.pp-field-hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--pp-muted);
+}
+
+/* ── Password input wrapper ─────────────────────────────────────────────── */
+.pp-pw-wrap {
+  position: relative;
+}
+
+.pp-pw-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--pp-surface);
+  border: 1px solid var(--pp-border);
+  border-radius: 8px;
+  padding: 10px 42px 10px 14px;
+  color: var(--pp-text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.pp-pw-input:focus {
+  border-color: var(--pp-accent);
+}
+
+.pp-pw-input--error {
+  background: var(--pp-error-bg);
+  border-color: var(--pp-error-border);
+}
+
+.pp-pw-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--pp-muted);
+  font-size: 16px;
+  padding: 0;
+  line-height: 1;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.pp-btn-primary {
+  background: linear-gradient(135deg, #6366f1, #7c3aed);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 22px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+
+.pp-btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.pp-btn-ghost {
+  background: transparent;
+  color: var(--pp-muted);
+  border: 1px solid var(--pp-border);
+  border-radius: 8px;
+  padding: 9px 22px;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.pp-btn-ghost:hover {
+  border-color: var(--pp-accent);
+  color: var(--pp-text);
+}
+
+/* ── Toast ──────────────────────────────────────────────────────────────── */
+.pp-toast {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.pp-toast--success {
+  background: rgba(74,222,128,0.1);
+  color: #4ade80;
+  border: 1px solid rgba(74,222,128,0.25);
+}
+
+.pp-toast--error {
+  background: rgba(248,113,113,0.1);
+  color: #f87171;
+  border: 1px solid rgba(248,113,113,0.25);
+}
+
+/* ── Role chip in view mode ─────────────────────────────────────────────── */
+.pp-role-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+/* ── Security tab ───────────────────────────────────────────────────────── */
+.pp-security-title {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--pp-text);
+}
+
+.pp-security-sub {
+  margin: 0 0 28px;
+  font-size: 13px;
+  color: var(--pp-muted);
+}
+
+.pp-oauth-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 10px;
+  background: var(--pp-surface);
+  border: 1px solid var(--pp-border);
+}
+
+.pp-oauth-icon {
+  font-size: 20px;
+}
+
+.pp-oauth-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--pp-text);
+}
+
+.pp-oauth-desc {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--pp-muted);
+}
+
+.pp-pw-form {
+  max-width: 440px;
+}
+
+.pp-pw-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ── Password strength meter ────────────────────────────────────────────── */
+.pp-strength-wrap {
+  margin-top: 8px;
+}
+
+.pp-strength-bars {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.pp-strength-bar {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.08);
+  transition: background 0.2s;
+}
+
+.pp-strength-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ── Password policy hints ──────────────────────────────────────────────── */
+.pp-policy-hints {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: rgba(99,102,241,0.07);
+  border-radius: 8px;
+  border: 1px solid rgba(99,102,241,0.18);
+}
+
+.pp-policy-title {
+  margin: 0 0 6px;
+  font-size: 11px;
+  color: var(--pp-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pp-policy-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 3px;
+}
+
+.pp-policy-icon {
+  font-size: 12px;
+}
+
+.pp-policy-text {
+  font-size: 12px;
+}
+
+/* ── Password match indicator ───────────────────────────────────────────── */
+.pp-pw-match {
+  margin: 5px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pp-pw-match--ok  { color: #4ade80; }
+.pp-pw-match--bad { color: #f87171; }
+
+/* ── Required asterisk ──────────────────────────────────────────────────── */
+.pp-required { color: var(--pp-error); }

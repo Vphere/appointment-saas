@@ -3,6 +3,7 @@ package org.vaidik.appointment.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.vaidik.appointment.dto.CreateAppointmentRequest;
@@ -16,6 +17,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AppointmentService {
 
     private final AppointmentRepository appointmentRepository;
@@ -33,22 +35,24 @@ public class AppointmentService {
     @Transactional
     public AppointmentResponse bookAppointment(CreateAppointmentRequest request, String userEmail) {
 
+        ServiceOffering service = serviceRepository.findByIdForUpdate(request.getServiceId())
+                .orElseThrow(() -> new RuntimeException("Service not found"));
+
         boolean exists = appointmentRepository.existsActiveByServiceDateAndTime(
                 request.getServiceId(),
                 request.getAppointmentDate(),
                 request.getAppointmentTime(),
                 FREED_STATUSES
         );
-        if (exists) throw new RuntimeException("This time slot is already taken. Please choose another time.");
+        if (exists) {
+            throw new RuntimeException("This time slot is already taken. Please choose another time.");
+        }
 
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Business business = businessRepository.findById(request.getBusinessId())
                 .orElseThrow(() -> new RuntimeException("Business not found"));
-
-        ServiceOffering service = serviceRepository.findById(request.getServiceId())
-                .orElseThrow(() -> new RuntimeException("Service not found"));
 
         Appointment appointment = Appointment.builder()
                 .user(user)
@@ -61,9 +65,15 @@ public class AppointmentService {
                 .reviewed(false)
                 .build();
 
-        Appointment saved = appointmentRepository.save(appointment);
-
-        return mapper.toResponse(saved);
+        try {
+            Appointment saved = appointmentRepository.save(appointment);
+            return mapper.toResponse(saved);
+        } catch (DataIntegrityViolationException ex) {
+            // Layer 2: DB-level constraint violation (rare race-condition safety net)
+            log.warn("Double-booking attempt caught at DB level for serviceId={}, date={}, time={}",
+                    request.getServiceId(), request.getAppointmentDate(), request.getAppointmentTime());
+            throw new RuntimeException("This time slot was just taken by another user. Please choose a different time.");
+        }
     }
 
     public List<AppointmentResponse> getUserAppointments(String email) {
@@ -150,10 +160,8 @@ public class AppointmentService {
 
         try {
             if (newStatus == AppointmentStatus.CONFIRMED) {
-                // Use the detailed confirmation email (shows deposit paid + remaining amount)
                 emailService.sendServiceConfirmedEmail(saved);
             } else {
-                // CANCELLED by owner — use generic status change (which only sends for CANCELLED)
                 emailService.sendStatusChangeEmail(saved);
             }
         } catch (Exception e) {
@@ -180,11 +188,6 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.CANCELLED);
         Appointment saved = appointmentRepository.save(appointment);
 
-        // Refund deposit if it was already captured — covers all post-payment states:
-        // DEPOSIT_PAID   → normal paid-but-not-confirmed path
-        // CONFIRMED      → owner confirmed, customer cancelling before service
-        // RESCHEDULED    → deposit was paid before reschedule, paymentStatus changed to RESCHEDULED
-        // AWAITING_CONSENT → deposit paid, owner initiated completion, customer hasn't consented yet
         PaymentStatus ps = appointment.getPaymentStatus();
         if (ps == PaymentStatus.DEPOSIT_PAID ||
                 ps == PaymentStatus.CONFIRMED ||
@@ -200,6 +203,7 @@ public class AppointmentService {
         Hibernate.initialize(saved.getUser());
         Hibernate.initialize(saved.getBusiness());
         Hibernate.initialize(saved.getService());
+        Hibernate.initialize(saved.getBusiness().getOwner());
 
         try {
             emailService.sendCancellationByUserEmail(saved);
@@ -223,7 +227,6 @@ public class AppointmentService {
             throw new RuntimeException("Only pending or confirmed appointments can be rescheduled.");
         }
 
-        // Guard: cannot reschedule if deposit is unpaid
         if (appointment.getPaymentStatus() == PaymentStatus.PENDING_PAYMENT) {
             throw new RuntimeException(
                     "Please complete your deposit payment before rescheduling. " +
@@ -246,6 +249,7 @@ public class AppointmentService {
                             "If you cancel now, no refund will be issued.");
         }
 
+        // Pessimistic-locked check for the new slot
         boolean slotTaken = appointmentRepository.existsActiveByServiceDateAndTime(
                 request.getServiceId(),
                 request.getAppointmentDate(),

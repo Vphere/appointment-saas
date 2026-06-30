@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { StarRating } from './StarRating';
-import { submitReview, updateReview } from '../api/reviews'; // ✅ import updateReview
+import { submitReview, updateReview } from '../api/reviews'; 
 
-export default function ReviewModal({ appointment, onClose, onSuccess, existingReview }) { // ✅ add existingReview prop
-  const [rating, setRating] = useState(existingReview?.rating || 0);   // ✅ pre-fill if editing
-  const [comment, setComment] = useState(existingReview?.comment || ''); // ✅ pre-fill if editing
+export default function ReviewModal({ appointment, onClose, onSuccess, existingReview }) { 
+  const [rating, setRating] = useState(existingReview?.rating || 0);  
+  const [comment, setComment] = useState(existingReview?.comment || ''); 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const isEditing = !!existingReview; // ✅ true if editing
+  const isEditing = !!existingReview; 
 
   const handleSubmit = async () => {
     if (rating === 0) return setError('Please select a rating');
@@ -16,10 +16,8 @@ export default function ReviewModal({ appointment, onClose, onSuccess, existingR
     setError('');
     try {
       if (isEditing) {
-        // ✅ Update existing review using PUT
         await updateReview(existingReview.id, { rating, comment });
       } else {
-        // ✅ Create new review using POST
         await submitReview({
           appointmentId: appointment.id,
           businessId: appointment.businessId,
@@ -41,7 +39,7 @@ export default function ReviewModal({ appointment, onClose, onSuccess, existingR
       <div className="modal">
         <div className="modal-header">
           <h3 className="modal-title">
-            {isEditing ? '✏️ Edit Review' : 'Leave a Review ✨'} {/* ✅ dynamic title */}
+            {isEditing ? '✏️ Edit Review' : 'Leave a Review ✨'} 
           </h3>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>

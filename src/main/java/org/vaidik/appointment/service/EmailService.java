@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.vaidik.appointment.dto.CancelledAppointmentInfo;
 import org.vaidik.appointment.entity.Appointment;
 import org.vaidik.appointment.entity.EmailOutbox;
+import org.vaidik.appointment.entity.ServiceOffering;
+import org.vaidik.appointment.entity.ServiceType;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -24,6 +26,7 @@ public class EmailService {
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
+
 
     // ─────────────────────────────────────────────────────────────────────────
     //  OTP — Password Reset
@@ -167,7 +170,7 @@ public class EmailService {
         String time     = appointment.getAppointmentTime().format(TIME_FMT);
         double remaining = appointment.getService().getPrice() - payment.getDepositAmount().doubleValue();
 
-        String subject = "💰 Deposit Confirmed — " + appointment.getService().getName();
+        String subject = "Deposit Confirmed — " + appointment.getService().getName();
         String html = buildEmailHtml(
                 "💰 Deposit Payment Confirmed",
                 "Hi " + userName + ",",
@@ -203,7 +206,7 @@ public class EmailService {
                 : totalPrice * 0.30;
         double remainingAmount = totalPrice - depositPaid;
 
-        String subject = "✅ Appointment Confirmed — " + appointment.getBusiness().getName();
+        String subject = "Appointment Confirmed — " + appointment.getBusiness().getName();
         String html = buildEmailHtml(
                 "✅ Appointment Confirmed",
                 "Hi " + userName + ",",
@@ -213,7 +216,7 @@ public class EmailService {
                         {"Service",          appointment.getService().getName()},
                         {"Date",             date},
                         {"Time",             time},
-                        {"Duration",         appointment.getService().getDuration() + " min"},
+                        {"Duration",         durationDisplay(appointment.getService())},
                         {"Deposit Paid",     "₹" + String.format("%.0f", depositPaid)},
                         {"Remaining to Pay", "₹" + String.format("%.0f", remainingAmount)},
                         {"Payment Method",   "Cash / UPI directly to service provider"},
@@ -243,7 +246,7 @@ public class EmailService {
         String date         = appointment.getAppointmentDate().format(DATE_FMT);
         String time         = appointment.getAppointmentTime().format(TIME_FMT);
 
-        String subject = "❌ Appointment Cancelled — " + businessName;
+        String subject = "Appointment Cancelled — " + businessName;
         String html = buildEmailHtml(
                 "❌ Appointment Cancelled",
                 "Hi " + userName + ",",
@@ -279,7 +282,7 @@ public class EmailService {
                 ? appointment.getDepositAmount().doubleValue() : totalPrice * 0.30;
         double remaining = totalPrice - depositPaid;
 
-        String subject = "⏰ Reminder: Appointment Tomorrow — " + businessName;
+        String subject = "Reminder: Appointment Tomorrow — " + businessName;
         String html = buildEmailHtml(
                 "⏰ Appointment Reminder",
                 "Hi " + userName + ",",
@@ -289,7 +292,7 @@ public class EmailService {
                         {"Service",          serviceName},
                         {"Date",             date},
                         {"Time",             time},
-                        {"Duration",         appointment.getService().getDuration() + " min"},
+                        {"Duration",         durationDisplay(appointment.getService())},
                         {"Remaining to Pay", "₹" + String.format("%.0f", remaining)},
                         {"Status",           appointment.getStatus().name()}
                 },
@@ -314,7 +317,7 @@ public class EmailService {
         String date          = appointment.getAppointmentDate().format(DATE_FMT);
         String time          = appointment.getAppointmentTime().format(TIME_FMT);
 
-        String subject = "❌ Booking Cancelled by Customer — " + businessName;
+        String subject = "Booking Cancelled by Customer — " + businessName;
         String html = buildEmailHtml(
                 "❌ Appointment Cancelled by Customer",
                 "Hi " + ownerName + ",",
@@ -356,7 +359,7 @@ public class EmailService {
             default -> "Your refund is being processed.";
         };
 
-        String subject = "🔄 Cancellation & Refund Update — " + appointment.getService().getName();
+        String subject = "Cancellation & Refund Update — " + appointment.getService().getName();
         String html = buildEmailHtml(
                 "🔄 Cancellation & Refund",
                 "Hi " + userName + ",",
@@ -388,10 +391,14 @@ public class EmailService {
         String date     = appointment.getAppointmentDate().format(DATE_FMT);
         String time     = appointment.getAppointmentTime().format(TIME_FMT);
 
-        // Use configured frontend URL — NOT hardcoded localhost
-        String confirmLink = frontendUrl + "/consent/" + token;
+        // Use configured frontend URL — NOT hardcoded localhost.
+        // frontendUrl may be a comma-separated list of allowed origins (for CORS);
+        // links sent in emails must use exactly ONE concrete, public origin.
+        String linkBaseUrl = resolvePrimaryFrontendUrl();
+        String confirmLink = linkBaseUrl + "/consent/" + token;
+        String disputeLink = linkBaseUrl + "/consent/" + token + "?dispute=true";
 
-        String subject = "🔐 Please Confirm Your Service — " + appointment.getService().getName();
+        String subject = "Please Confirm Your Service — " + appointment.getService().getName();
 
         String html = """
             <!DOCTYPE html>
@@ -510,7 +517,7 @@ public class EmailService {
                 appointment.getService().getName(),
                 date, time,
                 otp,
-                confirmLink, confirmLink,
+                confirmLink, disputeLink,
                 buildFooter("This link and OTP expire in 30 minutes. Never share your OTP with anyone other than the service provider present at the location.")
         );
 
@@ -528,7 +535,7 @@ public class EmailService {
         String date     = appointment.getAppointmentDate().format(DATE_FMT);
         String time     = appointment.getAppointmentTime().format(TIME_FMT);
 
-        String subject = "🏁 Service Completed — " + appointment.getBusiness().getName();
+        String subject = "Service Completed — " + appointment.getBusiness().getName();
         String html = buildEmailHtml(
                 "🏁 Service Completed",
                 "Hi " + userName + ",",
@@ -553,7 +560,7 @@ public class EmailService {
     @Async
     public void sendBusinessDeletionOtpEmail(String toEmail, String ownerName,
                                              String businessName, String otp) {
-        String subject = "⚠️ Business Deletion Verification — " + businessName;
+        String subject = "Business Deletion Verification — " + businessName;
         String html = buildEmailHtml(
                 "⚠️ Business Deletion Request",
                 "Hi " + (ownerName != null ? ownerName : toEmail) + ",",
@@ -582,7 +589,7 @@ public class EmailService {
         String date     = appointment.getAppointmentDate().format(DATE_FMT);
         String time     = appointment.getAppointmentTime().format(TIME_FMT);
 
-        String subject = "⚠️ Appointment Cancelled — Business No Longer Available";
+        String subject = "Appointment Cancelled — Business No Longer Available";
         String html = buildEmailHtml(
                 "⚠️ Appointment Cancelled",
                 "Hi " + userName + ",",
@@ -655,7 +662,7 @@ public class EmailService {
 
     @Async
     public void sendAccountRestoredEmail(String toEmail, String userName) {
-        String subject = "✅ Your BookEase Account Has Been Restored";
+        String subject = "Your BookEase Account Has Been Restored";
         String html = buildEmailHtml(
                 "✅ Account Restored",
                 "Hi " + userName + ",",
@@ -674,7 +681,7 @@ public class EmailService {
     public void sendAppointmentsCancelledForDeletedUserEmail(String ownerEmail, String ownerName,
                                                              String customerName,
                                                              List<CancelledAppointmentInfo> cancelledAppointments) {
-        String subject = "❌ Appointments Cancelled — Customer Account Closed";
+        String subject = "Appointments Cancelled — Customer Account Closed";
         String body = """
                 <p style="margin:0 0 20px;font-size:15px;color:#cbd5e1;line-height:1.6;">
                   Hi %s,<br><br>
@@ -704,7 +711,7 @@ public class EmailService {
         String date     = appointment.getAppointmentDate().format(DATE_FMT);
         String time     = appointment.getAppointmentTime().format(TIME_FMT);
 
-        String subject = "⏰ Slot Reservation Expired — " + appointment.getService().getName();
+        String subject = "Slot Reservation Expired — " + appointment.getService().getName();
         String html = buildEmailHtml(
                 "⏰ Slot Reservation Expired",
                 "Hi " + userName + ",",
@@ -737,7 +744,7 @@ public class EmailService {
         // This is also the first email the user receives for this booking —
         // we deliberately hold it until 10 min in so that users who pay quickly
         // never see a "pending payment" email at all.
-        String subject = "⏳ Action needed: pay deposit to keep your slot — " + appointment.getService().getName();
+        String subject = "Action needed: pay deposit to keep your slot — " + appointment.getService().getName();
         String html = buildEmailHtml(
                 "⏳ Complete Your Deposit to Secure This Slot",
                 "Hi " + userName + ",",
@@ -780,49 +787,77 @@ public class EmailService {
         }
     }
 
+    /**
+     * Resolves a single, concrete frontend origin from {@code app.frontend.url}.
+     * That property may legitimately hold a comma-separated list of allowed
+     * origins (used for CORS), but any URL embedded in an email — logo src,
+     * confirm/dispute links — must point to exactly one public, reachable origin.
+     * Always takes the first entry in the list, trimmed.
+     */
+    private String resolvePrimaryFrontendUrl() {
+        if (frontendUrl == null || frontendUrl.isBlank()) {
+            return "";
+        }
+        String baseUrl = frontendUrl;
+        if (baseUrl.contains(",")) {
+            baseUrl = baseUrl.substring(0, baseUrl.indexOf(",")).trim();
+        }
+        // Defensive: strip any trailing slash so concatenation never produces "//consent/..."
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+        return baseUrl;
+    }
+
     /** Reusable branded header block */
     private String buildHeader(String title, String accentColor) {
+        // IMPORTANT: do NOT use inline base64 (data:) image URIs here.
+        // Brevo's transactional email API strips/blocks inline data: URIs from htmlContent
+        // for spam/security reasons, which causes the logo to silently fail to render
+        // (even though the same HTML renders fine when previewed directly in a browser).
+        // We must reference the logo via a real hosted HTTPS URL on the deployed frontend.
+        String baseUrl = resolvePrimaryFrontendUrl();
+        String logoUrl = !baseUrl.isBlank()
+                ? baseUrl + "/bookease-logo-email.png"
+                : "";
+
+        String logoHtml = logoUrl.isBlank()
+                // Fallback: emoji box (no frontend URL configured)
+                ? """
+                  <div style="width:40px;height:40px;border-radius:8px;
+                              background:linear-gradient(135deg,#6366f1,#8b5cf6);
+                              display:inline-block;
+                              font-size:22px;line-height:40px;text-align:center;">
+                    📅
+                  </div>"""
+                // Full BookEase logo (icon + wordmark), hosted on the frontend
+                : """
+                  <img src="%s"
+                       alt="BookEase"
+                       width="178"
+                       height="46"
+                       style="display:block;height:46px;width:auto;max-width:180px;object-fit:contain;border:0;" />
+                  """.formatted(logoUrl);
+
         return """
             <tr>
               <td style="background:linear-gradient(135deg,#1a1d2e,#0d0f19);
                          border-top:4px solid %s;
                          border-radius:12px 12px 0 0;
-                         padding:28px 32px 20px;">
-                <table width="100%%" cellpadding="0" cellspacing="0">
+                         padding:24px 32px 20px;">
+                <table width="100%%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;">
                   <tr>
                     <td style="vertical-align:middle;">
-                      <table cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td style="vertical-align:middle;padding-right:12px;">
-                            <!-- BookEase Logo Mark — always brand purple/indigo, never themed -->
-                            <div style="width:36px;height:36px;border-radius:8px;
-                                        background:linear-gradient(135deg,#6366f1,#8b5cf6);
-                                        display:inline-block;
-                                        font-size:20px;line-height:36px;text-align:center;">
-                              📅
-                            </div>
-                          </td>
-                          <td style="vertical-align:middle;">
-                            <p style="margin:0;font-size:18px;font-weight:800;color:#f1f5f9;
-                                      letter-spacing:-0.01em;">
-                              Book<span style="color:#a5b4fc;">Ease</span>
-                            </p>
-                            <p style="margin:0;font-size:11px;color:#64748b;
-                                      letter-spacing:0.06em;text-transform:uppercase;">
-                              Appointment Platform
-                            </p>
-                          </td>
-                        </tr>
-                      </table>
+                      %s
                     </td>
                   </tr>
                 </table>
-                <h1 style="margin:16px 0 0;font-size:22px;font-weight:700;color:#f1f5f9;">
+                <h1 style="margin:0;font-size:22px;font-weight:700;color:#f1f5f9;">
                   %s
                 </h1>
               </td>
             </tr>
-            """.formatted(accentColor, title);
+            """.formatted(accentColor, logoHtml, title);
     }
 
     /** Reusable branded footer block */
@@ -976,5 +1011,13 @@ public class EmailService {
         return (user.getName() != null && !user.getName().isBlank())
                 ? user.getName()
                 : user.getEmail();
+    }
+
+    private String durationDisplay(ServiceOffering service) {
+        ServiceType type = service.getServiceType();
+        if (type == ServiceType.CONSULTATION) {
+            return "Consultation (flexible)";
+        }
+        return service.getDuration() != null ? service.getDuration() + " min" : "—";
     }
 }

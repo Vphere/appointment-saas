@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/useAuth';
-import { getAllServices } from '../api/services';
+import { getPopularServices } from '../api/services';
 import { getApprovedBusinesses } from '../api/business';
 import BookEaseLogo from '../components/BookEaseLogo';
 import {
@@ -15,7 +15,7 @@ import './Dashboard.css';
 const OWNER_ACTIONS = [
   { to: '/my-businesses',      icon: '🏢', title: 'My Businesses',                    desc: 'Manage your registered businesses', accent: 'violet' },
   { to: '/manage-services',    icon: '⚙️', title: 'Manage Services',                  desc: 'Add and update your services', accent: 'blue' },
-  { to: '/business-settings',  icon: '🕓', title: 'Working Hours & Holidays',         desc: 'Set availability, block holidays, upload photos', accent: 'green' },
+  { to: '/business-settings',  icon: '⚙️', title: 'Business Settings',                desc: 'Set working hours, block holidays, upload photos', accent: 'green' },
   { to: '/owner-appointments', icon: '📋', title: 'Appointments',                     desc: 'View and manage customer bookings', accent: 'amber' },
 ];
 
@@ -32,14 +32,6 @@ const FAQS = [
   { q: "How do I block a holiday?",                      a: 'Navigate to Business Settings → Holidays. Select your business, pick a date, optionally add a reason, and save.' },
   { q: 'Where can I see revenue and appointment trends?', a: 'The Analytics page (top nav → Analytics) shows monthly revenue, status breakdown, service earnings and reviews.' },
   { q: 'What happens after I register a business?',      a: 'It enters a Pending state and is reviewed by our admin team. Once approved, you can add services and accept bookings.' },
-];
-
-// ── Platform stats (shown in hero for everyone) ───────────────────
-const PLATFORM_STATS = [
-  { icon: <Users size={18} />,      label: 'Active Users',    value: '10,000+' },
-  { icon: <Building2 size={18} />,  label: 'Businesses',      value: '500+' },
-  { icon: <CalendarDays size={18} />, label: 'Bookings Made', value: '50,000+' },
-  { icon: <Star size={18} />,       label: 'Avg. Rating',     value: '4.8 ★' },
 ];
 
 // ── Platform features (shown to all roles in "What We Offer") ─────
@@ -103,9 +95,9 @@ function CustomerDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getAllServices(), getApprovedBusinesses()])
+    Promise.all([getPopularServices(6), getApprovedBusinesses()])
       .then(([sRes, bRes]) => {
-        setServices((Array.isArray(sRes.data) ? sRes.data : []).slice(0, 6));
+        setServices(Array.isArray(sRes.data) ? sRes.data : []);
         const bMap = {};
         (bRes.data || []).forEach(b => { bMap[b.id] = b; });
         setBusinesses(bMap);
@@ -253,15 +245,6 @@ function CustomerFooter() {
           From haircuts to healthcare, fitness to consulting — BookEase connects you with
           the best local services, verified and ready to book in seconds.
         </p>
-        <div className="db-footer-stats">
-          {PLATFORM_STATS.map((s, i) => (
-            <div key={i} className="db-footer-stat">
-              <div className="db-footer-stat-icon">{s.icon}</div>
-              <div className="db-footer-stat-val">{s.value}</div>
-              <div className="db-footer-stat-label">{s.label}</div>
-            </div>
-          ))}
-        </div>
       </div>
 
       <div className="db-footer-main">
@@ -287,7 +270,6 @@ function CustomerFooter() {
         <div className="db-footer-col">
           <h3 className="db-footer-col-title">Contact Us</h3>
           <div className="db-footer-contact-item"><Mail size={14} /><span>devsquad45@gmail.com</span></div>
-          <div className="db-footer-contact-item"><Phone size={14} /><span>+91 98765 43210</span></div>
           <p className="db-footer-contact-text">
             We're here to help — Mon to Sat, 9 AM to 6 PM IST.
           </p>
@@ -319,15 +301,6 @@ function OwnerFooter() {
           Streamline scheduling, manage services across locations, block holidays, track revenue
           and deliver better customer experiences — all from one platform built for modern businesses.
         </p>
-        <div className="db-footer-stats">
-          {PLATFORM_STATS.map((s, i) => (
-            <div key={i} className="db-footer-stat">
-              <div className="db-footer-stat-icon">{s.icon}</div>
-              <div className="db-footer-stat-val">{s.value}</div>
-              <div className="db-footer-stat-label">{s.label}</div>
-            </div>
-          ))}
-        </div>
       </div>
 
       <div className="db-footer-main">
@@ -355,7 +328,6 @@ function OwnerFooter() {
         <div className="db-footer-col">
           <h3 className="db-footer-col-title">Contact Us</h3>
           <div className="db-footer-contact-item"><Mail size={14} /><span>devsquad45@gmail.com</span></div>
-          <div className="db-footer-contact-item"><Phone size={14} /><span>+91 98765 43210</span></div>
           <p className="db-footer-contact-text">
             Need help? Our support team is available Mon to Sat, 9 AM to 6 PM IST.
           </p>

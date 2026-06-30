@@ -3,6 +3,7 @@ package org.vaidik.appointment.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.vaidik.appointment.dto.SlotResponse;
 import org.vaidik.appointment.entity.*;
@@ -21,6 +22,7 @@ public class SlotService {
     private final BusinessHolidayRepository holidayRepository;
     private final ServiceOfferingRepository serviceOfferingRepository;
 
+    @Transactional
     public List<SlotResponse> getAvailableSlots(Long serviceId,
                                                 LocalDate date,
                                                 int requestedDuration) {

@@ -23,10 +23,25 @@ const BUSINESS_TYPES = [
 ];
 const BTYPE_MAP = Object.fromEntries(BUSINESS_TYPES.map(t => [t.value, t]));
 
-// Generic icon for all businesses (not category-specific)
-const BIZ_ICONS = ['🏬', '🏢', '🏪', '🏨', '🏦', '🏗️'];
-function getBizIcon(id) {
-  return BIZ_ICONS[Number(id) % BIZ_ICONS.length];
+// Derive 1-2 initials from the business name for the avatar
+function getBizInitials(name = '') {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '?';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+// Deterministic gradient picked from the business id so it never changes
+const AVATAR_GRADIENTS = [
+  ['#6366f1', '#8b5cf6'], // indigo → violet
+  ['#0ea5e9', '#6366f1'], // sky → indigo
+  ['#10b981', '#0ea5e9'], // emerald → sky
+  ['#f59e0b', '#ef4444'], // amber → red
+  ['#8b5cf6', '#ec4899'], // violet → pink
+  ['#14b8a6', '#6366f1'], // teal → indigo
+];
+function getBizGradient(id) {
+  return AVATAR_GRADIENTS[Number(id) % AVATAR_GRADIENTS.length];
 }
 
 function formatBusinessType(raw) {
@@ -35,8 +50,9 @@ function formatBusinessType(raw) {
 }
 
 function BusinessCard({ business, rating, onClick }) {
-  const typeInfo = formatBusinessType(business.businessType);
-  const icon = getBizIcon(business.id);
+  const typeInfo   = formatBusinessType(business.businessType);
+  const initials   = getBizInitials(business.name);
+  const [c1, c2]   = getBizGradient(business.id);
 
   return (
     <div
@@ -48,7 +64,12 @@ function BusinessCard({ business, rating, onClick }) {
     >
       {/* Header */}
       <div className="bl-card-image">
-        <span className="bl-card-icon">{icon}</span>
+        {/* Initials avatar — universal, not category-specific */}
+        <div className="bl-card-avatar" style={{
+          background: `linear-gradient(135deg, ${c1}, ${c2})`,
+        }}>
+          {initials}
+        </div>
         {rating !== null && rating !== undefined && (
           <span className="bl-card-rating-badge">★ {Number(rating).toFixed(1)}</span>
         )}

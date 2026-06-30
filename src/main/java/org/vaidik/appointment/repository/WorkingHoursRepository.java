@@ -13,14 +13,32 @@ import java.util.Optional;
 
 public interface WorkingHoursRepository extends JpaRepository<WorkingHours, Long> {
 
-    List<WorkingHours> findByServiceId(Long serviceId);
+    @Query("SELECT w FROM WorkingHours w JOIN FETCH w.service WHERE w.service.id = :serviceId")
+    List<WorkingHours> findByServiceId(@Param("serviceId") Long serviceId);
 
-    Optional<WorkingHours> findByServiceIdAndDayOfWeek(Long serviceId, DayOfWeek dayOfWeek);
+    @Query("""
+        SELECT w FROM WorkingHours w
+        JOIN FETCH w.service s
+        JOIN FETCH s.business
+        WHERE w.service.id = :serviceId AND w.dayOfWeek = :dayOfWeek
+    """)
+    Optional<WorkingHours> findByServiceIdAndDayOfWeek(
+            @Param("serviceId") Long serviceId,
+            @Param("dayOfWeek") DayOfWeek dayOfWeek
+    );
+
+    @Query("""
+        SELECT w FROM WorkingHours w
+        JOIN FETCH w.service s
+        JOIN FETCH s.business b
+        JOIN FETCH b.owner
+        WHERE w.id = :id
+    """)
+    Optional<WorkingHours> findByIdWithFetch(@Param("id") Long id);
 
     @Transactional
     void deleteByServiceId(Long serviceId);
 
-    // Correct — go through service → business
     @Modifying
     @Query("DELETE FROM WorkingHours w WHERE w.service.business.id = :businessId")
     void deleteByBusinessId(@Param("businessId") Long businessId);

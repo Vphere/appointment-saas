@@ -19,12 +19,11 @@ public class EmailRetryScheduler {
     private final EmailOutboxRepository outboxRepository;
     private final EmailDeliveryService emailDeliveryService;
 
-    /** Runs every minute and retries any FAILED/PENDING email whose backoff has elapsed. */
     @Scheduled(fixedRate = 60 * 1000)
     public void retryDueEmails() {
         List<EmailOutbox> due = outboxRepository
                 .findTop20ByStatusInAndNextAttemptAtLessThanEqualOrderByNextAttemptAtAsc(
-                        List.of(EmailStatus.FAILED, EmailStatus.PENDING), LocalDateTime.now());
+                        List.of(EmailStatus.FAILED), LocalDateTime.now());
 
         if (due.isEmpty()) return;
 

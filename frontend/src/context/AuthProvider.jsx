@@ -19,6 +19,7 @@ export function AuthProvider({ children }) {
   };
 
 useEffect(() => {
+    // Avoid duplicate refresh
     if (didAttemptRefresh.current) return;
     didAttemptRefresh.current = true;
 

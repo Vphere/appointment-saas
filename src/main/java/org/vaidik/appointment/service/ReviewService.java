@@ -9,12 +9,14 @@ import org.vaidik.appointment.mapper.ReviewMapper;
 import org.vaidik.appointment.repository.AppointmentRepository;
 import org.vaidik.appointment.repository.ReviewRepository;
 import org.vaidik.appointment.repository.UserRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
@@ -22,6 +24,7 @@ public class ReviewService {
     private final ReviewMapper mapper;
     private final AppointmentRepository appointmentRepository;
 
+    @Transactional
     public ReviewResponse createReview(CreateReviewRequest request, String userEmail) {
 
         User user = userRepository.findByEmail(userEmail)
@@ -48,7 +51,7 @@ public class ReviewService {
         Review review = Review.builder()
                 .rating(request.getRating())
                 .comment(request.getComment())
-                .service(appointment.getService())           // ← service, not business
+                .service(appointment.getService())
                 .user(user)
                 .appointment(appointment)
                 .build();
@@ -56,7 +59,11 @@ public class ReviewService {
         appointment.setReviewed(true);
         appointmentRepository.save(appointment);
 
-        return mapper.toResponse(reviewRepository.save(review));
+        Review saved = reviewRepository.save(review);
+        return mapper.toResponse(
+                reviewRepository.findByIdWithFetch(saved.getId())
+                        .orElse(saved)
+        );
     }
 
     // Reviews for a specific service (used on the service detail page)
@@ -75,11 +82,12 @@ public class ReviewService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public ReviewResponse updateReview(Long reviewId, CreateReviewRequest request, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Review review = reviewRepository.findById(reviewId)
+        Review review = reviewRepository.findByIdWithFetch(reviewId)
                 .orElseThrow(() -> new RuntimeException("Review not found"));
 
         if (!review.getUser().getId().equals(user.getId())) {

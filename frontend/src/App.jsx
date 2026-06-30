@@ -37,7 +37,7 @@ function AppLayout({ children }) {
   );
 }
 
-document.addEventListener('wheel', (e) => {
+document.addEventListener('wheel', (_e) => {
   if (document.activeElement?.type === 'number') {
     document.activeElement.blur();
   }

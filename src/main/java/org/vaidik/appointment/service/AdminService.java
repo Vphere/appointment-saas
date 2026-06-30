@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AdminService {
 
     private final BusinessRepository businessRepository;
@@ -42,14 +43,11 @@ public class AdminService {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
 
-    /** Appointment states that still represent a "live" booking and must be cancelled on account deletion. */
     private static final List<AppointmentStatus> CANCELLABLE_STATUSES = List.of(
             AppointmentStatus.PENDING,
             AppointmentStatus.CONFIRMED,
             AppointmentStatus.AWAITING_REMAINING_PAYMENT
     );
-
-    // ── Stats ───────────────────────────────────────────────────────────────
 
     public AdminStatsResponse getAdminStats() {
         long totalBusinesses = businessRepository.count();
@@ -84,14 +82,13 @@ public class AdminService {
                 .build();
     }
 
-    // ── User management ─────────────────────────────────────────────────────
-
     public List<UserProfileDTO> getAllUsers() {
         return userRepository.findAll().stream()
                 .map(this::toUserDTO)
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public UserProfileDTO updateUserRole(Long userId, String newRole) {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -111,18 +108,6 @@ public class AdminService {
     /**
      * Soft-deletes a user — preserves all historical data (appointments,
      * payments, reviews) for analytics and financial audit.
-     *
-     * Side effects:
-     *   - Any of the user's PENDING / CONFIRMED / AWAITING_REMAINING_PAYMENT
-     *     appointments are cancelled. A refund is attempted (best-effort)
-     *     for any that had a deposit/payment captured — same policy as a
-     *     customer-initiated cancellation.
-     *   - The user receives ONE consolidated email listing every appointment
-     *     that was cancelled as a result.
-     *   - Each affected business owner receives ONE consolidated email
-     *     listing the appointment(s) of this customer that were cancelled
-     *     at their business.
-     *
      * Only truly ephemeral / session data is hard-deleted:
      *   - refresh_tokens  (session tokens, zero value after logout)
      *   - otps            (one-time codes, already expired)
@@ -217,11 +202,6 @@ public class AdminService {
         return toUserDTO(user);
     }
 
-    /**
-     * Restores a soft-deleted user — clears all deletion flags.
-     * The user can log in again immediately. Appointments that were
-     * cancelled at deletion time are NOT automatically restored.
-     */
     @Transactional
     public UserProfileDTO restoreUser(Long userId) {
         User user = userRepository.findById(userId)
@@ -243,16 +223,15 @@ public class AdminService {
         return toUserDTO(user);
     }
 
-    // ── Review moderation ────────────────────────────────────────────────────
-
     public List<ReviewResponse> getAllReviews() {
-        return reviewRepository.findAll().stream()
+        return reviewRepository.findAllWithFetch().stream()
                 .map(reviewMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public ReviewResponse removeReview(Long reviewId, RemoveReviewRequest request) {
-        var review = reviewRepository.findById(reviewId)
+        var review = reviewRepository.findByIdWithFetch(reviewId)
                 .orElseThrow(() -> new RuntimeException("Review not found"));
 
         review.setRemovedByAdmin(true);
@@ -265,8 +244,9 @@ public class AdminService {
         return reviewMapper.toResponse(reviewRepository.save(review));
     }
 
+    @Transactional
     public ReviewResponse restoreReview(Long reviewId) {
-        var review = reviewRepository.findById(reviewId)
+        var review = reviewRepository.findByIdWithFetch(reviewId)
                 .orElseThrow(() -> new RuntimeException("Review not found"));
 
         review.setRemovedByAdmin(false);
@@ -275,8 +255,6 @@ public class AdminService {
 
         return reviewMapper.toResponse(reviewRepository.save(review));
     }
-
-    // ── Private helpers ──────────────────────────────────────────────────────
 
     private UserProfileDTO toUserDTO(User u) {
         return UserProfileDTO.builder()

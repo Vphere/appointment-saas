@@ -1,6 +1,8 @@
 package org.vaidik.appointment.repository;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.vaidik.appointment.entity.Appointment;
@@ -16,7 +18,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     List<Appointment> findByUserId(Long userId);
 
-    @Query("SELECT a FROM Appointment a WHERE a.user.id = :userId ORDER BY a.createdAt DESC")
+    @Query("""
+        SELECT DISTINCT a FROM Appointment a
+        JOIN FETCH a.user
+        JOIN FETCH a.business
+        JOIN FETCH a.service
+        WHERE a.user.id = :userId ORDER BY a.createdAt DESC
+    """)
     List<Appointment> findByUserIdOrderByCreatedAtDesc(@Param("userId") Long userId);
 
     List<Appointment> findByBusinessId(Long businessId);
@@ -38,6 +46,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             Long serviceId, LocalDate date, LocalTime time
     );
 
+    /**
+     * How it works: when two requests arrive simultaneously both read the
+     * same rows with a row-level exclusive lock. The second transaction blocks
+     * until the first one commits, at which point it re-reads the now-committed
+     * row and correctly detects the conflict.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT COUNT(a) > 0 FROM Appointment a " +
             "WHERE a.service.id = :serviceId " +
             "AND a.appointmentDate = :date " +
@@ -50,7 +65,17 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("excludedStatuses") List<AppointmentStatus> excludedStatuses
     );
 
-    List<Appointment> findByServiceIdAndAppointmentDate(Long serviceId, LocalDate appointmentDate);
+    @Query("""
+        SELECT DISTINCT a FROM Appointment a
+        JOIN FETCH a.user
+        JOIN FETCH a.business
+        JOIN FETCH a.service
+        WHERE a.service.id = :serviceId AND a.appointmentDate = :date
+    """)
+    List<Appointment> findByServiceIdAndAppointmentDate(
+            @Param("serviceId") Long serviceId,
+            @Param("date") LocalDate date
+    );
 
     long countByBusinessId(Long businessId);
     long countByBusinessIdAndStatus(Long businessId, AppointmentStatus status);
@@ -80,16 +105,20 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("statuses") List<AppointmentStatus> statuses
     );
 
-    @Query(value = """
-        SELECT * FROM appointments a
-        WHERE a.reminder_sent = false
-        AND a.status IN (:statuses)
-        AND TIMESTAMP(a.appointment_date, a.appointment_time) BETWEEN :now AND :in24Hours
-        """, nativeQuery = true)
+    @Query("""
+        SELECT DISTINCT a FROM Appointment a
+        JOIN FETCH a.user
+        JOIN FETCH a.business
+        JOIN FETCH a.service
+        WHERE a.reminderSent = false
+        AND a.status IN :statuses
+        AND FUNCTION('TIMESTAMP', a.appointmentDate, a.appointmentTime) >= :now
+        AND FUNCTION('TIMESTAMP', a.appointmentDate, a.appointmentTime) <= :in24Hours
+    """)
     List<Appointment> findAppointmentsDueForReminder(
             @Param("now") LocalDateTime now,
             @Param("in24Hours") LocalDateTime in24Hours,
-            @Param("statuses") List<String> statuses
+            @Param("statuses") List<AppointmentStatus> statuses
     );
 
     @Query("""
@@ -107,14 +136,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("cutoff") LocalDateTime cutoff
     );
 
-
     /**
      * Finds appointments still in PENDING_PAYMENT state whose createdAt falls
      * within the nudge window [nudgeFrom, nudgeTo].
-     *
-     * Used by PaymentTimeoutScheduler to send a "your slot expires soon" email
-     * when ~half the reservation window has elapsed and the deposit is still unpaid.
-     * JOIN FETCHes included so the scheduler can read lazy fields off-thread.
      */
     @Query("""
         SELECT DISTINCT a FROM Appointment a
@@ -132,5 +156,15 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("nudgeFrom") LocalDateTime nudgeFrom,
             @Param("nudgeTo") LocalDateTime nudgeTo
     );
+
+    @Query(value = """
+        SELECT a.service_id
+        FROM appointments a
+        WHERE a.status NOT IN ('CANCELLED')
+        GROUP BY a.service_id
+        ORDER BY COUNT(a.id) DESC
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<Long> findMostBookedServiceIds(@Param("limit") int limit);
 
 }

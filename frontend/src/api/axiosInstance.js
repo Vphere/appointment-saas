@@ -21,6 +21,7 @@ const PUBLIC_ROUTES = [
   '/api/auth/verify-otp',
   '/api/auth/reset-password',
   '/api/auth/complete-profile',
+  '/api/payments/consent',
 ];
 
 function isPublicRoute(url) {

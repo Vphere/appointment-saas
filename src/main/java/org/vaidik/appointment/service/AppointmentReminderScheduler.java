@@ -37,7 +37,7 @@ public class AppointmentReminderScheduler {
         List<Appointment> due = appointmentRepository.findAppointmentsDueForReminder(
                 now,
                 in24Hours,
-                List.of(AppointmentStatus.CONFIRMED.name())
+                List.of(AppointmentStatus.CONFIRMED)   // enum, not String
         );
 
         log.info("Found {} appointment(s) due for reminder", due.size());
@@ -45,8 +45,8 @@ public class AppointmentReminderScheduler {
         for (Appointment appointment : due) {
             try {
                 emailService.sendReminderEmail(appointment);
-                appointment.setReminderSent(true);       // mark BEFORE saving
-                appointmentRepository.save(appointment); // persist flag to DB
+                appointment.setReminderSent(true);
+                appointmentRepository.save(appointment);
                 log.info("Reminder sent → appointmentId={} user={} at={}T{}",
                         appointment.getId(),
                         appointment.getUser().getEmail(),

@@ -1,4 +1,5 @@
 import api from './axiosInstance';
+import axios from 'axios';
 
 export const createPaymentOrder  = (appointmentId) =>
     api.post('/api/payments/create-order', { appointmentId });
@@ -12,11 +13,13 @@ export const initiateCompletion = (appointmentId) =>
 export const confirmByOtp = (appointmentId, otp) =>
     api.post('/api/payments/confirm-otp', { appointmentId, otp });
 
+const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
 export const getConsentDetails = (token) =>
-    api.get(`/api/payments/consent/${token}`);        // public, but api instance is fine
+    axios.get(`${BASE}/api/payments/consent/${token}`);
 
 export const confirmByLink = (token) =>
-    api.post(`/api/payments/consent/${token}/confirm`);
+    axios.post(`${BASE}/api/payments/consent/${token}/confirm`);
 
 export const disputeByLink = (token, reason) =>
-    api.post(`/api/payments/consent/${token}/dispute`, { reason });
+    axios.post(`${BASE}/api/payments/consent/${token}/dispute`, { reason });

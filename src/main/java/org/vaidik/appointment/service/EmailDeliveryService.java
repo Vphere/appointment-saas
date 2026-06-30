@@ -3,6 +3,7 @@ package org.vaidik.appointment.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.vaidik.appointment.entity.EmailOutbox;
 import org.vaidik.appointment.entity.EmailStatus;
 import org.vaidik.appointment.repository.EmailOutboxRepository;
@@ -34,20 +35,20 @@ public class EmailDeliveryService {
         return outboxRepository.save(job);
     }
 
-    /**
-     * Attempts to deliver the given job over SMTP right now.
-     * @return true if delivered successfully.
-     */
+    @Transactional
     public boolean attemptSend(EmailOutbox job) {
-        if (job.getStatus() == EmailStatus.SENT) {
-            return true; // already delivered (e.g. duplicate retry trigger)
+        EmailOutbox locked = outboxRepository.findByIdForUpdate(job.getId())
+                .orElse(job); // fallback to the passed-in instance if somehow already deleted
+
+        if (locked.getStatus() == EmailStatus.SENT) {
+            return true; // already delivered by a concurrent caller while we waited for the lock
         }
         try {
-            emailTransport.send(job.getRecipient(), job.getSubject(), job.getHtmlBody());
-            markSent(job);
+            emailTransport.send(locked.getRecipient(), locked.getSubject(), locked.getHtmlBody());
+            markSent(locked);
             return true;
         } catch (Exception e) {
-            markFailed(job, e);
+            markFailed(locked, e);
             return false;
         }
     }

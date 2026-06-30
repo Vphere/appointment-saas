@@ -5,7 +5,6 @@ import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.vaidik.appointment.dto.*;
@@ -14,16 +13,13 @@ import org.vaidik.appointment.mapper.BusinessMapper;
 import org.vaidik.appointment.repository.*;
 import java.security.SecureRandom;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class BusinessServiceService {
 
     private final BusinessRepository businessRepository;
@@ -39,15 +35,9 @@ public class BusinessServiceService {
     private final EmailService emailService;
     private final Cloudinary cloudinary;
 
-//    @Value("${app.upload.dir:uploads/photos}")
-//    private String photoDir;
-
-//    @Value("${app.document.dir:uploads/documents}")
-//    private String documentDir;
-
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    // CREATE BUSINESS
+    @Transactional
     public BusinessResponse createBusiness(BusinessRequest request, String ownerEmail) {
 
         User owner = userRepository.findByEmail(ownerEmail)
@@ -101,7 +91,7 @@ public class BusinessServiceService {
                 .toList();
     }
 
-    // APPROVE / REJECT BUSINESS
+    @Transactional
     public BusinessResponse updateBusinessStatus(Long id, BusinessStatus status) {
 
         Business business = businessRepository.findById(id)
@@ -117,7 +107,7 @@ public class BusinessServiceService {
         return businessMapper.toResponse(businessRepository.save(business));
     }
 
-    // REJECT WITH REASON
+    @Transactional
     public BusinessResponse rejectBusiness(Long id, RejectBusinessRequest request) {
         Business business = businessRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Business not found"));
@@ -156,6 +146,7 @@ public class BusinessServiceService {
     }
 
     // ── Step 1: send OTP ────────────────────────────────────────────────────────
+    @Transactional
     public void initiateDeleteRequest(Long businessId, String ownerEmail) {
         Business business = businessRepository.findActiveById(businessId)
                 .orElseThrow(() -> new RuntimeException("Business not found"));
@@ -245,16 +236,6 @@ public class BusinessServiceService {
         // ── 4. Delete business holidays ───────────────────────────────
         holidayRepository.deleteByBusinessId(businessId);
 
-        // ── 5. Delete business photos + files ────────────────────────
-//        List<BusinessPhoto> photos = photoRepository.findByBusinessId(businessId);
-//        for (BusinessPhoto photo : photos) {
-//            try {
-//                Path filePath = Paths.get(photoDir).resolve(photo.getFileName());
-//                Files.deleteIfExists(filePath);
-//            } catch (IOException ignored) {}
-//        }
-//        photoRepository.deleteByBusinessId(businessId);
-
         // ── 5. Delete business photos from Cloudinary + DB ───────────────
         List<BusinessPhoto> photos = photoRepository.findByBusinessId(businessId);
         for (BusinessPhoto photo : photos) {
@@ -265,20 +246,6 @@ public class BusinessServiceService {
             }
         }
         photoRepository.deleteByBusinessId(businessId);
-
-        // ── 6. Delete business documents + files ─────────────────────
-//        List<BusinessDocument> documents = documentRepository.findByBusinessId(businessId);
-//        for (BusinessDocument doc : documents) {
-//            try {
-//                Files.deleteIfExists(Paths.get(doc.getFilePath()));
-//            } catch (IOException ignored) {}
-//        }
-//        documentRepository.deleteByBusinessId(businessId);
-//
-//        try {
-//            Path businessDocDir = Paths.get(documentDir, String.valueOf(businessId));
-//            Files.deleteIfExists(businessDocDir);
-//        } catch (IOException ignored) {}
 
         // ── 6. Delete business documents from Cloudinary + DB ────────────
         List<BusinessDocument> documents = documentRepository.findByBusinessId(businessId);
@@ -305,6 +272,7 @@ public class BusinessServiceService {
     }
 
     // OWNER: RESUBMIT (edit + re-submit a rejected business)
+    @Transactional
     public BusinessResponse resubmitBusiness(Long id, BusinessRequest request, String ownerEmail) {
         Business business = businessRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Business not found"));

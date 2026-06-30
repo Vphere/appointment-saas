@@ -14,13 +14,12 @@ const CUSTOMER_NAV = [
 const OWNER_NAV = [
   { to: '/dashboard',          label: '🏠 Home' },
   { to: '/my-businesses',      label: '🏢 My Businesses' },
-  { to: '/manage-services',    label: '⚙️ Services' },
-  { to: '/business-settings',  label: '🕐 Hours' },
+  { to: '/manage-services',    label: '🛠️ Services' },
+  { to: '/business-settings',  label: '⚙️ Settings' },
   { to: '/owner-appointments', label: '📋 Appointments' },
   { to: '/business/analytics', label: '📊 Analytics' },
 ];
 
-// ── Admin nav: meaningful labels, key pages accessible directly ──
 const ADMIN_NAV = [
   { to: '/admin',           label: '📊 Dashboard' },
   { to: '/admin/approvals', label: '✅ Approvals' },
@@ -44,6 +43,16 @@ export default function Navbar() {
   const [avatarOpen, setAvatarOpen] = useState(false);
   const dropdownRef = useRef(null);
 
+  useEffect(() => {
+    function onClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setAvatarOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
   if (!user) return null;
 
   const navItems =
@@ -58,21 +67,10 @@ export default function Navbar() {
     navigate('/');
   };
 
-  useEffect(() => {
-    function onClickOutside(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setAvatarOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, []);
-
   return (
     <nav className="navbar">
       <div className="navbar-inner">
 
-        {/* Brand — admins go to /admin, others to /dashboard */}
         <NavLink
           to={role === 'SUPER_ADMIN' ? '/admin' : '/dashboard'}
           className="navbar-brand"
@@ -83,13 +81,12 @@ export default function Navbar() {
           )}
         </NavLink>
 
-        {/* Desktop nav links */}
         <ul className={`navbar-nav ${menuOpen ? 'open' : ''}`}>
           {navItems.map((item) => (
             <li key={item.to}>
               <NavLink
                 to={item.to}
-                end={item.to === '/admin'} // exact match for /admin only
+                end={item.to === '/admin'}
                 className={({ isActive }) => (isActive ? 'active' : '')}
                 onClick={() => setMenuOpen(false)}
               >
@@ -98,7 +95,6 @@ export default function Navbar() {
             </li>
           ))}
 
-          {/* Mobile-only: profile + logout inside hamburger menu */}
           <li className="mobile-only">
             <NavLink
               to="/profile"
@@ -115,7 +111,6 @@ export default function Navbar() {
           </li>
         </ul>
 
-        {/* Desktop right zone */}
         <div className="navbar-right desktop-only">
           <div className="avatar-wrapper" ref={dropdownRef}>
             <button
@@ -143,7 +138,6 @@ export default function Navbar() {
 
                 <div className="avatar-dropdown-divider" />
 
-                {/* Non-admins get profile link */}
                 {role !== 'SUPER_ADMIN' && (
                   <NavLink
                     to="/profile"
@@ -164,7 +158,6 @@ export default function Navbar() {
                   </NavLink>
                 )}
 
-                {/* Admin-specific quick links in dropdown */}
                 {role === 'SUPER_ADMIN' && (
                   <>
                     <NavLink to="/admin"           className="avatar-dropdown-item" onClick={() => setAvatarOpen(false)}>📊 Analytics</NavLink>
@@ -191,7 +184,6 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* Hamburger (mobile) */}
         <button
           className="navbar-mobile-menu"
           onClick={() => setMenuOpen((o) => !o)}

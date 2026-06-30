@@ -1,0 +1,840 @@
+/* ── BusinessAnalytics.css ──────────────────────────────────────────────────
+   All styles for BusinessAnalytics.jsx.
+   Design tokens are kept as CSS custom properties so they can be overridden
+   by a global theme without touching component code.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* ── Token overrides (scoped to this page) ─────────────────────────────── */
+.ba-root {
+  --ba-bg:        #080b14;
+  --ba-surface:   #0e1220;
+  --ba-card:      #111827;
+  --ba-card-hov:  #141c2e;
+  --ba-border:    rgba(255,255,255,0.06);
+  --ba-border-hi: rgba(255,255,255,0.12);
+  --ba-muted:     #4b5675;
+  --ba-dim:       #6b7a99;
+  --ba-text:      #d4daf0;
+  --ba-bright:    #eef0fb;
+  --ba-indigo:    #6574f8;
+  --ba-violet:    #7c6af7;
+  --ba-sky:       #38bdf8;
+  --ba-teal:      #2dd4bf;
+  --ba-emerald:   #34d399;
+  --ba-amber:     #fbbf24;
+  --ba-rose:      #fb7185;
+  --ba-slate:     #94a3b8;
+}
+
+/* ── Loading / error screens ────────────────────────────────────────────── */
+.ba-center-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.ba-spinner-wrap {
+  text-align: center;
+}
+
+.ba-spinner {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  border: 3px solid var(--ba-border);
+  border-top-color: var(--ba-indigo);
+  animation: ba-spin 0.8s linear infinite;
+}
+
+@keyframes ba-spin { to { transform: rotate(360deg); } }
+
+.ba-spinner-text {
+  color: var(--ba-dim);
+  font-size: 13px;
+  margin: 0;
+}
+
+.ba-error-card {
+  max-width: 380px;
+  text-align: center;
+}
+
+.ba-error-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.ba-error-msg {
+  color: var(--ba-rose);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.ba-error-link {
+  color: var(--ba-indigo);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+/* ── Page header ────────────────────────────────────────────────────────── */
+.ba-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.ba-page-title {
+  margin-bottom: 6px;
+}
+
+.ba-page-subtitle {
+  /* inherits .page-subtitle from global CSS */
+}
+
+.ba-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ba-btn-csv {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(52,211,153,0.08);
+  color: var(--ba-emerald);
+  border: 1px solid rgba(52,211,153,0.2);
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.ba-btn-json {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(101,116,248,0.08);
+  color: #a5b4fc;
+  border: 1px solid rgba(101,116,248,0.2);
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.ba-btn-csv:hover,
+.ba-btn-json:hover { opacity: 0.75; }
+
+/* ── KPI grid ───────────────────────────────────────────────────────────── */
+.ba-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+/* ── KPI Card ───────────────────────────────────────────────────────────── */
+.ba-kpi-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.ba-kpi-accent-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 16px 0 0 16px;
+}
+
+.ba-kpi-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.ba-kpi-body {
+  padding-left: 4px;
+}
+
+.ba-kpi-label {
+  /* uses .ba-section-label */
+}
+
+.ba-kpi-value {
+  margin: 8px 0 0;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.ba-kpi-sub {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--ba-dim);
+}
+
+.ba-kpi-icon {
+  font-size: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ba-kpi-bar-track {
+  margin-top: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.05);
+  overflow: hidden;
+}
+
+.ba-kpi-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1s ease;
+}
+
+/* ── Card ───────────────────────────────────────────────────────────────── */
+.ba-card {
+  background: var(--ba-card);
+  border: 1px solid var(--ba-border);
+  border-radius: 16px;
+  padding: 22px 26px;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.ba-card--hover:hover {
+  background: var(--ba-card-hov);
+  border-color: var(--ba-border-hi);
+}
+
+/* ── Section label / title ──────────────────────────────────────────────── */
+.ba-section-label {
+  margin: 0 0 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ba-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.ba-section-title-wrap {
+  margin-bottom: 22px;
+}
+
+.ba-section-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ba-bright);
+  letter-spacing: -0.01em;
+}
+
+.ba-section-sub {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--ba-dim);
+}
+
+/* ── Badge ──────────────────────────────────────────────────────────────── */
+.ba-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.03em;
+}
+
+/* ── Chart tooltip ──────────────────────────────────────────────────────── */
+.ba-tooltip {
+  background: #1a2035;
+  border: 1px solid var(--ba-border-hi);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.ba-tooltip-label {
+  margin: 0 0 6px;
+  color: var(--ba-dim);
+  font-weight: 600;
+}
+
+.ba-tooltip-row {
+  margin: 2px 0;
+  font-weight: 700;
+}
+
+/* ── Donut chart ────────────────────────────────────────────────────────── */
+.ba-donut-wrap {
+  position: relative;
+}
+
+.ba-donut-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.ba-donut-center-value {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ba-bright);
+}
+
+.ba-donut-center-label {
+  margin: 0;
+  font-size: 10px;
+  color: var(--ba-dim);
+  font-weight: 600;
+}
+
+/* ── Pie legend ─────────────────────────────────────────────────────────── */
+.ba-pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.ba-pie-legend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ba-pie-legend-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ba-pie-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.ba-pie-legend-name {
+  font-size: 12px;
+  color: var(--ba-dim);
+}
+
+.ba-pie-legend-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ba-text);
+}
+
+/* ── Tab bar ────────────────────────────────────────────────────────────── */
+.ba-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 24px;
+  background: var(--ba-surface);
+  border-radius: 12px;
+  padding: 4px;
+  border: 1px solid var(--ba-border);
+  width: fit-content;
+  flex-wrap: wrap;
+}
+
+.ba-tab-btn {
+  position: relative;
+  padding: 9px 20px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--ba-muted);
+  transition: all 0.18s;
+  white-space: nowrap;
+  outline: none;
+}
+
+.ba-tab-btn--active {
+  font-weight: 600;
+  background: rgba(101,116,248,0.18);
+  color: #a5b4fc;
+}
+
+.ba-tab-badge {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  background: var(--ba-indigo);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 99px;
+  line-height: 1.5;
+}
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+.ba-empty {
+  padding: 32px 0;
+  text-align: center;
+}
+
+.ba-empty p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ba-muted);
+}
+
+/* ── Vertical stack ─────────────────────────────────────────────────────── */
+.ba-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Two-column grid ────────────────────────────────────────────────────── */
+.ba-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ── Revenue / appointments stat mini-cards ─────────────────────────────── */
+.ba-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.ba-stat-card {
+  background: var(--ba-card);
+  border: 1px solid var(--ba-border);
+  border-radius: 14px;
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ba-stat-card-top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+}
+
+.ba-stat-card-label {
+  margin: 0 0 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ba-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.ba-stat-card-value {
+  margin: 0 0 4px;
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.ba-stat-card-pct {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ba-dim);
+}
+
+/* ── Revenue summary table ──────────────────────────────────────────────── */
+.ba-table-wrap {
+  overflow-x: auto;
+}
+
+.ba-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ba-table th {
+  padding: 8px 14px;
+  text-align: left;
+  color: var(--ba-muted);
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  border-bottom: 1px solid var(--ba-border);
+}
+
+.ba-table td {
+  padding: 13px 14px;
+}
+
+.ba-table tbody tr {
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  transition: background 0.12s;
+}
+
+.ba-table tbody tr:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+.ba-table tfoot tr {
+  border-top: 1px solid var(--ba-border-hi);
+}
+
+.ba-table-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ba-text);
+  font-weight: 500;
+}
+
+.ba-table-color-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.ba-table-revenue {
+  color: var(--ba-emerald);
+  font-weight: 700;
+}
+
+.ba-table-pct-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ba-dim);
+}
+
+.ba-table-pct-bar-track {
+  flex: 1;
+  max-width: 80px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+
+.ba-table-pct-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.ba-table-total-label {
+  color: var(--ba-bright);
+  font-weight: 700;
+}
+
+.ba-table-total-revenue {
+  color: var(--ba-emerald);
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.ba-table-total-pct {
+  color: var(--ba-dim);
+}
+
+.ba-table-date   { color: var(--ba-dim); }
+.ba-table-customer { color: var(--ba-text); font-weight: 500; }
+.ba-table-dim    { color: var(--ba-dim); }
+
+/* ── Reports export buttons ─────────────────────────────────────────────── */
+.ba-export-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ba-export-btn {
+  border-radius: 12px;
+  padding: 18px 20px;
+  cursor: pointer;
+  text-align: left;
+  transition: opacity 0.15s;
+}
+
+.ba-export-btn:hover { opacity: 0.8; }
+
+.ba-export-icon {
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+.ba-export-label {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ba-export-desc {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ba-dim);
+  line-height: 1.5;
+}
+
+/* ── Reviews tab ────────────────────────────────────────────────────────── */
+.ba-reviews-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ba-review-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.ba-review-avg-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.ba-review-avg-left {
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.ba-review-avg-number {
+  font-size: 48px;
+  font-weight: 800;
+  color: var(--ba-amber);
+  line-height: 1;
+}
+
+.ba-review-avg-count {
+  font-size: 11px;
+  color: var(--ba-dim);
+  margin-top: 4px;
+}
+
+.ba-review-bars {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ba-review-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ba-review-bar-stars {
+  font-size: 11px;
+  color: var(--ba-amber);
+  width: 52px;
+  flex-shrink: 0;
+  letter-spacing: -1px;
+}
+
+.ba-review-bar-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.ba-review-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  border-radius: 99px;
+  transition: width 0.5s ease;
+}
+
+.ba-review-bar-count {
+  font-size: 11px;
+  color: var(--ba-muted);
+  width: 18px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.ba-review-quick-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ba-review-quick-stat {
+  background: var(--ba-card);
+  border: 1px solid var(--ba-border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ba-review-quick-stat-label {
+  font-size: 12px;
+  color: var(--ba-dim);
+}
+
+.ba-review-quick-stat-value {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* ── Review filter pills ────────────────────────────────────────────────── */
+.ba-review-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ba-review-filter-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  background: rgba(255,255,255,0.04);
+  color: var(--ba-dim);
+  transition: all 0.15s;
+}
+
+.ba-review-filter-btn--active {
+  font-weight: 700;
+  background: rgba(101,116,248,0.18);
+  color: #a5b4fc;
+}
+
+/* ── Review cards ───────────────────────────────────────────────────────── */
+.ba-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ba-review-card {
+  padding: 18px 22px;
+}
+
+.ba-review-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ba-review-user-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ba-review-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #6574f8, #7c6af7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.ba-review-customer-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ba-bright);
+}
+
+.ba-review-appt-date {
+  font-size: 11px;
+  color: var(--ba-muted);
+  margin-top: 1px;
+}
+
+.ba-review-meta-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.ba-review-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ba-review-chip {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.ba-review-chip--biz {
+  background: rgba(108,99,255,0.12);
+  color: #a78bfa;
+}
+
+.ba-review-chip--svc {
+  background: rgba(56,189,248,0.12);
+  color: #38bdf8;
+}
+
+.ba-review-comment {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ba-text);
+  line-height: 1.6;
+  font-style: italic;
+  padding-left: 12px;
+  border-left: 3px solid rgba(101,116,248,0.3);
+}
+
+.ba-review-no-comment {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ba-muted);
+  font-style: italic;
+}
+
+/* ── Stars ──────────────────────────────────────────────────────────────── */
+.ba-stars {
+  letter-spacing: 1px;
+}
+
+.ba-star--on  { color: #fbbf24; }
+.ba-star--off { color: rgba(255,255,255,0.12); }

@@ -16,6 +16,7 @@ import org.vaidik.appointment.security.JwtUtil;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -26,7 +27,13 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     private final JwtUtil jwtUtil;
 
     @Value("${app.frontend.url}")
-    private String frontendUrl;
+    private List<String> frontendUrls;
+
+    private String primaryFrontendUrl() {
+        return (frontendUrls != null && !frontendUrls.isEmpty())
+                ? frontendUrls.get(0)
+                : "";
+    }
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
@@ -38,6 +45,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String name  = oAuth2User.getAttribute("name");
 
         Optional<User> existing = userRepository.findByEmail(email);
+
+        String frontendUrl = primaryFrontendUrl();
 
         // ── Deactivated (soft-deleted) account → block login entirely ──
         if (existing.isPresent() && existing.get().isDeleted()) {
@@ -60,9 +69,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 response.sendRedirect(
                         frontendUrl + "/complete-profile?email="
                                 + URLEncoder.encode(email, StandardCharsets.UTF_8)
-                                + "&name=" + URLEncoder.encode(
-                                user.getName() != null ? user.getName() : "",
-                                StandardCharsets.UTF_8)
+                                + "&name=" + URLEncoder.encode(user.getName() != null ? user.getName() : "",
+                                    StandardCharsets.UTF_8)
                 );
                 return;
             }

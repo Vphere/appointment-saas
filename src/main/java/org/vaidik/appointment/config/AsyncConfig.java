@@ -10,15 +10,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.lang.reflect.Method;
 import java.util.concurrent.Executor;
 
-/**
- * Bounded thread pool for all {@code @Async} work (primarily outbound email).
- *
- * Without this, Spring falls back to {@code SimpleAsyncTaskExecutor}, which
- * spawns a brand-new OS thread per task with no upper bound — under a burst
- * of requests (e.g. many appointment status changes triggering emails) this
- * can exhaust resources and slow down the whole instance. A bounded pool
- * keeps memory/thread usage predictable and improves overall response time.
- */
 @Slf4j
 @Configuration
 public class AsyncConfig implements AsyncConfigurer {

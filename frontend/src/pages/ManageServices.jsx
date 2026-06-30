@@ -56,10 +56,6 @@ const CATEGORY_OPTIONS = [
   { val: 'OTHER',              icon: '⚙️', label: 'Other' },
 ];
 
-// ── Lazy-init helpers — read sessionStorage ONCE at component boot ─
-// This fixes the "dialog disappears on refresh" bug:
-// useState(fn) calls fn synchronously before the first render,
-// so the form is open/populated from frame 0 — no flicker, no blank flash.
 const initFromDraft = (urlBizId) => {
   const draft = loadDraft();
   if (!draft) return { form: emptyForm, showForm: false, bulkMode: false, selectedBusiness: urlBizId || '' };
@@ -707,7 +703,7 @@ function ServiceCard({ s, onEdit, onDelete }) {
             <span className="ms-sc-chip-icon">🏷️</span>
             <div className="ms-sc-chip-body">
               <span className="ms-sc-chip-label">Category</span>
-              <span className="ms-sc-chip-value">{s.category}</span>
+              <span className="ms-sc-chip-value">{CATEGORY_OPTIONS.find(c => c.val === s.category)?.label || s.category}</span>
             </div>
           </div>
         )}
@@ -759,9 +755,6 @@ export default function ManageServices() {
   const createLocationRef = useRef(null);
   const [formErrors, setFormErrors] = useState({});
 
-  // ── All state initialised LAZILY from sessionStorage ─────────────
-  // This is the key fix: useState(() => fn()) runs fn synchronously,
-  // so on a page refresh the form is already open from frame 0.
   const [form,             setForm]             = useState(() => initFromDraft(urlBizId).form);
   const [showForm,         setShowForm]         = useState(() => initFromDraft(urlBizId).showForm);
   const [bulkMode,         setBulkMode]         = useState(() => initFromDraft(urlBizId).bulkMode);

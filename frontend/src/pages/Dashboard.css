@@ -470,7 +470,7 @@
 .db-footer-top-banner {
   position: relative; z-index: 1;
   text-align: center;
-  padding: 64px 24px 36px;
+  padding: 52px 24px 28px;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   max-width: 860px;
   margin: 0 auto;
@@ -499,7 +499,7 @@
 .db-footer-top-sub {
   color: #94a3b8;
   max-width: 620px;
-  margin: 0 auto 32px;
+  margin: 0 auto;
   line-height: 1.75;
   font-size: 0.95rem;
 }
@@ -545,7 +545,7 @@
   display: grid;
   grid-template-columns: 1.8fr 1fr 1fr;
   gap: 52px;
-  padding: 52px 6% 44px;
+  padding: 36px 6% 44px;
 }
 
 /* ── Brand ── */

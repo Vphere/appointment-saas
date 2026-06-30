@@ -10,6 +10,12 @@ export const createServicesBulk = (data) => api.post('/api/services/bulk', data)
 export const updateService = (id, data) => api.put(`/api/services/${id}`, data);
 export const deleteService = (id) => api.delete(`/api/services/${id}`);
 
+export const getPopularServices = (limit = 6) =>
+  api.get('/api/services/popular', { params: { limit } });
+
+export const getNearbyServices = (lat, lng, radiusKm = 20) =>
+  api.get('/api/services/nearby', { params: { lat, lng, radiusKm } });
+
 export function formatServiceLocation(service) {
   const parts = [];
 

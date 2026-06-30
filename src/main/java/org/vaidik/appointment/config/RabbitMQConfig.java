@@ -16,18 +16,6 @@ import org.springframework.context.annotation.Configuration;
 // * {@code email_outbox} table (see {@link org.vaidik.appointment.service.EmailRetryScheduler})
 // * already guarantee eventual delivery via polling; RabbitMQ simply makes
 // * retries near-instant instead of waiting for the next scheduler tick.
-// *
-// * Topology:
-// *   email.exchange (direct)
-// *     ├─ "email.send"      -> email.queue            (main work queue)
-// *     ├─ "email.retry.1m"  -> email.retry.1m (TTL=1m)  --(DLX)--> email.send
-// *     ├─ "email.retry.5m"  -> email.retry.5m (TTL=5m)  --(DLX)--> email.send
-// *     ├─ "email.retry.15m" -> email.retry.15m(TTL=15m) --(DLX)--> email.send
-// *     └─ "email.dead"      -> email.dlq               (exhausted retries)
-// *
-// * To enable: provision a RabbitMQ instance (e.g. CloudAMQP free tier), set
-// * RABBITMQ_HOST / RABBITMQ_PORT / RABBITMQ_USERNAME / RABBITMQ_PASSWORD /
-// * RABBITMQ_VHOST env vars and set EMAIL_QUEUE_ENABLED=true.
 // */
 @Configuration
 @ConditionalOnProperty(name = "app.email.queue.enabled", havingValue = "true")

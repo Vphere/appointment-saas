@@ -9,25 +9,39 @@ import org.vaidik.appointment.entity.BusinessHoliday;
 import java.util.List;
 
 public interface BusinessHolidayRepository extends JpaRepository<BusinessHoliday, Long> {
-    // Get holidays for a specific service OR business-wide holidays
-    @Query("SELECT h FROM BusinessHoliday h WHERE h.business.id = :businessId " +
-            "AND (h.service.id = :serviceId OR h.allServices = true) " +
-            "ORDER BY h.date ASC")
+
+    @Query("""
+        SELECT h FROM BusinessHoliday h
+        JOIN FETCH h.business
+        LEFT JOIN FETCH h.service
+        WHERE h.business.id = :businessId
+        AND (h.service.id = :serviceId OR h.allServices = true)
+        ORDER BY h.date ASC
+    """)
     List<BusinessHoliday> findByBusinessIdAndServiceIdOrAllServices(
             @Param("businessId") Long businessId,
             @Param("serviceId") Long serviceId);
 
-    @Query("SELECT h FROM BusinessHoliday h WHERE " +
-            "(h.service.id = :serviceId OR " +
-            "(h.allServices = true AND h.business.id = " +
-            "  (SELECT s.business.id FROM ServiceOffering s WHERE s.id = :serviceId))) " +
-            "ORDER BY h.date ASC")
+    @Query("""
+        SELECT h FROM BusinessHoliday h
+        JOIN FETCH h.business
+        LEFT JOIN FETCH h.service
+        WHERE (h.service.id = :serviceId OR
+              (h.allServices = true AND h.business.id =
+              (SELECT s.business.id FROM ServiceOffering s WHERE s.id = :serviceId)))
+        ORDER BY h.date ASC
+    """)
     List<BusinessHoliday> findByServiceIdOrBusinessWide(@Param("serviceId") Long serviceId);
 
-    // Get all holidays for a business (owner view)
-    List<BusinessHoliday> findByBusinessIdOrderByDateAsc(Long businessId);
+    @Query("""
+        SELECT h FROM BusinessHoliday h
+        JOIN FETCH h.business
+        LEFT JOIN FETCH h.service
+        WHERE h.business.id = :businessId
+        ORDER BY h.date ASC
+    """)
+    List<BusinessHoliday> findByBusinessIdOrderByDateAsc(@Param("businessId") Long businessId);
 
-    // Check duplicate
     boolean existsByBusinessIdAndServiceIdAndDate(Long businessId, Long serviceId, java.time.LocalDate date);
     boolean existsByBusinessIdAndAllServicesTrueAndDate(Long businessId, java.time.LocalDate date);
 

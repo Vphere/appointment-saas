@@ -50,8 +50,6 @@ function formatDateDisplay(iso) {
   });
 }
 
-// ── Shared atoms ──────────────────────────────────────────────────
-
 function Card({ children, className = '' }) {
   return <div className={`bs-card ${className}`}>{children}</div>;
 }
@@ -131,20 +129,15 @@ function TabBar({ tabs, active, onChange }) {
   );
 }
 
-// ── Custom Date Input ─────────────────────────────────────────────
-// Strategy: the styled button calls nativeRef.current.showPicker()
-// which programmatically opens the browser's native date picker.
-// The native input itself is visually hidden (height 0, opacity 0)
-// but still in DOM flow so showPicker() works reliably on all browsers.
 function DateInput({ value, onChange, min, placeholder = 'Select a date…' }) {
   const nativeRef = useRef(null);
 
   const handleTriggerClick = () => {
     if (!nativeRef.current) return;
     try {
-      nativeRef.current.showPicker();   // Chrome 99+, Firefox 101+, Safari 16+
+      nativeRef.current.showPicker();   
     } catch {
-      nativeRef.current.focus();        // fallback: focus reveals picker on older browsers
+      nativeRef.current.focus();        
       nativeRef.current.click();
     }
   };
@@ -156,8 +149,6 @@ function DateInput({ value, onChange, min, placeholder = 'Select a date…' }) {
 
   return (
     <div className="bs-date-wrapper">
-      {/* Hidden native input — zero height, no pointer events so it doesn't
-          intercept clicks, but showPicker() still works because it's in the DOM */}
       <input
         ref={nativeRef}
         type="date"
@@ -169,7 +160,6 @@ function DateInput({ value, onChange, min, placeholder = 'Select a date…' }) {
         aria-hidden="true"
       />
 
-      {/* Fully styled clickable trigger */}
       <button
         type="button"
         className="bs-date-trigger"

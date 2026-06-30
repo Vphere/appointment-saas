@@ -2,6 +2,7 @@ package org.vaidik.appointment.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.vaidik.appointment.dto.BusinessHolidayRequest;
 import org.vaidik.appointment.dto.BusinessHolidayResponse;
 import org.vaidik.appointment.entity.Business;
@@ -15,24 +16,24 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class BusinessHolidayService {
 
     private final BusinessHolidayRepository holidayRepository;
     private final BusinessRepository businessRepository;
     private final ServiceOfferingRepository serviceRepository;
 
-    // All holidays for a business (owner view)
     public List<BusinessHolidayResponse> getHolidays(Long businessId) {
         return holidayRepository.findByBusinessIdOrderByDateAsc(businessId)
                 .stream().map(this::toResponse).toList();
     }
 
-    // Holidays for a specific service + business-wide holidays
     public List<BusinessHolidayResponse> getHolidaysByService(Long serviceId) {
         return holidayRepository.findByServiceIdOrBusinessWide(serviceId)
                 .stream().map(this::toResponse).toList();
     }
 
+    @Transactional
     public BusinessHolidayResponse addHoliday(BusinessHolidayRequest req, String ownerEmail) {
         Business business = getAndValidate(req.getBusinessId(), ownerEmail);
 
@@ -43,13 +44,11 @@ public class BusinessHolidayService {
                 .allServices(req.isAllServices());
 
         if (req.isAllServices()) {
-            // Check duplicate business-wide holiday
             if (holidayRepository.existsByBusinessIdAndAllServicesTrueAndDate(business.getId(), req.getDate())) {
                 throw new RuntimeException("A business-wide holiday already exists for this date.");
             }
         } else {
-            // Service-specific holiday
-            ServiceOffering service = serviceRepository.findById(req.getServiceId())
+            ServiceOffering service = serviceRepository.findByIdWithFetch(req.getServiceId())  // ← was findById
                     .orElseThrow(() -> new RuntimeException("Service not found"));
             if (!service.getBusiness().getId().equals(business.getId())) {
                 throw new RuntimeException("Service does not belong to this business");
@@ -63,6 +62,7 @@ public class BusinessHolidayService {
         return toResponse(holidayRepository.save(builder.build()));
     }
 
+    @Transactional
     public void deleteHoliday(Long holidayId, String ownerEmail) {
         BusinessHoliday holiday = holidayRepository.findById(holidayId)
                 .orElseThrow(() -> new RuntimeException("Holiday not found"));

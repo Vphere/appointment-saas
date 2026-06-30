@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    // Occurs when validation annotations fail like NotBlank, Email
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationErrors(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()
@@ -40,6 +41,7 @@ public class GlobalExceptionHandler {
                 .body(Map.of("message", "Your account is temporarily locked. Please try again later."));
     }
 
+    // Handles all remaining RuntimeExceptions.
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException ex) {
         String msg = ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred.";

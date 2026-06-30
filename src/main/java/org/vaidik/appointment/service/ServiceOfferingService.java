@@ -3,7 +3,7 @@ package org.vaidik.appointment.service;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.vaidik.appointment.dto.CreateServiceRequest;
@@ -13,15 +13,16 @@ import org.vaidik.appointment.entity.*;
 import org.vaidik.appointment.mapper.ServiceOfferingMapper;
 import org.vaidik.appointment.repository.*;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ServiceOfferingService {
 
     private final ServiceOfferingRepository serviceRepository;
@@ -32,11 +33,8 @@ public class ServiceOfferingService {
     private final WorkingHoursRepository    workingHoursRepository;
     private final BusinessPhotoRepository   businessPhotoRepository;
     private final BusinessPaymentAccountRepository paymentAccountRepository;
-    private final Cloudinary cloudinary;
-
-    // Configured in application.properties: app.upload.dir=uploads
-//    @Value("${app.upload.dir:uploads}")
-//    private String uploadDir;
+    private final AppointmentRepository     appointmentRepository;
+    private final Cloudinary                cloudinary;
 
     // ── CREATE ───────────────────────────────────────────────────────
     @Transactional
@@ -61,7 +59,6 @@ public class ServiceOfferingService {
             throw new RuntimeException(
                     "Gap Between Appointments must be at least 1 minute for Consultation services.");
 
-        // deletedAt is intentionally omitted — null by default means active.
         ServiceOffering service = ServiceOffering.builder()
                 .name(request.getName())
                 .description(request.getDescription())
@@ -119,6 +116,83 @@ public class ServiceOfferingService {
                 .toList();
     }
 
+    public List<ServiceResponse> getPopularServices(int limit) {
+        // Step 1 – ranked service IDs from appointment counts
+        List<Long> rankedIds = appointmentRepository.findMostBookedServiceIds(limit);
+
+        // Step 2 – fetch each service in rank order (only active ones)
+        List<ServiceResponse> result = new ArrayList<>();
+        for (Long id : rankedIds) {
+            serviceRepository.findByIdAndDeletedFalse(id)
+                    .map(mapper::toResponse)
+                    .ifPresent(result::add);
+        }
+
+        // Step 3 – pad with fallback services if we still need more
+        if (result.size() < limit) {
+            Set<Long> alreadyIn = rankedIds.stream().collect(Collectors.toSet());
+            List<ServiceOffering> allActive = serviceRepository.findByDeletedFalse();
+            for (ServiceOffering s : allActive) {
+                if (result.size() >= limit) break;
+                if (!alreadyIn.contains(s.getId())) {
+                    result.add(mapper.toResponse(s));
+                    alreadyIn.add(s.getId());
+                }
+            }
+        }
+
+        return result;
+    }
+
+    // ── NEARBY SERVICES ──────────────────────────────────────────────
+    /**
+     * Returns active services whose city is within {@code radiusKm} kilometres
+     * of the supplied coordinates, ordered by distance ascending.
+     *
+     * Because service rows store city/state as text (no lat/lng column), we use
+     * the Haversine formula on a per-city cache built from the current service list.
+     * This is accurate enough for city-level proximity and requires zero schema change.
+     *
+     * For production-scale deployments where geocoding precision matters, store
+     * lat/lng columns on the ServiceOffering entity and replace the city-lookup
+     * below with a direct coordinate comparison.
+     */
+    public List<ServiceResponse> getNearbyServices(double userLat, double userLng, double radiusKm) {
+        List<ServiceOffering> allActive = serviceRepository.findByDeletedFalse();
+
+        // Build a map of city -> approximate coordinates using a bundled lookup.
+        // Services whose city is not in the lookup (or whose city field is blank)
+        // are excluded from the nearby result rather than guessed at.
+        return allActive.stream()
+                .filter(s -> s.getCity() != null && !s.getCity().isBlank())
+                .filter(s -> {
+                    double[] coords = CityCoordinates.get(s.getCity().trim().toLowerCase());
+                    if (coords == null) return false;
+                    double distKm = haversineKm(userLat, userLng, coords[0], coords[1]);
+                    return distKm <= radiusKm;
+                })
+                .sorted((a, b) -> {
+                    double[] ca = CityCoordinates.get(a.getCity().trim().toLowerCase());
+                    double[] cb = CityCoordinates.get(b.getCity().trim().toLowerCase());
+                    double da = haversineKm(userLat, userLng, ca[0], ca[1]);
+                    double db = haversineKm(userLat, userLng, cb[0], cb[1]);
+                    return Double.compare(da, db);
+                })
+                .map(mapper::toResponse)
+                .toList();
+    }
+
+    /** Haversine great-circle distance between two lat/lng points in km. */
+    private static double haversineKm(double lat1, double lng1, double lat2, double lng2) {
+        final double R = 6371.0; // Earth radius km
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLng = Math.toRadians(lng2 - lng1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
     // ── UPDATE (partial) ─────────────────────────────────────────────
     @Transactional
     public ServiceResponse updateService(Long id, UpdateServiceRequest request, String userEmail) {
@@ -165,34 +239,6 @@ public class ServiceOfferingService {
     }
 
     // ── SOFT DELETE ──────────────────────────────────────────────────
-    /**
-     * Industry-standard soft delete (Square, Booksy, Fresha pattern).
-     *
-     * The service row is NEVER physically removed.  All appointment rows
-     * keep their service_id FK → price, name, duration stay in history.
-     * Revenue reports remain accurate forever.
-     *
-     * Deletion state is encoded in a single column:
-     *
-     *   deleted_at IS NULL     → active
-     *   deleted_at IS NOT NULL → soft-deleted (value = deletion timestamp)
-     *
-     * What we DO clean up (things that have no value after deletion):
-     *
-     *   Table               Action          Reason
-     *   ─────────────────── ─────────────── ──────────────────────────────────────
-     *   business_holidays   hard DELETE     Schedule for a deleted service is useless
-     *   working_hours       hard DELETE     Same — no point keeping hours for a gone service
-     *   business_photos     hard DELETE     Free DB row + delete physical file from disk
-     *                       + file delete
-     *
-     * What we do NOT touch:
-     *
-     *   Table               Reason
-     *   ─────────────────── ──────────────────────────────────────────────────────
-     *   appointments        History — keep intact, service row still exists (soft delete)
-     *   reviews             History — keep intact, service row still exists
-     */
     @Transactional
     public void deleteService(Long id, String userEmail) {
 
@@ -202,16 +248,11 @@ public class ServiceOfferingService {
         if (!service.getBusiness().getOwner().getEmail().equals(userEmail))
             throw new RuntimeException("Unauthorized");
 
-        // 1. Delete holiday overrides specific to this service
         businessHolidayRepository.deleteByServiceId(id);
-
-        // 2. Delete working-hour configs for this service
         workingHoursRepository.deleteByServiceId(id);
 
-        // 3. Load photos BEFORE deleting DB rows
         List<BusinessPhoto> photos = businessPhotoRepository.findByServiceId(id);
 
-        // 4. Delete Cloudinary files
         for (BusinessPhoto photo : photos) {
             if (photo.getPublicId() != null) {
                 try {
@@ -222,46 +263,9 @@ public class ServiceOfferingService {
             }
         }
 
-        // 5. Delete business_photos DB rows
         businessPhotoRepository.deleteByServiceId(id);
 
-//        // 3. Load photo file names BEFORE deleting DB rows
-//        List<String> photoFileNames = businessPhotoRepository.findFileNamesByServiceId(id);
-//
-//        // 4. Delete business_photos DB rows for this service
-//        businessPhotoRepository.deleteByServiceId(id);
-//
-//        // 5. Delete physical photo files from disk
-//        //    Done AFTER DB deletion so if file delete fails, DB is already clean.
-//        //    A missing file is logged as a warning — it should NOT roll back the transaction.
-//        deletePhysicalFiles(photoFileNames);
-
-        // 6. Soft-delete: set deletedAt to now — this is the single source of truth.
-        //    NULL = active, non-NULL = deleted. No separate boolean needed.
         service.setDeletedAt(LocalDateTime.now());
         serviceRepository.save(service);
     }
-
-    // ── Physical file deletion ────────────────────────────────────────
-    /**
-     * Deletes files from uploadDir/fileName.
-     * Missing files are silently skipped (they may have been cleaned up already).
-     * IOExceptions are logged but never propagated — file cleanup should never
-     * roll back a successful DB transaction.
-     */
-//    private void deletePhysicalFiles(List<String> fileNames) {
-//        for (String fileName : fileNames) {
-//            if (fileName == null || fileName.isBlank()) continue;
-//            try {
-//                Path filePath = Paths.get(uploadDir, fileName);
-//                boolean deleted = Files.deleteIfExists(filePath);
-//                if (!deleted) {
-//                    System.err.println("INFO: photo file not found on disk (already removed?): " + filePath);
-//                }
-//            } catch (IOException e) {
-//                // Log but continue — never fail the transaction over a missing file
-//                System.err.println("WARN: could not delete photo file [" + fileName + "]: " + e.getMessage());
-//            }
-//        }
-//    }
 }

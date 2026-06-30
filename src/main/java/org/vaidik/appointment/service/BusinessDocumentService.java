@@ -4,6 +4,7 @@ import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.vaidik.appointment.dto.BusinessDocumentResponse;
 import org.vaidik.appointment.entity.*;
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class BusinessDocumentService {
 
     private final BusinessDocumentRepository documentRepo;
@@ -28,6 +30,7 @@ public class BusinessDocumentService {
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    @Transactional
     public BusinessDocumentResponse uploadDocument(Long businessId,
                                                    String documentType,
                                                    MultipartFile file,
@@ -91,6 +94,7 @@ public class BusinessDocumentService {
         return toResponse(documentRepo.save(doc));
     }
 
+    @Transactional
     public void deleteDocument(Long documentId, String ownerEmail) throws IOException {
         BusinessDocument doc = documentRepo.findById(documentId)
                 .orElseThrow(() -> new RuntimeException("Document not found"));

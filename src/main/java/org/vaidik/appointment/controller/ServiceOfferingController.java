@@ -76,4 +76,20 @@ public class ServiceOfferingController {
     ) {
         return serviceOfferingService.getByCategory(category, city);
     }
+
+    @GetMapping("/popular")
+    public List<ServiceResponse> getPopularServices(
+            @RequestParam(defaultValue = "6") int limit
+    ) {
+        return serviceOfferingService.getPopularServices(limit);
+    }
+
+    @GetMapping("/nearby")
+    public List<ServiceResponse> getNearbyServices(
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam(defaultValue = "20") double radiusKm
+    ) {
+        return serviceOfferingService.getNearbyServices(lat, lng, radiusKm);
+    }
 }

@@ -2,6 +2,7 @@ package org.vaidik.appointment.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.vaidik.appointment.dto.WorkingHoursBulkRequest;
 import org.vaidik.appointment.dto.WorkingHoursRequest;
 import org.vaidik.appointment.dto.WorkingHoursResponse;
@@ -18,12 +19,12 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class WorkingHoursService {
 
     private final WorkingHoursRepository workingHoursRepository;
     private final ServiceOfferingRepository serviceOfferingRepository;
 
-    // ─── GET by Service ────────────────────────────────────────────────────────
     public List<WorkingHoursResponse> getWorkingHoursByService(Long serviceId) {
         return workingHoursRepository.findByServiceId(serviceId)
                 .stream()
@@ -31,11 +32,10 @@ public class WorkingHoursService {
                 .collect(Collectors.toList());
     }
 
-    // ─── CREATE / UPSERT single day ────────────────────────────────────────────
+    @Transactional
     public WorkingHoursResponse createWorkingHours(WorkingHoursRequest request, String ownerEmail) {
         ServiceOffering service = validateOwnership(request.getServiceId(), ownerEmail);
 
-        // Upsert: if a record for this day already exists, update it
         WorkingHours wh = workingHoursRepository
                 .findByServiceIdAndDayOfWeek(service.getId(), request.getDayOfWeek())
                 .orElse(WorkingHours.builder()
@@ -50,12 +50,11 @@ public class WorkingHoursService {
         return toResponse(workingHoursRepository.save(wh));
     }
 
-    // ─── UPDATE by ID ──────────────────────────────────────────────────────────
+    @Transactional
     public WorkingHoursResponse updateWorkingHours(Long id, WorkingHoursRequest request, String ownerEmail) {
-        WorkingHours wh = workingHoursRepository.findById(id)
+        WorkingHours wh = workingHoursRepository.findByIdWithFetch(id)   // ← was findById
                 .orElseThrow(() -> new RuntimeException("Working hours record not found"));
 
-        // 🔒 Ownership check via service
         if (!wh.getService().getBusiness().getOwner().getEmail().equals(ownerEmail)) {
             throw new RuntimeException("Unauthorized");
         }
@@ -67,7 +66,7 @@ public class WorkingHoursService {
         return toResponse(workingHoursRepository.save(wh));
     }
 
-    // ─── BULK SAVE (multi-day) ─────────────────────────────────────────────────
+    @Transactional
     public List<WorkingHoursResponse> bulkSave(WorkingHoursBulkRequest request, String ownerEmail) {
         ServiceOffering service = validateOwnership(request.getServiceId(), ownerEmail);
 
@@ -96,9 +95,8 @@ public class WorkingHoursService {
                 .collect(Collectors.toList());
     }
 
-    // ─── Helper: validate ownership ────────────────────────────────────────────
     private ServiceOffering validateOwnership(Long serviceId, String ownerEmail) {
-        ServiceOffering service = serviceOfferingRepository.findById(serviceId)
+        ServiceOffering service = serviceOfferingRepository.findByIdWithFetch(serviceId)   // ← was findById
                 .orElseThrow(() -> new RuntimeException("Service not found"));
         if (!service.getBusiness().getOwner().getEmail().equals(ownerEmail)) {
             throw new RuntimeException("Unauthorized");
@@ -106,7 +104,6 @@ public class WorkingHoursService {
         return service;
     }
 
-    // ─── Helper: entity → response ─────────────────────────────────────────────
     private WorkingHoursResponse toResponse(WorkingHours wh) {
         return WorkingHoursResponse.builder()
                 .id(wh.getId())

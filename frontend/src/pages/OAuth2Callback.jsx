@@ -18,7 +18,7 @@ export default function OAuth2Callback() {
     }
 
     if (token) {
-      loginUser(token);       // saves to localStorage, sets user
+      loginUser(token);       // saves user details
       navigate('/dashboard'); // redirect after login
     } else {
       navigate('/login');

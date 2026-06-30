@@ -9,12 +9,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Hibernate;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.vaidik.appointment.dto.*;
 import org.vaidik.appointment.entity.*;
 import org.vaidik.appointment.repository.*;
+import java.security.SecureRandom;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -66,6 +66,8 @@ public class PaymentService {
 
     // Platform fee percentage
     private static final double PLATFORM_FEE_PERCENT = 2.0;
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     // ── 1. Create Razorpay Order ──────────────────────────────────────────────
 
@@ -293,7 +295,7 @@ public class PaymentService {
             consentRepository.flush(); // ← critical: force DELETE to execute before INSERT
         });
 
-        String otp        = String.valueOf((int)(Math.random() * 900000) + 100000);
+        String otp = String.valueOf(100000 + SECURE_RANDOM.nextInt(900000));
         String otpHash    = hashOtp(otp);
         String token      = UUID.randomUUID().toString();
         LocalDateTime exp = LocalDateTime.now().plusMinutes(30);

@@ -4,6 +4,7 @@ import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.vaidik.appointment.dto.BusinessPhotoResponse;
 import org.vaidik.appointment.entity.BusinessPhoto;
@@ -17,6 +18,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class BusinessPhotoService {
 
     private final BusinessPhotoRepository photoRepository;
@@ -32,6 +34,7 @@ public class BusinessPhotoService {
                 .stream().map(this::toResponse).toList();
     }
 
+    @Transactional
     public BusinessPhotoResponse uploadPhoto(Long serviceId, MultipartFile file,
                                              String caption, String ownerEmail) throws IOException {
         ServiceOffering service = serviceRepository.findById(serviceId)
@@ -72,6 +75,7 @@ public class BusinessPhotoService {
         return toResponse(photoRepository.save(photo));
     }
 
+    @Transactional
     public void deletePhoto(Long photoId, String ownerEmail) throws IOException {
         BusinessPhoto photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new RuntimeException("Photo not found"));

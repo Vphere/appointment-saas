@@ -406,7 +406,21 @@
   background: rgba(108,99,255,0.08);
   pointer-events: none;
 }
-.bl-card-icon { font-size: 2.6rem; }
+.bl-card-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  user-select: none;
+}
 
 .bl-card-rating-badge {
   display: flex;

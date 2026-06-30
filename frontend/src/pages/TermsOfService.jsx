@@ -43,7 +43,7 @@ export default function TermsOfService() {
             By registering for, accessing, or using BookEase (the "Platform"), you confirm
             that you have read, understood, and agree to be bound by these Terms of Service
             ("Terms") and our{" "}
-            <a href="/privacy">Privacy Policy</a>. If you do not agree, do not use the Platform.
+            <a href="/privacy-policy">Privacy Policy</a>. If you do not agree, do not use the Platform.
           </p>
         </section>
 
@@ -311,8 +311,7 @@ export default function TermsOfService() {
             BookEase after the effective date constitutes acceptance of the revised Terms.
           </p>
           <p>
-            We recommend reviewing these Terms periodically. The current version is always
-            available at <a href="/terms">/terms</a>.
+            We recommend reviewing these Terms periodically. 
           </p>
         </section>
 
